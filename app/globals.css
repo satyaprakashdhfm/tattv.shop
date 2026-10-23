@@ -75,7 +75,7 @@
   }
   .display {
     font-family: var(--font-serif);
-    font-weight: 400;
+    font-weight: 500;
     letter-spacing: 0.01em;
     line-height: 1.05;
   }
@@ -137,6 +137,25 @@
   }
   .link-underline:hover {
     background-size: 100% 1px;
+  }
+  /* Underline that slides away left-to-right on hover and returns right-to-left. */
+  .underline-reveal {
+    position: relative;
+  }
+  .underline-reveal::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 1px;
+    background: currentColor;
+    transform-origin: right;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .underline-reveal:hover::after,
+  .group:hover .underline-reveal::after {
+    transform: scaleX(0);
   }
   .field {
     width: 100%;

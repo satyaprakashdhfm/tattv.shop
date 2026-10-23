@@ -9,7 +9,7 @@ import type { Art, BeadStone, ChainStyle, PendantShape, RingStyle, Tone } from "
  */
 
 type View = "front" | "detail";
-type Backdrop = "light" | "dark" | "none";
+type Backdrop = "light" | "dark" | "studio" | "none";
 
 const METAL_STOPS: Record<string, string[]> = {
   silver: ["#ffffff", "#d9d9d9", "#9b9b9b", "#f2f2f2", "#8a8a8a"],
@@ -463,6 +463,7 @@ export function ProductArt({
   tone,
   view = "front",
   backdrop = "light",
+  fit = "cover",
   className,
   title,
 }: {
@@ -470,6 +471,8 @@ export function ProductArt({
   tone: Tone;
   view?: View;
   backdrop?: Backdrop;
+  /** cover crops to fill the box; contain shows the whole piece and extends the backdrop. */
+  fit?: "cover" | "contain";
   className?: string;
   title?: string;
 }) {
@@ -483,8 +486,9 @@ export function ProductArt({
   let content: ReactNode;
   let detailBox = "100 100 200 200";
   if (art.kind === "chain") {
-    const bottom = art.pendant ? 312 : 400;
-    const pts = along(cubic([82, -30], [82, bottom], [318, bottom], [318, -30]), art.style === "rope" ? 5 : art.style === "curb" ? 13 : art.style === "ball" ? 7 : 9);
+    // Ends start well above the frame so the chain never looks cut off in taller (contain) crops.
+    const bottom = art.pendant ? 347 : 433;
+    const pts = along(cubic([82, -130], [82, bottom], [318, bottom], [318, -130]), art.style === "rope" ? 5 : art.style === "curb" ? 13 : art.style === "ball" ? 7 : 9);
     content = (
       <>
         <ChainLinks pts={pts} style={art.style} m={m} />
@@ -505,6 +509,8 @@ export function ProductArt({
 
   const bg =
     backdrop === "dark" ? ["#2a2a2a", "#0b0b0b"] : backdrop === "light" ? ["#ffffff", "#ece8e1"] : null;
+  // Photo-studio sweep: darker wall fading into a warm, lit floor.
+  const studio = backdrop === "studio";
 
   return (
     <svg
@@ -512,7 +518,7 @@ export function ProductArt({
       className={className}
       role="img"
       aria-label={title ?? "Product illustration"}
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio={fit === "contain" ? "xMidYMid meet" : "xMidYMid slice"}
     >
       <defs>
         <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2="1">
@@ -531,8 +537,16 @@ export function ProductArt({
             <stop offset="1" stopColor={bg[1]} />
           </radialGradient>
         )}
+        {studio && (
+          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0.12" stopColor="#7f7872" />
+            <stop offset="0.42" stopColor="#c9bfb4" />
+            <stop offset="0.62" stopColor="#e4dbd0" />
+            <stop offset="0.88" stopColor="#efe8de" />
+          </linearGradient>
+        )}
       </defs>
-      {bg && <rect x={-200} y={-200} width={800} height={800} fill={`url(#${id}-bg)`} />}
+      {(bg || studio) && <rect x={-200} y={-200} width={800} height={800} fill={`url(#${id}-bg)`} />}
       {content}
     </svg>
   );

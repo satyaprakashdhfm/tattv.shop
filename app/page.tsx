@@ -1,26 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Gift, PenTool, RotateCcw, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, Gift } from "lucide-react";
 import { CATEGORIES, COLLECTIONS, PRODUCTS, getProduct, unitPrice, type Art, type Tone } from "@/lib/products";
 import { ProductArt } from "@/components/product-art";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
-import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 
-const CATEGORY_ART: Record<string, { art: Art; tone: Tone }> = {
-  chains: { art: { kind: "chain", style: "cable", pendant: "triangle" }, tone: "silver" },
-  rings: { art: { kind: "ring", style: "signet" }, tone: "gold" },
-  bracelets: { art: { kind: "bracelet", style: "curb" }, tone: "silver" },
-  wallets: { art: { kind: "wallet", style: "bifold" }, tone: "leather-brown" },
+const CATEGORY_ART: Record<string, { art: Art; tone: Tone; label: string }> = {
+  chains: { art: { kind: "chain", style: "curb", pendant: "tag" }, tone: "gold", label: "Shop Chains & Pendants" },
+  rings: { art: { kind: "ring", style: "onyx" }, tone: "silver", label: "Shop Rings" },
+  bracelets: { art: { kind: "bracelet", style: "cuff" }, tone: "black", label: "Shop Bracelets" },
+  wallets: { art: { kind: "wallet", style: "bifold" }, tone: "leather-tan", label: "Shop Wallets" },
 };
-
-const SERVICES = [
-  { icon: Truck, title: "Complimentary Shipping", text: `On all orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}` },
-  { icon: RotateCcw, title: "15-Day Returns", text: "Easy exchanges & refunds" },
-  { icon: ShieldCheck, title: "Hallmarked Silver", text: "BIS certified 925 sterling" },
-  { icon: PenTool, title: "Free Engraving", text: "Make it unmistakably yours" },
-];
 
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
@@ -34,7 +27,7 @@ export default function HomePage() {
         <div className="container-x grid min-h-[min(78vh,820px)] items-center gap-8 py-14 lg:grid-cols-2 lg:py-0">
           <div className="relative z-10 max-w-xl animate-fade-in">
             <p className="eyebrow mb-6 text-white/60">The Men&apos;s Edit · Autumn 2026</p>
-            <h1 className="display text-5xl sm:text-6xl xl:text-7xl">
+            <h1 className="display text-5xl font-normal sm:text-6xl xl:text-7xl">
               Energize your
               <br />
               <em className="font-light">style element.</em>
@@ -60,35 +53,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services strip */}
-      <section className="border-b border-line bg-white">
-        <div className="container-x grid grid-cols-2 gap-y-6 py-7 lg:grid-cols-4">
-          {SERVICES.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="flex items-center gap-4 lg:justify-center">
-              <Icon size={22} strokeWidth={1.2} className="shrink-0" />
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.16em]">{title}</p>
-                <p className="text-xs text-muted">{text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Shop by category */}
-      <section className="container-x py-20 md:py-28">
-        <SectionHeading eyebrow="Shop by Category" title="The Essentials" center />
-        <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
+      <section className="pb-4 pt-16 md:pb-6 md:pt-20">
+        <h2 className="mb-8 text-center text-lg font-semibold uppercase tracking-[0.06em] md:mb-10 md:text-xl">Shop by Category</h2>
+        <div className="grid grid-cols-2 gap-2.5 px-2.5 lg:grid-cols-4">
           {CATEGORIES.map((c) => (
-            <Link key={c.id} href={`/shop?category=${c.id}`} className="group">
-              <div className="aspect-[4/5] overflow-hidden bg-sand">
-                <ProductArt art={CATEGORY_ART[c.id].art} tone={CATEGORY_ART[c.id].tone} className="h-full w-full transition-transform duration-700 group-hover:scale-105" title={c.name} />
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <h3 className="font-serif text-xl md:text-2xl">{c.name}</h3>
-                <ArrowRight size={16} strokeWidth={1.5} className="transition-transform group-hover:translate-x-1" />
-              </div>
-              <p className="mt-1 hidden text-sm text-muted md:block">{c.blurb}</p>
+            <Link key={c.id} href={`/shop?category=${c.id}`} className="group relative block aspect-[2/3] overflow-hidden">
+              <ProductArt
+                art={CATEGORY_ART[c.id].art}
+                tone={CATEGORY_ART[c.id].tone}
+                backdrop="studio"
+                fit="contain"
+                className="h-full w-full transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
+                title={c.name}
+              />
+              <span className="absolute inset-x-0 bottom-8 text-center md:bottom-10">
+                <span className="underline-reveal whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.04em] sm:text-[12px] md:text-[13px]">{CATEGORY_ART[c.id].label}</span>
+              </span>
             </Link>
           ))}
         </div>
