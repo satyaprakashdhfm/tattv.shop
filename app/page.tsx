@@ -34,7 +34,7 @@ export default function HomePage() {
       </section>
 
       {/* New arrivals */}
-      <section className="py-16 md:py-20">
+      <section className="pb-5 pt-10 md:pb-6 md:pt-12">
         <div className="container-x">
           <SectionHeading title="New Arrivals" href="/shop?tag=new" />
           <ProductRail products={newArrivals} cta="discover" />
@@ -42,8 +42,8 @@ export default function HomePage() {
       </section>
 
       {/* Shop by category */}
-      <section className="py-4 md:py-6">
-        <h2 className="title mb-8 text-center text-lg md:mb-10 md:text-xl">Shop by Category</h2>
+      <section className="py-5 md:py-6">
+        <h2 className="title mb-6 text-center text-lg md:mb-7 md:text-xl">Shop by Category</h2>
         <div className="grid grid-cols-2 gap-2.5 px-2.5 lg:grid-cols-4">
           {CATEGORIES.map((c) => (
             <Link key={c.id} href={`/shop?category=${c.id}`} className="group relative block aspect-[3/4] overflow-hidden bg-ink">
@@ -64,7 +64,7 @@ export default function HomePage() {
       </section>
 
       {/* Bestsellers */}
-      <section className="container-x py-16 md:py-20">
+      <section className="container-x pb-12 pt-5 md:pb-14 md:pt-6">
         <SectionHeading title="Bestsellers" href="/shop?tag=bestseller" />
         <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
           {bestsellers.map((p) => (
@@ -75,7 +75,7 @@ export default function HomePage() {
 
       {/* Brand story */}
       <section className="border-t border-line bg-white">
-        <div className="container-x grid items-center gap-12 py-16 md:py-24 lg:grid-cols-2">
+        <div className="container-x grid items-center gap-10 py-12 md:py-16 lg:grid-cols-2">
           <div className="relative mx-auto flex aspect-square w-full max-w-md items-center justify-center bg-ink">
             <Image src="/brand/mark-white.png" alt="TATTV emblem" width={253} height={294} className="h-auto w-1/3" />
           </div>
