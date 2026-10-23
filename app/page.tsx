@@ -12,37 +12,38 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-ink text-white">
-        <div className="container-x grid min-h-[min(78vh,820px)] items-center gap-10 py-14 lg:grid-cols-2 lg:py-16">
-          <div className="relative z-10 max-w-xl animate-fade-in">
-            <p className="eyebrow mb-6 text-white/60">The Men&apos;s Edit · Autumn 2026</p>
-            <h1 className="display text-5xl font-normal sm:text-6xl xl:text-7xl">
-              Energize your
+      <section className="relative overflow-hidden bg-[#e7ddd0]">
+        {/* Full-width photo; below lg it sits above the copy, from lg up the copy overlays its left side. */}
+        <div className="relative aspect-[16/9] lg:aspect-auto lg:h-[min(64vh,580px)] lg:min-h-[460px]">
+          <Image
+            src="/images/hero/hero-bg.jpg"
+            alt="Man in a black suit wearing a TATTV chain, curb bracelet and onyx ring, holding a leather wallet"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[75%_25%]"
+          />
+          <div className="absolute inset-y-0 left-0 hidden w-3/5 bg-gradient-to-r from-[#e7ddd0]/85 via-[#e7ddd0]/45 to-transparent lg:block" />
+        </div>
+        <div className="container-x lg:absolute lg:inset-0 lg:flex lg:items-center">
+          <div className="max-w-lg animate-fade-in py-10 lg:max-w-[400px] lg:py-0 xl:max-w-lg">
+            <h1 className="title text-3xl leading-[1.15] tracking-[0.04em] lg:text-[42px]">
+              More than accessories.
               <br />
-              <em className="font-light">style element.</em>
+              <span className="font-normal">It&apos;s your signature.</span>
             </h1>
-            <p className="mt-6 max-w-md text-base font-light leading-relaxed text-white/70">
-              Modern and classic jewellery for men: chains, rings, bracelets and leather wallets, made to be worn every day.
+            <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-ink/75">
+              Chains, rings, bracelets and everyday essentials designed to define your style.
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link href="/shop" className="btn btn-light">
-                Shop Men&apos;s
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/shop" className="btn btn-dark">
+                Shop the Collection
               </Link>
-              <Link href="/collections" className="btn btn-outline-light">
-                Explore Collections
+              <Link href="/collections" className="btn btn-outline">
+                Discover Your Style
               </Link>
             </div>
           </div>
-          <Link href="/product/twin-cable-bangle" className="group relative mx-auto block aspect-[4/5] w-full max-w-[520px] overflow-hidden" aria-label="Twin Cable Bangle">
-            <Image
-              src="/images/hero/cable-bangle.jpg"
-              alt="TATTV Twin Cable Bangle on black satin"
-              fill
-              priority
-              sizes="(min-width: 1024px) 520px, 100vw"
-              className="object-cover transition-transform duration-[1.5s] group-hover:scale-[1.03]"
-            />
-          </Link>
         </div>
       </section>
 
