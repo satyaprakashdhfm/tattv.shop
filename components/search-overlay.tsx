@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
-import { searchProducts, unitPrice } from "@/lib/products";
+import { searchProducts } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
-import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 
-const POPULAR = ["Cuban", "Signet", "Pendant", "Onyx", "Wallet", "Chain"];
+const POPULAR = ["Signet", "Pendant", "Cuff", "Leather", "Wallet", "Chain"];
 
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useStore();
@@ -91,11 +91,11 @@ export function SearchOverlay() {
                 <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
                   {results.slice(0, 6).map((p) => (
                     <Link key={p.slug} href={`/product/${p.slug}`} onClick={close} className="group">
-                      <div className="aspect-square bg-sand">
-                        <ProductArt art={p.art} tone={p.options[0].tone} className="h-full w-full" title={p.name} />
+                      <div className="relative aspect-square overflow-hidden bg-sand">
+                        <ProductImage product={p} sizes="(min-width: 1024px) 16vw, 50vw" />
                       </div>
-                      <p className="mt-2 font-serif text-base leading-tight group-hover:underline">{p.name}</p>
-                      <p className="text-xs text-muted">{formatPrice(unitPrice(p))}</p>
+                      <p className="mt-2 text-sm font-medium leading-tight group-hover:underline">{p.name}</p>
+                      <p className="text-xs text-muted">{formatPrice(p.price)}</p>
                     </Link>
                   ))}
                 </div>

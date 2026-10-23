@@ -8,7 +8,6 @@ import { ProductDetail } from "./product-detail";
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ option?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -22,9 +21,8 @@ export function generateStaticParams() {
   return PRODUCTS.map((p) => ({ slug: p.slug }));
 }
 
-export default async function ProductPage({ params, searchParams }: Props) {
+export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const { option } = await searchParams;
   const product = getProduct(slug);
   if (!product) notFound();
 
@@ -44,12 +42,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </nav>
       </div>
 
-      <ProductDetail key={`${product.slug}-${option ?? ""}`} product={product} initialOptionId={option} />
+      <ProductDetail key={product.slug} product={product} />
 
       <section className="border-t border-line bg-white">
         <div className="container-x py-20">
-          <SectionHeading eyebrow="Complete the Look" title="You May Also Like" href={`/shop?category=${product.category}`} cta="View More" />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-12 md:gap-x-6 lg:grid-cols-4">
+          <SectionHeading title="You May Also Like" href={`/shop?category=${product.category}`} cta="View More" />
+          <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
             {relatedProducts(product).map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}

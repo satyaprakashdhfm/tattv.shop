@@ -40,7 +40,7 @@ export function CartDrawer() {
         {cart.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <ShoppingBag size={36} strokeWidth={1} />
-            <p className="display text-3xl">Your bag is empty</p>
+            <p className="title text-base md:text-lg">Your bag is empty</p>
             <p className="text-sm text-muted">Discover pieces made to be worn every day.</p>
             <Link href="/shop" onClick={() => setCartOpen(false)} className="btn btn-dark mt-2">
               Shop Now

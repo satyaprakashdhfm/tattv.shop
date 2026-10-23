@@ -2,32 +2,31 @@
 
 import Link from "next/link";
 import { Minus, Plus } from "lucide-react";
-import { getOption, getProduct, unitPrice } from "@/lib/products";
+import { getProduct } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
-import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 import { useStore, type CartLine } from "./store-provider";
 
 export function CartLineItem({ line, compact }: { line: CartLine; compact?: boolean }) {
   const { updateQty, removeLine, setCartOpen } = useStore();
   const product = getProduct(line.slug);
   if (!product) return null;
-  const option = getOption(product, line.optionId);
-  const href = `/product/${product.slug}?option=${option.id}`;
+  const href = `/product/${product.slug}`;
 
   return (
     <div className="flex gap-4 py-5">
-      <Link href={href} onClick={() => setCartOpen(false)} className={`shrink-0 bg-sand ${compact ? "h-24 w-24" : "h-32 w-32"}`}>
-        <ProductArt art={product.art} tone={option.tone} className="h-full w-full" title={product.name} />
+      <Link href={href} onClick={() => setCartOpen(false)} className={`relative shrink-0 overflow-hidden bg-sand ${compact ? "h-24 w-24" : "h-32 w-32"}`}>
+        <ProductImage product={product} sizes="128px" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex justify-between gap-3">
-          <Link href={href} onClick={() => setCartOpen(false)} className="font-serif text-lg leading-tight hover:underline">
+          <Link href={href} onClick={() => setCartOpen(false)} className="text-[15px] font-medium leading-tight hover:underline">
             {product.name}
           </Link>
-          <p className="shrink-0 text-sm">{formatPrice(unitPrice(product, option.id) * line.qty)}</p>
+          <p className="shrink-0 text-sm font-semibold">{formatPrice(product.price * line.qty)}</p>
         </div>
         <p className="mt-1 text-xs text-muted">
-          {option.label}
+          {product.material}
           {line.size && ` · ${product.sizes?.label} ${line.size}`}
         </p>
         <div className="mt-auto flex items-center justify-between pt-3">

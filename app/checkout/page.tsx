@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check, Lock } from "lucide-react";
 import { useStore } from "@/components/store-provider";
-import { ProductArt } from "@/components/product-art";
-import { getOption, getProduct, unitPrice } from "@/lib/products";
+import { ProductImage } from "@/components/product-image";
+import { getProduct } from "@/lib/products";
 import { formatPrice, shippingFor } from "@/lib/format";
 
 const PAYMENT_METHODS = [
@@ -28,7 +28,7 @@ export default function CheckoutPage() {
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white">
           <Check size={26} />
         </span>
-        <h1 className="display mt-8 text-5xl">Thank you</h1>
+        <h1 className="title mt-8 text-xl md:text-2xl">Thank you</h1>
         <p className="mt-4 max-w-md text-muted">
           Your order <span className="font-medium text-ink">{orderId}</span> has been placed. A confirmation will be sent to your email shortly.
         </p>
@@ -42,7 +42,7 @@ export default function CheckoutPage() {
   if (cart.length === 0) {
     return (
       <div className="container-x flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
-        <h1 className="display text-5xl">Your bag is empty</h1>
+        <h1 className="title text-xl md:text-2xl">Your bag is empty</h1>
         <Link href="/shop" className="btn btn-dark mt-10">
           Shop Now
         </Link>
@@ -52,7 +52,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="container-x py-12 md:py-16">
-      <h1 className="display text-5xl">Checkout</h1>
+      <h1 className="title text-xl md:text-2xl">Checkout</h1>
       <form
         className="mt-10 grid gap-12 lg:grid-cols-12"
         onSubmit={(e) => {
@@ -115,21 +115,22 @@ export default function CheckoutPage() {
             <ul className="space-y-4">
               {cart.map((line) => {
                 const product = getProduct(line.slug)!;
-                const option = getOption(product, line.optionId);
                 return (
                   <li key={line.key} className="flex items-center gap-4">
                     <div className="relative h-16 w-16 shrink-0 bg-white">
-                      <ProductArt art={product.art} tone={option.tone} className="h-full w-full" />
+                      <div className="absolute inset-0 overflow-hidden">
+                        <ProductImage product={product} sizes="64px" />
+                      </div>
                       <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[10px] text-white">{line.qty}</span>
                     </div>
                     <div className="min-w-0 flex-1 text-sm">
-                      <p className="truncate font-serif text-base">{product.name}</p>
+                      <p className="truncate text-sm font-medium">{product.name}</p>
                       <p className="text-xs text-muted">
-                        {option.label}
+                        {product.material}
                         {line.size && ` · ${line.size}`}
                       </p>
                     </div>
-                    <p className="text-sm">{formatPrice(unitPrice(product, option.id) * line.qty)}</p>
+                    <p className="text-sm">{formatPrice(product.price * line.qty)}</p>
                   </li>
                 );
               })}

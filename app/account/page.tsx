@@ -9,7 +9,7 @@ export default function AccountPage() {
   return (
     <div className="container-x flex justify-center py-16 md:py-24">
       <div className="w-full max-w-md">
-        <h1 className="display text-center text-5xl">{mode === "signin" ? "Sign In" : "Create Account"}</h1>
+        <h1 className="title text-center text-xl md:text-2xl">{mode === "signin" ? "Sign In" : "Create Account"}</h1>
         <p className="mt-3 text-center text-sm text-muted">
           {mode === "signin" ? "Access your orders, wishlist and saved addresses." : "Join TATTV for early access and faster checkout."}
         </p>

@@ -29,7 +29,7 @@ const CHAIN_LENGTHS = [
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="scroll-mt-28 border-t border-line py-12">
-      <h2 className="display text-4xl">{title}</h2>
+      <h2 className="title text-lg md:text-xl">{title}</h2>
       <div className="mt-6 space-y-4 text-sm leading-relaxed text-ink/75">{children}</div>
     </section>
   );
@@ -40,7 +40,7 @@ export default function HelpPage() {
     <div className="container-x grid gap-12 py-16 lg:grid-cols-12">
       <aside className="lg:col-span-3">
         <div className="lg:sticky lg:top-28">
-          <h1 className="display text-5xl">Client Care</h1>
+          <h1 className="title text-xl md:text-2xl">Client Care</h1>
           <nav className="mt-8 flex flex-wrap gap-x-6 gap-y-3 lg:flex-col" aria-label="Help topics">
             {[
               ["shipping", "Shipping"],

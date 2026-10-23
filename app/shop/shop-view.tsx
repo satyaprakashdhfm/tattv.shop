@@ -10,9 +10,7 @@ import {
   MATERIALS,
   PRODUCTS,
   categoryName,
-  materialOf,
   searchProducts,
-  unitPrice,
   type Product,
 } from "@/lib/products";
 import { ProductCard } from "@/components/product-card";
@@ -20,14 +18,13 @@ import { ProductCard } from "@/components/product-card";
 const TAGS: Record<string, { title: string; blurb: string; test: (p: Product) => boolean }> = {
   new: { title: "New Arrivals", blurb: "The latest additions to the TATTV collection.", test: (p) => !!p.isNew },
   bestseller: { title: "Bestsellers", blurb: "The pieces our clients return to, again and again.", test: (p) => !!p.bestseller },
-  gifts: { title: "The Gift Edit", blurb: "Thoughtful pieces under ₹4,999, beautifully boxed.", test: (p) => unitPrice(p) <= 4999 },
+  gifts: { title: "The Gift Edit", blurb: "Thoughtful pieces under ₹1,500, beautifully packed.", test: (p) => p.price <= 1500 },
 };
 
 const PRICES = [
-  { id: "u3", label: "Under ₹3,000", test: (n: number) => n < 3000 },
-  { id: "3-5", label: "₹3,000 to ₹5,000", test: (n: number) => n >= 3000 && n < 5000 },
-  { id: "5-8", label: "₹5,000 to ₹8,000", test: (n: number) => n >= 5000 && n < 8000 },
-  { id: "8p", label: "₹8,000 & above", test: (n: number) => n >= 8000 },
+  { id: "u1000", label: "Under ₹1,000", test: (n: number) => n < 1000 },
+  { id: "1000-1500", label: "₹1,000 to ₹1,500", test: (n: number) => n >= 1000 && n <= 1500 },
+  { id: "1500p", label: "Above ₹1,500", test: (n: number) => n > 1500 },
 ];
 
 const SORTS = [
@@ -35,7 +32,6 @@ const SORTS = [
   { id: "new", label: "Newest" },
   { id: "price-asc", label: "Price: Low to High" },
   { id: "price-desc", label: "Price: High to Low" },
-  { id: "rating", label: "Top Rated" },
 ];
 
 const list = (v: string | null) => (v ? v.split(",").filter(Boolean) : []);
@@ -74,12 +70,11 @@ export function ShopView() {
     if (tag && TAGS[tag]) items = items.filter(TAGS[tag].test);
     if (category) items = items.filter((p) => p.category === category);
     if (collections.length) items = items.filter((p) => collections.includes(p.collection));
-    if (materials.length) items = items.filter((p) => p.options.some((o) => materials.includes(materialOf(o.tone))));
-    if (prices.length) items = items.filter((p) => PRICES.some((r) => prices.includes(r.id) && r.test(unitPrice(p))));
+    if (materials.length) items = items.filter((p) => materials.includes(p.finish));
+    if (prices.length) items = items.filter((p) => PRICES.some((r) => prices.includes(r.id) && r.test(p.price)));
     const sorted = [...items];
-    if (sort === "price-asc") sorted.sort((a, b) => unitPrice(a) - unitPrice(b));
-    if (sort === "price-desc") sorted.sort((a, b) => unitPrice(b) - unitPrice(a));
-    if (sort === "rating") sorted.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+    if (sort === "price-asc") sorted.sort((a, b) => a.price - b.price);
+    if (sort === "price-desc") sorted.sort((a, b) => b.price - a.price);
     if (sort === "new") sorted.sort((a, b) => Number(!!b.isNew) - Number(!!a.isNew));
     return sorted;
   })();
@@ -143,7 +138,7 @@ export function ShopView() {
             <span className="mx-2">/</span>
             <span className="text-ink">Shop</span>
           </nav>
-          <h1 className="display text-5xl md:text-6xl">{heading.title}</h1>
+          <h1 className="title text-xl md:text-2xl">{heading.title}</h1>
           {heading.blurb && <p className="mt-3 max-w-xl text-muted">{heading.blurb}</p>}
           <div className="no-scrollbar mt-8 flex gap-2 overflow-x-auto">
             {CATEGORIES.map((c) => (
@@ -200,14 +195,14 @@ export function ShopView() {
         <div className="grid gap-10 lg:grid-cols-[220px_1fr] xl:gap-14">
           <aside className="hidden lg:block">{filters}</aside>
           {results.length ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
               {results.map((p) => (
                 <ProductCard key={p.slug} product={p} />
               ))}
             </div>
           ) : (
             <div className="py-20 text-center">
-              <p className="display text-3xl">No pieces found</p>
+              <p className="title text-base md:text-lg">No pieces found</p>
               <p className="mt-3 text-muted">Try removing a filter or two.</p>
               <button onClick={() => window.history.replaceState(null, "", "/shop")} className="btn btn-dark mt-8">
                 View All Jewellery

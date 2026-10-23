@@ -15,14 +15,14 @@ export default function CartPage() {
 
   return (
     <div className="container-x py-12 md:py-16">
-      <h1 className="display text-5xl">Your Bag</h1>
+      <h1 className="title text-xl md:text-2xl">Your Bag</h1>
       <p className="mt-2 text-sm text-muted">
         {cartCount} {cartCount === 1 ? "item" : "items"}
       </p>
 
       {cart.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="display text-3xl">Your bag is empty</p>
+          <p className="title text-base md:text-lg">Your bag is empty</p>
           <Link href="/shop" className="btn btn-dark mt-8">
             Continue Shopping
           </Link>
@@ -65,8 +65,8 @@ export default function CartPage() {
 
       {suggestions.length > 0 && (
         <section className="mt-24">
-          <h2 className="display mb-10 text-4xl">You May Also Like</h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-12 md:gap-x-6 lg:grid-cols-4">
+          <h2 className="title mb-10 text-lg md:text-xl">You May Also Like</h2>
+          <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
             {suggestions.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}

@@ -6,10 +6,10 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { ChevronDown, Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { NAV } from "@/lib/navigation";
-import { getProduct, unitPrice } from "@/lib/products";
+import { getProduct } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
-import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 
 function Badge({ count }: { count: number }) {
   if (!count) return null;
@@ -137,11 +137,11 @@ export function Header() {
                 if (!p) return null;
                 return (
                   <Link key={slug} href={`/product/${p.slug}`} className="group">
-                    <div className="aspect-[4/3] overflow-hidden bg-sand">
-                      <ProductArt art={p.art} tone={p.options[0].tone} className="h-full w-full transition-transform duration-700 group-hover:scale-105" title={p.name} />
+                    <div className="relative aspect-[4/3] overflow-hidden bg-sand">
+                      <ProductImage product={p} sizes="25vw" className="transition-transform duration-700 group-hover:scale-105" />
                     </div>
-                    <p className="mt-3 font-serif text-lg">{p.name}</p>
-                    <p className="text-sm text-muted">{formatPrice(unitPrice(p))}</p>
+                    <p className="mt-3 text-[15px] font-medium">{p.name}</p>
+                    <p className="text-sm text-muted">{formatPrice(p.price)}</p>
                   </Link>
                 );
               })}

@@ -2,18 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check, ChevronDown, Gift, Heart, Minus, Plus, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
-import { COLLECTIONS, TONES, getOption, unitPrice, type Product } from "@/lib/products";
+import { BadgeCheck, Check, ChevronDown, Gift, Heart, Minus, Plus, RotateCcw, Truck } from "lucide-react";
+import { COLLECTIONS, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
-import { ProductArt } from "@/components/product-art";
+import { ProductImage } from "@/components/product-image";
 import { useStore } from "@/components/store-provider";
-
-const VIEWS = [
-  { view: "front", backdrop: "light" },
-  { view: "detail", backdrop: "light" },
-  { view: "front", backdrop: "dark" },
-  { view: "detail", backdrop: "dark" },
-] as const;
 
 function deliveryDate(days: number) {
   const d = new Date();
@@ -21,9 +14,8 @@ function deliveryDate(days: number) {
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
 
-export function ProductDetail({ product, initialOptionId }: { product: Product; initialOptionId?: string }) {
+export function ProductDetail({ product }: { product: Product }) {
   const { addToCart, wishlist, toggleWishlist } = useStore();
-  const [option, setOption] = useState(() => getOption(product, initialOptionId));
   const [size, setSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [viewIndex, setViewIndex] = useState(0);
@@ -33,7 +25,7 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
   const [pinResult, setPinResult] = useState<string | null>(null);
 
   const saved = wishlist.includes(product.slug);
-  const price = unitPrice(product, option.id);
+  const price = product.price;
   const collection = COLLECTIONS.find((c) => c.id === product.collection)!;
 
   const handleAdd = () => {
@@ -41,7 +33,7 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
       setSizeError(true);
       return;
     }
-    addToCart({ slug: product.slug, optionId: option.id, size: size ?? undefined }, qty);
+    addToCart({ slug: product.slug, size: size ?? undefined }, qty);
   };
 
   const panels = [
@@ -61,12 +53,12 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
     {
       title: "Care",
       body:
-        product.category === "wallets" || option.tone.startsWith("leather") ? (
+        product.finish === "leather" ? (
           <p>Wipe clean with a soft dry cloth. Condition every few months and keep away from direct heat and prolonged moisture to preserve the patina.</p>
         ) : (
           <ul className="space-y-2">
             <li>Store in the TATTV pouch, away from moisture and perfume.</li>
-            <li>Polish gently with the included anti-tarnish cloth.</li>
+            <li>Wipe gently with a soft, dry cloth after wearing.</li>
             <li>Remove before swimming, showering or exercising.</li>
           </ul>
         ),
@@ -85,79 +77,47 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
   return (
     <section className="container-x grid gap-10 py-8 lg:grid-cols-12 lg:gap-14 lg:py-12">
       {/* Gallery */}
-      <div className="min-w-0 lg:col-span-7">
-        <div className="flex flex-col-reverse gap-4 md:flex-row">
-          <div className="no-scrollbar flex gap-3 overflow-x-auto md:w-20 md:flex-col">
-            {VIEWS.map((v, i) => (
-              <button
-                key={i}
-                onClick={() => setViewIndex(i)}
-                aria-label={`View image ${i + 1}`}
-                className={`aspect-square w-20 shrink-0 overflow-hidden border transition ${viewIndex === i ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
-              >
-                <ProductArt art={product.art} tone={option.tone} view={v.view} backdrop={v.backdrop} className="h-full w-full" />
-              </button>
-            ))}
-          </div>
+      <div className="min-w-0 lg:col-span-6">
+        <div className="flex max-w-[600px] flex-col-reverse gap-4 md:flex-row">
+          {product.images.length > 1 && (
+            <div className="no-scrollbar flex gap-3 overflow-x-auto md:w-20 md:flex-col">
+              {product.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setViewIndex(i)}
+                  aria-label={`View image ${i + 1}`}
+                  className={`relative aspect-square w-20 shrink-0 overflow-hidden border transition ${viewIndex === i ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
+                >
+                  <ProductImage product={product} index={i} sizes="80px" />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="relative aspect-square flex-1 overflow-hidden bg-sand">
-            <ProductArt
-              key={`${viewIndex}-${option.id}`}
-              art={product.art}
-              tone={option.tone}
-              view={VIEWS[viewIndex].view}
-              backdrop={VIEWS[viewIndex].backdrop}
-              className="h-full w-full animate-fade-in"
-              title={product.name}
-            />
-            {product.badge && <span className="absolute left-4 top-4 bg-white px-3 py-1 text-[10px] uppercase tracking-[0.18em]">{product.badge}</span>}
+            <ProductImage key={viewIndex} product={product} index={viewIndex} priority sizes="(min-width: 768px) 500px, 100vw" className="animate-fade-in" />
+            {product.badge && <span className="absolute left-4 top-4 bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em]">{product.badge}</span>}
           </div>
         </div>
       </div>
 
       {/* Buy box */}
-      <div className="min-w-0 lg:col-span-5">
+      <div className="min-w-0 lg:col-span-6 xl:col-span-5 xl:col-start-8">
         <div className="lg:sticky lg:top-28">
           <p className="eyebrow text-muted">
             {collection.name} Collection
           </p>
-          <h1 className="display mt-3 text-4xl md:text-5xl">{product.name}</h1>
-          <div className="mt-3 flex items-center gap-2 text-sm">
-            <span className="flex" aria-label={`Rated ${product.rating} out of 5`}>
-              {Array.from({ length: 5 }, (_, i) => (
-                <Star key={i} size={14} strokeWidth={1.2} className={i < Math.round(product.rating) ? "fill-ink" : ""} />
-              ))}
-            </span>
-            <span className="text-muted">
-              {product.rating.toFixed(1)} · {product.reviews} reviews
-            </span>
-          </div>
-          <p className="mt-5 text-xl">
+          <h1 className="mt-3 text-2xl font-semibold leading-tight md:text-3xl">{product.name}</h1>
+          <p className="mt-4 text-xl font-semibold">
             {formatPrice(price)}
-            {product.compareAt && <span className="ml-3 text-base text-muted line-through">{formatPrice(product.compareAt + (option.priceDelta ?? 0))}</span>}
+            {product.compareAt && <span className="ml-3 text-base text-muted line-through">{formatPrice(product.compareAt)}</span>}
           </p>
           <p className="mt-1 text-xs text-muted">Inclusive of all taxes</p>
           <p className="mt-6 leading-relaxed text-ink/80">{product.short}</p>
 
           {/* Material */}
-          <div className="mt-8">
-            <p className="text-sm">
-              <span className="eyebrow">{product.category === "wallets" || option.tone.startsWith("leather") ? "Colour" : "Material"}:</span>{" "}
-              <span className="text-muted">{option.label}</span>
-            </p>
-            <div className="mt-3 flex gap-3">
-              {product.options.map((o) => (
-                <button
-                  key={o.id}
-                  onClick={() => setOption(o)}
-                  aria-label={o.label}
-                  aria-pressed={o.id === option.id}
-                  title={`${o.label}${o.priceDelta ? ` (+${formatPrice(o.priceDelta)})` : ""}`}
-                  className={`h-9 w-9 rounded-full ring-offset-2 transition ${o.id === option.id ? "ring-1 ring-ink" : "ring-1 ring-line hover:ring-ink/50"}`}
-                  style={{ background: TONES[o.tone].swatch }}
-                />
-              ))}
-            </div>
-          </div>
+          <p className="mt-8 text-sm">
+            <span className="eyebrow">Material:</span> <span className="text-muted">{product.material}</span>
+          </p>
 
           {/* Size */}
           {product.sizes && (
@@ -241,7 +201,7 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
 
           <ul className="mt-8 grid grid-cols-3 gap-3 border-y border-line py-6 text-center text-[11px] uppercase tracking-[0.12em]">
             <li className="flex flex-col items-center gap-2">
-              <ShieldCheck size={20} strokeWidth={1.2} /> Hallmarked
+              <BadgeCheck size={20} strokeWidth={1.2} /> Quality Checked
             </li>
             <li className="flex flex-col items-center gap-2">
               <RotateCcw size={20} strokeWidth={1.2} /> 15-Day Returns

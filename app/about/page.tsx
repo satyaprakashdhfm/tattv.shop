@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { COLLECTIONS, getProduct } from "@/lib/products";
-import { ProductArt } from "@/components/product-art";
+import { COLLECTIONS } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Our Story",
@@ -10,14 +9,13 @@ export const metadata: Metadata = {
 };
 
 const PILLARS = [
-  { n: "01", title: "Designed in India", text: "Every piece begins as a sketch in our studio, balancing modern architecture with classic Indian symbolism." },
-  { n: "02", title: "Certified Materials", text: "BIS hallmarked 925 sterling silver, thick 18K gold vermeil, surgical-grade steel and full-grain leather." },
-  { n: "03", title: "Finished by Hand", text: "Each link is polished, each signet is set and each wallet edge is painted by hand, in small batches." },
-  { n: "04", title: "Made to Last", text: "Lifetime complimentary polishing on all silver jewellery. Bring it back, and we'll make it new again." },
+  { n: "01", title: "Designed in India", text: "Every piece begins as a sketch in our studio, balancing modern architecture with classic detail." },
+  { n: "02", title: "Built to Last", text: "Premium stainless steel, gold plating and genuine leather, chosen to handle everyday wear." },
+  { n: "03", title: "Finished by Hand", text: "Each piece is polished, checked and packed by hand, in small batches." },
+  { n: "04", title: "Easy Care", text: "Water-resistant finishes and simple care, so your pieces look as good as the day they arrived." },
 ];
 
 export default function AboutPage() {
-  const pendant = getProduct("triangle-pendant")!;
   return (
     <>
       <section className="bg-ink text-white">
@@ -32,7 +30,7 @@ export default function AboutPage() {
       <section className="container-x grid items-center gap-12 py-20 md:py-28 lg:grid-cols-2">
         <div className="max-w-lg">
           <p className="eyebrow text-muted">Our Story</p>
-          <h1 className="display mt-3 text-5xl md:text-6xl">Jewellery with an essential nature.</h1>
+          <h1 className="title mt-3 text-xl md:text-2xl">Jewellery with an essential nature.</h1>
           <p className="mt-6 leading-relaxed text-muted">
             TATTV was born from a simple belief: what a man wears every day should mean something. Not louder, but deeper. Not trend, but character.
           </p>
@@ -41,14 +39,14 @@ export default function AboutPage() {
             <strong className="font-medium text-ink"> Classic</strong>, with heritage links, signets and leather that age beautifully.
           </p>
         </div>
-        <div className="aspect-square bg-sand">
-          <ProductArt art={pendant.art} tone="gold" className="h-full w-full" title={pendant.name} />
+        <div className="relative aspect-[4/5] w-full max-w-lg justify-self-center overflow-hidden bg-ink">
+          <Image src="/images/categories/rings.jpg" alt="TATTV signet rings" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
         </div>
       </section>
 
       <section className="bg-white py-20 md:py-28">
         <div className="container-x">
-          <h2 className="display text-center text-5xl">The TATTV Standard</h2>
+          <h2 className="title text-center text-xl md:text-2xl">The TATTV Standard</h2>
           <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {PILLARS.map((p) => (
               <div key={p.n} className="border-t border-ink pt-6">
@@ -63,7 +61,7 @@ export default function AboutPage() {
 
       <section className="container-x py-20 text-center md:py-28">
         <p className="eyebrow text-muted">Collections</p>
-        <h2 className="display mt-3 text-5xl">Modern or classic. Or both.</h2>
+        <h2 className="title mt-3 text-xl md:text-2xl">Modern or classic. Or both.</h2>
         <div className="mx-auto mt-12 grid max-w-3xl gap-10 sm:grid-cols-2">
           {COLLECTIONS.map((col) => (
             <div key={col.id}>

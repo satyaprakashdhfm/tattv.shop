@@ -1,29 +1,6 @@
 export type CategoryId = "chains" | "rings" | "bracelets" | "wallets";
 export type CollectionId = "modern" | "classic";
-
-export type MetalTone = "silver" | "gold" | "black" | "steel";
-export type LeatherTone = "leather-black" | "leather-tan" | "leather-brown" | "leather-navy";
-export type Tone = MetalTone | LeatherTone;
-
-export type ChainStyle = "cable" | "curb" | "rope" | "box" | "ball";
-export type PendantShape = "tag" | "disc" | "triangle" | "square" | "drop" | "hexagon" | "arrow" | "bar" | "monogram";
-export type RingStyle = "band" | "ridged" | "signet" | "onyx" | "link" | "monogram";
-export type BraceletStyle = "curb" | "box" | "beads" | "cuff" | "leather";
-export type BeadStone = "onyx" | "tiger" | "lava";
-export type WalletStyle = "bifold" | "cardholder" | "zip";
-
-export type Art =
-  | { kind: "chain"; style: ChainStyle; pendant?: PendantShape }
-  | { kind: "ring"; style: RingStyle }
-  | { kind: "bracelet"; style: BraceletStyle; bead?: BeadStone }
-  | { kind: "wallet"; style: WalletStyle };
-
-export interface ProductOption {
-  id: string;
-  label: string;
-  tone: Tone;
-  priceDelta?: number;
-}
+export type Finish = "silver" | "gold" | "black" | "two-tone" | "leather";
 
 export interface Product {
   slug: string;
@@ -32,24 +9,24 @@ export interface Product {
   collection: CollectionId;
   price: number;
   compareAt?: number;
-  options: ProductOption[];
+  material: string;
+  finish: Finish;
+  /** Paths under /public. Cropped from TATTV's Instagram until original product shots are supplied. */
+  images: string[];
   sizes?: { label: string; values: string[] };
-  art: Art;
-  badge?: "New" | "Bestseller" | "Limited Edition" | "Online Exclusive";
+  badge?: "New" | "Bestseller" | "Limited Edition";
   isNew?: boolean;
   bestseller?: boolean;
-  rating: number;
-  reviews: number;
   short: string;
   description: string;
   details: string[];
 }
 
-export const CATEGORIES: { id: CategoryId; name: string; blurb: string }[] = [
-  { id: "chains", name: "Chains & Pendants", blurb: "Statement links and meaningful pendants, layered or worn alone." },
-  { id: "rings", name: "Rings", blurb: "Signets, bands and sculpted forms made for everyday wear." },
-  { id: "bracelets", name: "Bracelets", blurb: "Links, cuffs and stone beads with a quiet, confident weight." },
-  { id: "wallets", name: "Wallets", blurb: "Full-grain leather, hand-finished edges, built to age well." },
+export const CATEGORIES: { id: CategoryId; name: string; blurb: string; image: string }[] = [
+  { id: "chains", name: "Chains", blurb: "Chains and pendants, layered or worn alone.", image: "/images/categories/chains.jpg" },
+  { id: "rings", name: "Rings", blurb: "Signets, bands and sculpted forms made for everyday wear.", image: "/images/categories/rings.jpg" },
+  { id: "bracelets", name: "Bracelets", blurb: "Cuffs, bangles and leather with a quiet, confident weight.", image: "/images/categories/bracelets.jpg" },
+  { id: "wallets", name: "Wallets", blurb: "Genuine leather, clean lines, built to age well.", image: "/images/categories/wallets.jpg" },
 ];
 
 export const COLLECTIONS: { id: CollectionId; name: string; tagline: string; blurb: string }[] = [
@@ -57,481 +34,328 @@ export const COLLECTIONS: { id: CollectionId; name: string; tagline: string; blu
     id: "modern",
     name: "Modern",
     tagline: "Clean lines. Bold intent.",
-    blurb: "Architectural forms, oxidised finishes and minimal silhouettes for the man who edits.",
+    blurb: "Architectural forms, black finishes and minimal silhouettes for the man who edits.",
   },
   {
     id: "classic",
     name: "Classic",
     tagline: "Heritage, refined.",
-    blurb: "Time-honoured links, signets and craftsmanship that never asks for attention, and always gets it.",
+    blurb: "Time-honoured signets, bands and bangles that never ask for attention, and always get it.",
   },
 ];
 
-export const TONES: Record<Tone, { label: string; swatch: string }> = {
-  silver: { label: "Sterling Silver", swatch: "linear-gradient(135deg,#fafafa,#bdbdbd 50%,#8d8d8d)" },
-  gold: { label: "Gold Vermeil", swatch: "linear-gradient(135deg,#fbe7b0,#d4a952 50%,#9b722b)" },
-  black: { label: "Black Rhodium", swatch: "linear-gradient(135deg,#6b6b6b,#242424 50%,#050505)" },
-  steel: { label: "Stainless Steel", swatch: "linear-gradient(135deg,#f1f4f6,#aab2b8 50%,#6f777e)" },
-  "leather-black": { label: "Black", swatch: "#1c1b1a" },
-  "leather-tan": { label: "Tan", swatch: "#a8693a" },
-  "leather-brown": { label: "Brown", swatch: "#5a3824" },
-  "leather-navy": { label: "Navy", swatch: "#1f2a44" },
-};
-
-const SILVER: ProductOption = { id: "silver", label: "925 Sterling Silver", tone: "silver" };
-const GOLD: ProductOption = { id: "gold", label: "18K Gold Vermeil", tone: "gold", priceDelta: 2500 };
-const BLACK: ProductOption = { id: "black", label: "Black Rhodium", tone: "black", priceDelta: 500 };
-const STEEL: ProductOption = { id: "steel", label: "Stainless Steel", tone: "steel" };
-const STEEL_GOLD: ProductOption = { id: "gold", label: "Gold-Plated Steel", tone: "gold", priceDelta: 600 };
-const STEEL_BLACK: ProductOption = { id: "black", label: "Black IP Steel", tone: "black", priceDelta: 300 };
-
-const leather = (...tones: LeatherTone[]): ProductOption[] =>
-  tones.map((tone) => ({ id: tone.replace("leather-", ""), label: TONES[tone].label, tone }));
+export const MATERIALS: { id: Finish; name: string }[] = [
+  { id: "silver", name: "Silver Tone" },
+  { id: "gold", name: "Gold Tone" },
+  { id: "black", name: "Black" },
+  { id: "two-tone", name: "Two-Tone" },
+  { id: "leather", name: "Leather" },
+];
 
 const CHAIN_LENGTHS = { label: "Length", values: ['18"', '20"', '22"', '24"'] };
 const RING_SIZES = { label: "Ring Size", values: ["8", "10", "12", "14", "16", "18", "20", "22", "24"] };
 const WRIST_SIZES = { label: "Wrist Size", values: ['S · 7"', 'M · 7.5"', 'L · 8"', 'XL · 8.5"'] };
 
-const geometricPendant = (
-  shape: PendantShape,
-  name: string,
-  price: number,
-  copy: string,
-  extra: Partial<Product> = {},
-): Product => ({
-  slug: `${shape === "drop" ? "teardrop" : shape}-pendant`,
-  name,
-  category: "chains",
-  collection: "modern",
-  price,
-  options: [SILVER, GOLD, BLACK],
-  sizes: CHAIN_LENGTHS,
-  art: { kind: "chain", style: "cable", pendant: shape },
-  rating: 4.8,
-  reviews: 64,
-  short: copy,
-  description: `${copy} Hand-finished in 925 sterling silver and hung on a 2mm cable chain, it is designed to be worn close and layered freely.`,
-  details: [
-    "Pendant: 28mm, solid 925 sterling silver",
-    "Chain: 2mm cable chain with lobster clasp",
-    "Engravable reverse",
-    "BIS hallmarked, nickel free",
-  ],
-  ...extra,
-});
+const img = (...names: string[]) => names.map((n) => `/images/products/${n}.jpg`);
 
 export const PRODUCTS: Product[] = [
-  // ——— Chains & Pendants ———
-  geometricPendant("triangle", "Triangle Pendant", 4990, "A sharp, polished triangle with an inset border: bold geometry, quietly worn.", {
+  // ——— Chains ———
+  {
+    slug: "star-dog-tag-pendant",
+    name: "Star Dog Tag Pendant",
+    category: "chains",
+    collection: "modern",
+    price: 1499,
+    material: "Stainless Steel",
+    finish: "silver",
+    images: img("star-dog-tag-pendant"),
+    sizes: CHAIN_LENGTHS,
     badge: "Bestseller",
     bestseller: true,
-    rating: 4.9,
-    reviews: 212,
-  }),
-  geometricPendant("square", "Square Pendant", 4990, "A solid square plate with a recessed frame, strong and understated.", {
-    bestseller: true,
-    reviews: 148,
-  }),
-  geometricPendant("drop", "Teardrop Pendant", 4790, "A smooth teardrop with a softly bevelled inner line.", { isNew: true, badge: "New" }),
-  geometricPendant("hexagon", "Hexagon Pendant", 5290, "An architectural hexagon with a fine inner ring.", { isNew: true, badge: "New" }),
-  geometricPendant("disc", "Circle Disc Pendant", 5490, "A polished disc with a concentric inner ring and a single centre point.", {
-    badge: "Limited Edition",
-    rating: 5,
-    reviews: 41,
-  }),
-  {
-    slug: "signature-dog-tag-pendant",
-    name: "Signature Dog Tag Pendant",
-    category: "chains",
-    collection: "modern",
-    price: 5990,
-    options: [SILVER, BLACK, GOLD],
-    sizes: CHAIN_LENGTHS,
-    art: { kind: "chain", style: "ball", pendant: "tag" },
-    badge: "Online Exclusive",
-    bestseller: true,
-    rating: 4.8,
-    reviews: 176,
-    short: "A brushed silver tag on a ball chain, ready for your initials.",
-    description:
-      "Our take on the military classic, with softened corners, a brushed face and a polished bevelled edge. Add up to three initials or a date at no extra charge.",
-    details: ["Tag: 22 × 36mm, 925 sterling silver", "2.4mm ball chain", "Complimentary engraving", "BIS hallmarked"],
+    short: "A polished steel tag with a raised star emblem.",
+    description: "Our take on the military classic: a bevelled steel tag with a star medallion at its centre, hung on a fine box chain.",
+    details: ["Tag: 22 × 36mm", "2mm box chain with lobster clasp", "Stainless steel, won't tarnish", "Hypoallergenic"],
   },
   {
-    slug: "monogram-t-pendant",
-    name: "Monogram T Pendant",
+    slug: "wave-tag-pendant",
+    name: "Wave Tag Pendant",
     category: "chains",
     collection: "modern",
-    price: 6490,
-    options: [BLACK, SILVER, GOLD],
+    price: 1299,
+    material: "Gold-Plated Stainless Steel",
+    finish: "two-tone",
+    images: img("wave-tag-pendant"),
     sizes: CHAIN_LENGTHS,
-    art: { kind: "chain", style: "box", pendant: "monogram" },
     isNew: true,
     badge: "New",
-    rating: 4.9,
-    reviews: 38,
-    short: "The TATTV monogram, cast in solid silver and set on a box chain.",
-    description:
-      "Taken directly from our emblem, the interlocking T sits inside an open frame. Cast in solid silver and finished by hand.",
-    details: ["Pendant: 20 × 24mm", "1.6mm box chain", "Solid 925 sterling silver", "Signature TATTV clasp"],
+    short: "A sculpted wave-pattern tag on a slim chain.",
+    description: "Fluid diagonal ridges catch the light across this rectangular tag. Wear it alone or layered with a second chain.",
+    details: ["Tag: 15 × 40mm", "2mm rope chain", "Stainless steel with 18K gold plating", "Water resistant"],
   },
   {
-    slug: "arrow-pendant",
-    name: "Arrow Pendant",
-    category: "chains",
-    collection: "modern",
-    price: 3990,
-    options: [STEEL, STEEL_BLACK, STEEL_GOLD],
-    sizes: CHAIN_LENGTHS,
-    art: { kind: "chain", style: "cable", pendant: "arrow" },
-    rating: 4.6,
-    reviews: 92,
-    short: "A slim, directional arrow in surgical-grade stainless steel.",
-    description: "Minimal and purposeful. A slender arrow pendant in 316L stainless steel that won't tarnish, fade or flinch.",
-    details: ["Pendant: 40mm", "316L stainless steel, waterproof", "2mm cable chain", "Hypoallergenic"],
-  },
-  {
-    slug: "cuban-link-chain",
-    name: "Cuban Link Chain",
+    slug: "gothic-cross-pendant",
+    name: "Gothic Cross Pendant",
     category: "chains",
     collection: "classic",
-    price: 11990,
-    compareAt: 13990,
-    options: [SILVER, GOLD],
+    price: 1199,
+    material: "Oxidised Stainless Steel",
+    finish: "silver",
+    images: img("gothic-cross-pendant"),
     sizes: CHAIN_LENGTHS,
-    art: { kind: "chain", style: "curb" },
-    badge: "Bestseller",
-    bestseller: true,
-    rating: 4.9,
-    reviews: 301,
-    short: "A substantial 6mm Cuban curb, diamond-cut for light.",
-    description:
-      "The cornerstone of a man's jewellery box. Tightly interlocked, diamond-cut links lie flat against the collarbone and catch the light with every move.",
-    details: ["6mm width, 925 sterling silver", "Diamond-cut curb links", "Box clasp with safety latch", "Approx. 38g at 22\""],
+    short: "An ornate cross with an antiqued finish.",
+    description: "Detailed scrollwork and an oxidised finish give this cross pendant real depth. Hung on a sturdy wheat chain.",
+    details: ["Pendant: 45mm", "3mm wheat chain", "Oxidised stainless steel", "Lobster clasp"],
   },
   {
-    slug: "rope-chain",
-    name: "Classic Rope Chain",
+    slug: "medallion-pendant",
+    name: "Medallion Pendant",
     category: "chains",
     collection: "classic",
-    price: 7490,
-    options: [GOLD, SILVER],
+    price: 1399,
+    material: "Oxidised Stainless Steel",
+    finish: "silver",
+    images: img("medallion-pendant"),
     sizes: CHAIN_LENGTHS,
-    art: { kind: "chain", style: "rope" },
-    rating: 4.7,
-    reviews: 118,
-    short: "A 3mm twisted rope chain with timeless texture.",
-    description: "Dozens of tiny links twisted into a single rope, a traditional chain that pairs with any pendant in the collection.",
-    details: ["3mm width", "Lobster clasp", "925 sterling silver base", "Pendant compatible"],
+    isNew: true,
+    badge: "New",
+    short: "An intricately engraved round medallion.",
+    description: "A coin-style medallion with a deeply engraved star motif, finished by hand to bring out every detail.",
+    details: ["Medallion: 30mm", "2.5mm cable chain", "Oxidised stainless steel", "Lobster clasp"],
   },
   {
-    slug: "box-chain",
-    name: "Box Chain",
+    slug: "halo-ring-pendant",
+    name: "Halo Ring Pendant",
     category: "chains",
     collection: "modern",
-    price: 3490,
-    options: [SILVER, BLACK, GOLD],
+    price: 999,
+    material: "Stainless Steel",
+    finish: "silver",
+    images: img("halo-ring-pendant"),
     sizes: CHAIN_LENGTHS,
-    art: { kind: "chain", style: "box" },
-    rating: 4.7,
-    reviews: 87,
-    short: "A crisp, square-link everyday chain.",
-    description: "Geometric links create a smooth, fluid chain that works on its own or as the base for any TATTV pendant.",
-    details: ["1.6mm width", "925 sterling silver", "Lobster clasp", "Pendant compatible"],
+    short: "A minimal open-circle pendant for everyday wear.",
+    description: "A single polished ring on a fine chain: understated enough for every day, sharp over a knit or an open collar.",
+    details: ["Pendant: 14mm", "1.5mm cable chain", "Stainless steel", "Hypoallergenic"],
   },
 
   // ——— Rings ———
   {
-    slug: "heritage-signet-ring",
-    name: "Heritage Signet Ring",
+    slug: "stripe-signet-ring",
+    name: "Stripe Signet Ring",
     category: "rings",
     collection: "classic",
-    price: 6990,
-    options: [GOLD, SILVER],
+    price: 1499,
+    material: "Gold-Plated Stainless Steel",
+    finish: "gold",
+    images: img("stripe-signet-ring"),
     sizes: RING_SIZES,
-    art: { kind: "ring", style: "signet" },
     badge: "Bestseller",
     bestseller: true,
-    rating: 4.9,
-    reviews: 244,
-    short: "An oval signet with a polished face, ready for engraving.",
-    description:
-      "A signet is a signature. Ours has a generous oval face and a tapered shank, weighted to sit comfortably on the little or ring finger.",
-    details: ["Face: 14 × 11mm", "Solid 925 sterling silver", "Complimentary initial engraving", "Comfort-fit interior"],
+    short: "A bold signet with black enamel stripes and an emblem face.",
+    description: "A substantial signet with a crest-engraved face flanked by black enamel stripes. Made to be noticed.",
+    details: ["Face: 16 × 14mm", "Gold-plated stainless steel", "Black enamel detailing", "Comfort-fit interior"],
   },
   {
-    slug: "onyx-signet-ring",
-    name: "Black Onyx Signet",
+    slug: "classic-band-ring",
+    name: "Classic Band Ring",
     category: "rings",
     collection: "classic",
-    price: 7990,
-    options: [SILVER, GOLD, BLACK],
+    price: 899,
+    material: "Stainless Steel",
+    finish: "two-tone",
+    images: img("classic-band-ring"),
     sizes: RING_SIZES,
-    art: { kind: "ring", style: "onyx" },
-    rating: 4.8,
-    reviews: 133,
-    short: "Polished black onyx set into a sterling signet.",
-    description: "A deep black onyx inlay brings quiet drama to the classic signet. Each stone is hand-cut and individually set.",
-    details: ["Natural black onyx", "Face: 15 × 12mm", "925 sterling silver", "Stone may vary slightly"],
+    bestseller: true,
+    short: "A brushed 6mm band with polished bevelled edges.",
+    description: "Uncomplicated and essential. A brushed centre between polished edges, available in steel, black and gold tones.",
+    details: ["6mm width", "Stainless steel", "Brushed and polished finish", "Comfort-fit interior"],
   },
   {
-    slug: "ridged-band-ring",
-    name: "Ridged Band",
+    slug: "onyx-square-ring",
+    name: "Onyx Square Ring",
     category: "rings",
     collection: "modern",
-    price: 4490,
-    options: [BLACK, SILVER, GOLD],
+    price: 1299,
+    material: "Gold-Plated Stainless Steel",
+    finish: "gold",
+    images: img("onyx-square-ring", "onyx-square-ring-2"),
     sizes: RING_SIZES,
-    art: { kind: "ring", style: "ridged" },
+    short: "A square gold signet set with black onyx.",
+    description: "A clean square face inlaid with polished black onyx, framed in gold-plated steel.",
+    details: ["Face: 12 × 12mm", "Natural black onyx", "Gold-plated stainless steel", "Stone may vary slightly"],
+  },
+  {
+    slug: "black-spinner-ring",
+    name: "Black Spinner Ring",
+    category: "rings",
+    collection: "modern",
+    price: 799,
+    material: "Black IP Stainless Steel",
+    finish: "black",
+    images: img("black-spinner-ring"),
+    sizes: RING_SIZES,
     isNew: true,
     badge: "New",
-    rating: 4.7,
-    reviews: 29,
-    short: "Three sculpted ridges in a 7mm architectural band.",
-    description: "Inspired by brutalist façades, three crisp ridges add depth and shadow to a substantial 7mm band.",
-    details: ["7mm width", "925 sterling silver", "Brushed and polished finish", "Comfort-fit interior"],
+    short: "A matte black band with a rotating centre.",
+    description: "A tactile spinner band in matte black steel. The centre ring turns freely, perfect for restless hands.",
+    details: ["8mm width", "Black IP stainless steel", "Rotating centre band", "Scratch resistant"],
   },
   {
-    slug: "classic-band-6mm",
-    name: "Classic Band 6mm",
+    slug: "lion-medallion-ring",
+    name: "Lion Medallion Ring",
     category: "rings",
     collection: "classic",
-    price: 3990,
-    options: [SILVER, GOLD, BLACK],
+    price: 1599,
+    material: "Oxidised Stainless Steel",
+    finish: "silver",
+    images: img("lion-medallion-ring"),
     sizes: RING_SIZES,
-    art: { kind: "ring", style: "band" },
-    rating: 4.8,
-    reviews: 189,
-    short: "A pure, polished 6mm band.",
-    description: "Uncomplicated and essential. A high-polish, domed band that pairs with everything and wears beautifully over time.",
-    details: ["6mm width", "925 sterling silver", "High-polish finish", "Engravable interior"],
-  },
-  {
-    slug: "chain-link-ring",
-    name: "Chain Link Ring",
-    category: "rings",
-    collection: "modern",
-    price: 3490,
-    options: [STEEL, STEEL_BLACK, STEEL_GOLD],
-    sizes: RING_SIZES,
-    art: { kind: "ring", style: "link" },
-    rating: 4.5,
-    reviews: 71,
-    short: "Interlocking curb links that flex with your hand.",
-    description: "A full circle of solid curb links in 316L stainless steel. Flexible, tactile and impossible to ignore.",
-    details: ["5mm links", "316L stainless steel", "Waterproof, won't tarnish", "Hypoallergenic"],
-  },
-  {
-    slug: "monogram-t-ring",
-    name: "Monogram T Signet",
-    category: "rings",
-    collection: "modern",
-    price: 7490,
-    options: [BLACK, SILVER, GOLD],
-    sizes: RING_SIZES,
-    art: { kind: "ring", style: "monogram" },
     badge: "Limited Edition",
-    rating: 5,
-    reviews: 22,
-    short: "A square signet bearing the TATTV emblem.",
-    description: "Our emblem translated into a modern square signet. Oxidised recesses make the interlocking T stand out in relief.",
-    details: ["Face: 13 × 13mm", "925 sterling silver", "Oxidised relief detail", "Numbered edition of 500"],
+    short: "A round signet crowned with a lion's head.",
+    description: "A regal round face with a detailed lion's head in relief, oxidised to bring out its texture.",
+    details: ["Face: 18mm", "Oxidised stainless steel", "Relief detailing", "Limited run"],
   },
 
   // ——— Bracelets ———
   {
-    slug: "cuban-curb-bracelet",
-    name: "Cuban Curb Bracelet",
+    slug: "mesh-cuff-bracelet",
+    name: "Mesh Cuff Bracelet",
     category: "bracelets",
-    collection: "classic",
-    price: 8490,
-    options: [SILVER, GOLD],
+    collection: "modern",
+    price: 1799,
+    material: "Stainless Steel",
+    finish: "black",
+    images: img("mesh-cuff-bracelet"),
     sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "curb" },
     badge: "Bestseller",
     bestseller: true,
-    rating: 4.9,
-    reviews: 198,
-    short: "The 8mm Cuban, scaled perfectly for the wrist.",
-    description: "Our bestselling chain, reimagined for the wrist. Diamond-cut curb links with a secure box clasp.",
-    details: ["8mm width", "925 sterling silver", "Box clasp with safety latch", "Pairs with the Cuban Link Chain"],
+    short: "A woven-mesh open cuff in black and steel.",
+    description: "Finely woven steel mesh shaped into an open cuff that slips on from the side and sits close to the wrist.",
+    details: ["10mm width", "Stainless steel mesh", "Open cuff, slightly adjustable", "Water resistant"],
   },
   {
-    slug: "onyx-bead-bracelet",
-    name: "Onyx Bead Bracelet",
+    slug: "open-cuff-bracelet",
+    name: "Open Cuff Bracelet",
     category: "bracelets",
     collection: "modern",
-    price: 2990,
-    options: [SILVER, BLACK, GOLD],
+    price: 1299,
+    material: "Stainless Steel",
+    finish: "gold",
+    images: img("open-cuff-bracelet"),
     sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "beads", bead: "onyx" },
-    bestseller: true,
-    rating: 4.8,
-    reviews: 265,
-    short: "Matte black onyx beads with a sterling accent.",
-    description: "8mm matte onyx beads on a durable stretch cord, finished with a single sterling silver accent bead.",
-    details: ["8mm natural onyx beads", "Sterling silver accent bead", "Reinforced stretch cord", "Stackable"],
-  },
-  {
-    slug: "tiger-eye-bead-bracelet",
-    name: "Tiger Eye Bead Bracelet",
-    category: "bracelets",
-    collection: "classic",
-    price: 2990,
-    options: [GOLD, SILVER],
-    sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "beads", bead: "tiger" },
-    isNew: true,
-    badge: "New",
-    rating: 4.7,
-    reviews: 34,
-    short: "Warm, banded tiger eye with a gold-tone accent.",
-    description: "Tiger eye has long been carried for focus and courage. Polished 8mm beads, finished with a vermeil accent.",
-    details: ["8mm natural tiger eye", "Vermeil or silver accent bead", "Reinforced stretch cord", "Stackable"],
-  },
-  {
-    slug: "lava-stone-bracelet",
-    name: "Lava Stone Bracelet",
-    category: "bracelets",
-    collection: "modern",
-    price: 2490,
-    options: [BLACK, SILVER],
-    sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "beads", bead: "lava" },
-    rating: 4.6,
-    reviews: 58,
-    short: "Textured volcanic stone for a raw, modern edge.",
-    description: "Porous lava stone beads with a tactile, matte finish. A drop of essential oil turns it into a subtle diffuser.",
-    details: ["8mm lava stone", "Black rhodium accent bead", "Reinforced stretch cord", "Stackable"],
-  },
-  {
-    slug: "open-cuff",
-    name: "Sculpted Open Cuff",
-    category: "bracelets",
-    collection: "modern",
-    price: 6990,
-    options: [SILVER, BLACK, GOLD],
-    sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "cuff" },
-    rating: 4.8,
-    reviews: 47,
-    short: "A solid open cuff with a softly bevelled edge.",
-    description: "Forged from a single bar of sterling silver, this cuff slips on from the side and sits close to the wrist.",
-    details: ["8mm width", "Solid 925 sterling silver", "Slightly adjustable", "Approx. 32g"],
+    short: "A slim, polished open cuff.",
+    description: "A pared-back open cuff with softly rounded ends. Stack it with a watch or a leather bracelet.",
+    details: ["4mm width", "Stainless steel", "Open cuff, slightly adjustable", "Stackable"],
   },
   {
     slug: "braided-leather-bracelet",
     name: "Braided Leather Bracelet",
     category: "bracelets",
     collection: "modern",
-    price: 2490,
-    options: [...leather("leather-black", "leather-brown", "leather-tan")],
+    price: 1099,
+    material: "Genuine Leather & Steel",
+    finish: "leather",
+    images: img("braided-leather-bracelet", "braided-leather-bracelet-2"),
     sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "leather" },
-    rating: 4.6,
-    reviews: 112,
-    short: "Hand-braided Italian leather with a magnetic steel clasp.",
-    description: "Four strands of full-grain leather, hand-braided and finished with a secure magnetic clasp in brushed steel.",
-    details: ["6mm braided leather", "Magnetic stainless steel clasp", "Avoid prolonged water contact", "Gift boxed"],
+    bestseller: true,
+    short: "Multi-strand braided leather with a gold-tone clasp.",
+    description: "Several strands of braided black leather, finished with a secure magnetic clasp.",
+    details: ["Multi-strand braided leather", "Magnetic stainless steel clasp", "Avoid prolonged water contact", "Gift boxed"],
   },
   {
-    slug: "box-link-bracelet",
-    name: "Box Link Bracelet",
+    slug: "black-leather-bar-bracelet",
+    name: "Leather Bar Bracelet",
+    category: "bracelets",
+    collection: "modern",
+    price: 999,
+    material: "Genuine Leather & Steel",
+    finish: "leather",
+    images: img("black-leather-bar-bracelet"),
+    sizes: WRIST_SIZES,
+    isNew: true,
+    badge: "New",
+    short: "Black braided leather with a brushed steel bar.",
+    description: "A single braided leather cord finished with a brushed steel ID bar, ready to engrave.",
+    details: ["6mm braided leather", "Brushed steel ID bar", "Fold-over clasp", "Engravable"],
+  },
+  {
+    slug: "steel-kada-bracelet",
+    name: "Steel Kada Bracelet",
     category: "bracelets",
     collection: "classic",
-    price: 4490,
-    options: [SILVER, GOLD],
+    price: 1299,
+    material: "Stainless Steel",
+    finish: "silver",
+    images: img("steel-kada-bracelet"),
     sizes: WRIST_SIZES,
-    art: { kind: "bracelet", style: "box" },
-    rating: 4.7,
-    reviews: 66,
-    short: "Refined square links with a fluid drape.",
-    description: "A slim box link bracelet that stacks effortlessly with a watch or a bead bracelet.",
-    details: ["3mm width", "925 sterling silver", "Lobster clasp", "Stackable"],
+    short: "A solid steel kada with a textured inlay.",
+    description: "A modern take on the traditional kada: solid polished steel with a textured centre inlay and a screw clasp.",
+    details: ["8mm width", "Stainless steel", "Screw clasp", "Water resistant"],
+  },
+  {
+    slug: "steel-bar-bracelet",
+    name: "Steel Bar Bracelet",
+    category: "bracelets",
+    collection: "classic",
+    price: 1199,
+    material: "Stainless Steel",
+    finish: "silver",
+    images: img("steel-bar-bracelet"),
+    sizes: WRIST_SIZES,
+    short: "A rigid steel bangle with a twin-bar detail.",
+    description: "Clean, architectural and comfortable: a polished steel bangle with a twin-bar centre.",
+    details: ["6mm width", "Stainless steel", "Hinged clasp", "Water resistant"],
+  },
+  {
+    slug: "gold-cable-bangle",
+    name: "Gold Cable Bangle",
+    category: "bracelets",
+    collection: "classic",
+    price: 1499,
+    material: "Gold-Plated Stainless Steel",
+    finish: "gold",
+    images: img("gold-cable-bangle"),
+    sizes: WRIST_SIZES,
+    short: "A twisted cable bangle with a polished gold finish.",
+    description: "Twisted cable detailing wraps a gold-tone bangle, finished with a discreet hinged clasp.",
+    details: ["5mm width", "Gold-plated stainless steel", "Hinged clasp", "Stackable"],
+  },
+  {
+    slug: "carbon-inlay-bangle",
+    name: "Carbon Inlay Bangle",
+    category: "bracelets",
+    collection: "modern",
+    price: 1599,
+    material: "Gold-Plated Stainless Steel",
+    finish: "two-tone",
+    images: img("carbon-inlay-bangle"),
+    sizes: WRIST_SIZES,
+    isNew: true,
+    badge: "New",
+    short: "A gold-tone bangle with a black carbon-texture inlay.",
+    description: "A polished gold-tone bangle set with a black textured inlay for contrast.",
+    details: ["8mm width", "Gold-plated stainless steel", "Carbon-texture inlay", "Hinged clasp"],
   },
 
   // ——— Wallets ———
   {
-    slug: "heritage-bifold-wallet",
-    name: "Heritage Bifold Wallet",
+    slug: "leather-bifold-wallet",
+    name: "Leather Bifold Wallet",
     category: "wallets",
     collection: "classic",
-    price: 3490,
-    options: leather("leather-brown", "leather-black", "leather-tan"),
-    art: { kind: "wallet", style: "bifold" },
-    badge: "Bestseller",
+    price: 1499,
+    material: "Genuine Leather",
+    finish: "leather",
+    images: img("leather-bifold-wallet"),
     bestseller: true,
-    rating: 4.8,
-    reviews: 412,
-    short: "Full-grain leather bifold with 8 card slots.",
-    description:
-      "Cut from vegetable-tanned full-grain leather that develops a rich patina with age. Hand-painted edges and a debossed TATTV emblem.",
-    details: ["8 card slots, 2 note compartments", "Full-grain vegetable-tanned leather", "RFID blocking lining", "11.5 × 9.5cm closed"],
-  },
-  {
-    slug: "slim-card-holder",
-    name: "Slim Card Holder",
-    category: "wallets",
-    collection: "modern",
-    price: 1990,
-    options: leather("leather-black", "leather-navy", "leather-tan"),
-    art: { kind: "wallet", style: "cardholder" },
-    isNew: true,
-    badge: "New",
-    rating: 4.7,
-    reviews: 95,
-    short: "Four slots, one centre pocket, zero bulk.",
-    description: "For the minimalist. Slips into a front pocket and holds everything you actually need.",
-    details: ["4 card slots + centre pocket", "Saffiano-textured leather", "RFID blocking", "10 × 7cm"],
-  },
-  {
-    slug: "zip-around-wallet",
-    name: "Zip-Around Wallet",
-    category: "wallets",
-    collection: "classic",
-    price: 4490,
-    options: leather("leather-black", "leather-brown"),
-    art: { kind: "wallet", style: "zip" },
-    rating: 4.6,
-    reviews: 53,
-    short: "Secure zip closure with a dedicated coin pocket.",
-    description: "A travel-ready wallet with a smooth metal zip, 12 card slots, a coin pocket and room for foreign currency.",
-    details: ["12 card slots, coin pocket", "Full-grain leather", "Gunmetal YKK zip", "19 × 10cm"],
-  },
-  {
-    slug: "modern-slim-bifold",
-    name: "Modern Slim Bifold",
-    category: "wallets",
-    collection: "modern",
-    price: 2790,
-    options: leather("leather-navy", "leather-black"),
-    art: { kind: "wallet", style: "bifold" },
-    rating: 4.7,
-    reviews: 140,
-    short: "A pared-back bifold with clean, raw-cut edges.",
-    description: "Everything you love about a bifold, minus a third of the bulk. Six card slots and a full-length note pocket.",
-    details: ["6 card slots, 1 note compartment", "Pebbled full-grain leather", "RFID blocking", "11 × 9cm closed"],
+    short: "A slim genuine-leather bifold with six card slots.",
+    description: "Soft genuine leather in a slim bifold with six card slots and a full-length note compartment.",
+    details: ["6 card slots, 1 note compartment", "Genuine leather", "RFID blocking lining", "11 × 9cm closed"],
   },
 ];
 
 export const getProduct = (slug: string) => PRODUCTS.find((p) => p.slug === slug);
 
-export const getOption = (product: Product, optionId?: string) =>
-  product.options.find((o) => o.id === optionId) ?? product.options[0];
-
-export const unitPrice = (product: Product, optionId?: string) => product.price + (getOption(product, optionId).priceDelta ?? 0);
-
 export const categoryName = (id: CategoryId) => CATEGORIES.find((c) => c.id === id)?.name ?? id;
-
-export const materialOf = (tone: Tone) => (tone.startsWith("leather") ? "leather" : tone);
-
-export const MATERIALS = [
-  { id: "silver", name: "Sterling Silver" },
-  { id: "gold", name: "Gold" },
-  { id: "black", name: "Black Finish" },
-  { id: "steel", name: "Stainless Steel" },
-  { id: "leather", name: "Leather" },
-] as const;
 
 export const relatedProducts = (product: Product, count = 4) => {
   const sameCategory = PRODUCTS.filter((p) => p.slug !== product.slug && p.category === product.category);
@@ -543,9 +367,6 @@ export function searchProducts(query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   return PRODUCTS.filter((p) =>
-    [p.name, p.short, categoryName(p.category), p.collection, ...p.options.map((o) => o.label)]
-      .join(" ")
-      .toLowerCase()
-      .includes(q),
+    [p.name, p.short, categoryName(p.category), p.collection, p.material].join(" ").toLowerCase().includes(q),
   );
 }

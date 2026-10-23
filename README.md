@@ -15,7 +15,7 @@ npm run build && npm start
 | `app/` | Routes: home, `/shop` (filters via URL), `/product/[slug]`, `/cart`, `/checkout`, `/wishlist`, `/account`, `/collections`, `/about`, `/help` |
 | `components/` | Header + mega menu, cart drawer, search overlay, product card/rail, footer |
 | `components/store-provider.tsx` | Cart & wishlist state, persisted to `localStorage` |
-| `components/product-art.tsx` | Procedural SVG product renderings, placeholders until real photography exists |
+| `public/images/` | Product, category and hero photos, cropped from TATTV's Instagram until original high-res shots are supplied |
 | `lib/products.ts` | Product catalogue, categories, collections |
 | `lib/site.ts` | Contact details and social links (placeholders) |
 | `lib/navigation.ts` | Main navigation and mega-menu content |

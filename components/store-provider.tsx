@@ -1,12 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getProduct, unitPrice } from "@/lib/products";
+import { getProduct } from "@/lib/products";
 
 export interface CartLine {
   key: string;
   slug: string;
-  optionId: string;
   size?: string;
   qty: number;
 }
@@ -29,8 +28,16 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-const CART_KEY = "tattv.cart";
+const CART_KEY = "tattv.cart.v2";
 const WISHLIST_KEY = "tattv.wishlist";
+
+function writeStorage(key: string, value: unknown) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage can be unavailable (private mode, blocked site data); the session still works in memory.
+  }
+}
 
 function readStorage<T>(key: string, fallback: T): T {
   try {
@@ -55,15 +62,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    if (hydrated) writeStorage(CART_KEY, cart);
   }, [cart, hydrated]);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+    if (hydrated) writeStorage(WISHLIST_KEY, wishlist);
   }, [wishlist, hydrated]);
 
   const addToCart = useCallback((line: Omit<CartLine, "key" | "qty">, qty = 1) => {
-    const key = [line.slug, line.optionId, line.size ?? ""].join("|");
+    const key = [line.slug, line.size ?? ""].join("|");
     setCart((prev) => {
       const existing = prev.find((l) => l.key === key);
       if (existing) return prev.map((l) => (l.key === key ? { ...l, qty: Math.min(10, l.qty + qty) } : l));
@@ -87,7 +94,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const cartCount = cart.reduce((n, l) => n + l.qty, 0);
     const subtotal = cart.reduce((sum, l) => {
       const product = getProduct(l.slug);
-      return product ? sum + unitPrice(product, l.optionId) * l.qty : sum;
+      return product ? sum + product.price * l.qty : sum;
     }, 0);
     return {
       cart,

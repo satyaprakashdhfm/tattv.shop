@@ -1,28 +1,16 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-export function SectionHeading({
-  eyebrow,
-  title,
-  href,
-  cta = "Shop All",
-  center,
-}: {
-  eyebrow?: string;
-  title: string;
-  href?: string;
-  cta?: string;
-  center?: boolean;
-}) {
+export function SectionHeading({ title, href, cta = "Shop All" }: { title: string; href?: string; cta?: string }) {
   return (
-    <div className={`mb-10 flex flex-col gap-4 md:mb-12 ${center ? "items-center text-center" : "md:flex-row md:items-end md:justify-between"}`}>
-      <div>
-        {eyebrow && <p className="eyebrow mb-3 text-muted">{eyebrow}</p>}
-        <h2 className="display text-4xl md:text-5xl">{title}</h2>
-      </div>
+    <div className="relative mb-8 flex flex-col items-center gap-3 md:mb-10">
+      <h2 className="title text-center text-lg md:text-xl">{title}</h2>
       {href && (
-        <Link href={href} className="eyebrow flex items-center gap-2 border-b border-ink pb-1 hover:opacity-60">
-          {cta} <ArrowRight size={14} />
+        <Link
+          href={href}
+          className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-muted hover:text-ink md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2"
+        >
+          <span className="underline-reveal">{cta}</span> <ArrowRight size={13} />
         </Link>
       )}
     </div>

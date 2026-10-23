@@ -12,21 +12,21 @@ export default function WishlistPage() {
 
   return (
     <div className="container-x py-12 md:py-16">
-      <h1 className="display text-5xl">Wishlist</h1>
+      <h1 className="title text-xl md:text-2xl">Wishlist</h1>
       <p className="mt-2 text-sm text-muted">
         {items.length} saved {items.length === 1 ? "piece" : "pieces"}
       </p>
       {items.length === 0 ? (
         <div className="flex flex-col items-center py-24 text-center">
           <Heart size={36} strokeWidth={1} />
-          <p className="display mt-6 text-3xl">Nothing saved yet</p>
+          <p className="title mt-6 text-base md:text-lg">Nothing saved yet</p>
           <p className="mt-2 text-sm text-muted">Tap the heart on any piece to keep it here.</p>
           <Link href="/shop" className="btn btn-dark mt-8">
             Explore the Collection
           </Link>
         </div>
       ) : (
-        <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
           {items.map((p) => (
             <ProductCard key={p.slug} product={p} />
           ))}
