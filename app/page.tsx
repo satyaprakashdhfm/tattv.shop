@@ -12,38 +12,25 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-[#e7ddd0]">
-        {/* Full-width photo; below lg it sits above the copy, from lg up the copy overlays its left side. */}
-        <div className="relative aspect-[16/9] lg:aspect-auto lg:h-[min(64vh,580px)] lg:min-h-[460px]">
-          <Image
-            src="/images/hero/hero-bg.jpg"
-            alt="Man in a black suit wearing a TATTV chain, curb bracelet and onyx ring, holding a leather wallet"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[75%_25%]"
-          />
-          <div className="absolute inset-y-0 left-0 hidden w-3/5 bg-gradient-to-r from-[#e7ddd0]/85 via-[#e7ddd0]/45 to-transparent lg:block" />
-        </div>
-        <div className="container-x lg:absolute lg:inset-0 lg:flex lg:items-center">
-          <div className="max-w-lg animate-fade-in py-10 lg:max-w-[400px] lg:py-0 xl:max-w-lg">
-            <h1 className="title text-3xl leading-[1.15] tracking-[0.04em] lg:text-[42px]">
-              More than accessories.
-              <br />
-              <span className="font-normal">It&apos;s your signature.</span>
-            </h1>
-            <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-ink/75">
-              Chains, rings, bracelets and everyday essentials designed to define your style.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/shop" className="btn btn-dark">
-                Shop the Collection
-              </Link>
-              <Link href="/collections" className="btn btn-outline">
-                Discover Your Style
-              </Link>
-            </div>
-          </div>
+      <section className="relative h-[480px] overflow-hidden bg-ink text-white sm:h-[520px] lg:h-[min(64vh,580px)] lg:min-h-[480px]">
+        <Image
+          src="/images/hero/hero-bg-new.jpg"
+          alt="Man at sunset wearing a TATTV chain, bracelets and onyx ring, holding a leather wallet"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[68%_30%] lg:object-[50%_30%]"
+        />
+        {/* Darken the lower half so the centred copy reads over the sky and the suit. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 via-40% to-transparent to-70%" />
+        <div className="container-x absolute inset-x-0 bottom-0 flex flex-col items-center pb-12 text-center md:pb-14">
+          <p className="eyebrow animate-fade-in text-white/85">The Men&apos;s Collection</p>
+          <h1 className="display mt-4 max-w-3xl animate-fade-in text-3xl font-normal leading-tight sm:text-4xl lg:text-[44px]">
+            Chains, rings, bracelets and everyday essentials designed to define your style.
+          </h1>
+          <Link href="/shop" className="btn btn-outline-light mt-8 h-11 animate-fade-in">
+            Discover the Collection
+          </Link>
         </div>
       </section>
 
