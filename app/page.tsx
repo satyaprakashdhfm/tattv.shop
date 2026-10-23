@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
@@ -41,8 +42,28 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Editorial campaign banner */}
+      <section className="relative mt-6 h-[420px] overflow-hidden bg-[#0d0d0b] text-white md:mt-8 md:h-[440px] lg:h-[480px]">
+        <Image
+          src="/images/banners/steel-edit.jpg"
+          alt="TATTV Twin Cable Bangle resting on black satin"
+          fill
+          sizes="100vw"
+          className="object-cover object-[82%_50%] md:object-[75%_50%]"
+        />
+        <div className="container-x absolute inset-0 flex items-start pt-14 md:items-center md:pt-0">
+          <div className="max-w-[280px] sm:max-w-sm">
+            <p className="eyebrow text-white/60">The Steel Edit</p>
+            <h2 className="display mt-4 text-3xl font-normal leading-tight md:text-[42px]">Built for every day. Made to last.</h2>
+            <Link href="/shop" className="mt-7 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.22em] text-white/90 hover:text-white">
+              <span className="underline-reveal">Shop the Edit</span> <ArrowRight size={14} strokeWidth={1.5} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Shop by category */}
-      <section className="py-5 md:py-6">
+      <section className="pb-5 pt-10 md:pb-6 md:pt-12">
         <h2 className="title mb-6 text-center text-lg md:mb-7 md:text-xl">Shop by Category</h2>
         <div className="grid grid-cols-2 gap-2.5 px-2.5 lg:grid-cols-4">
           {CATEGORIES.map((c) => (

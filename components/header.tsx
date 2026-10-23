@@ -98,7 +98,7 @@ export function Header() {
           </ul>
         </nav>
 
-        <div className="flex items-center justify-end gap-5" onMouseEnter={() => setActive(null)}>
+        <div className="col-start-3 flex items-center justify-end gap-5" onMouseEnter={() => setActive(null)}>
           <button aria-label="Search" onClick={() => setSearchOpen(true)} className="hover:opacity-60">
             <Search size={20} strokeWidth={1.5} />
           </button>
