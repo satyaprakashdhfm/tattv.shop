@@ -7,7 +7,7 @@ import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 const MESSAGES = [
   `Complimentary shipping across India on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}`,
   "Easy 15-day returns & exchanges",
-  "Every order arrives gift-ready in a TATTV pouch",
+  "Every order arrives in a signature TATTV pouch",
 ];
 
 export function AnnouncementBar() {

@@ -1,22 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Gift } from "lucide-react";
-import { CATEGORIES, COLLECTIONS, PRODUCTS, getProduct } from "@/lib/products";
-import { ProductImage } from "@/components/product-image";
-import { PhotoMosaic } from "@/components/photo-mosaic";
+import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
-import { formatPrice } from "@/lib/format";
-
-const photo = (name: string) => `/images/products/${name}.jpg`;
-
-const COLLECTION_PHOTOS: Record<string, string[]> = {
-  modern: [photo("lightning-tag-pendant"), photo("mesh-inlay-bangle"), photo("curb-link-ring"), photo("leather-card-wallet-2")],
-  classic: [photo("star-dog-tag-pendant"), photo("twin-cable-bangle"), photo("mesh-inlay-bangle-2"), photo("leather-card-wallet")],
-};
-
-const GIFT_PICKS = ["curb-link-ring", "leather-card-wallet", "star-dog-tag-pendant", "mesh-inlay-bangle"];
 
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
@@ -89,28 +76,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Modern / Classic */}
-      <section className="grid md:grid-cols-2">
-        {COLLECTIONS.map((col) => {
-          const dark = col.id === "modern";
-          return (
-            <Link
-              key={col.id}
-              href={`/shop?collection=${col.id}`}
-              className={`group flex flex-col overflow-hidden ${dark ? "bg-ink text-white" : "bg-sand-dark text-ink"}`}
-            >
-              <PhotoMosaic images={COLLECTION_PHOTOS[col.id]} />
-              <div className="max-w-sm p-8 md:p-12">
-                <p className={`eyebrow mb-3 ${dark ? "text-white/60" : "text-muted"}`}>The {col.name} Collection</p>
-                <h2 className="title text-xl md:text-2xl">{col.tagline}</h2>
-                <p className={`mt-4 text-sm leading-relaxed ${dark ? "text-white/70" : "text-ink/70"}`}>{col.blurb}</p>
-                <span className={`btn mt-8 ${dark ? "btn-light" : "btn-dark"}`}>Shop {col.name}</span>
-              </div>
-            </Link>
-          );
-        })}
-      </section>
-
       {/* Bestsellers */}
       <section className="container-x py-16 md:py-20">
         <SectionHeading title="Bestsellers" href="/shop?tag=bestseller" />
@@ -118,36 +83,6 @@ export default function HomePage() {
           {bestsellers.map((p) => (
             <ProductCard key={p.slug} product={p} />
           ))}
-        </div>
-      </section>
-
-      {/* Gifting */}
-      <section className="container-x pb-16 md:pb-20">
-        <div className="grid overflow-hidden bg-sand md:grid-cols-2">
-          <div className="flex flex-col justify-center p-10 md:p-16">
-            <Gift size={28} strokeWidth={1.2} />
-            <p className="eyebrow mt-6 text-muted">The Gift Edit</p>
-            <h2 className="title mt-3 text-xl md:text-2xl">Gifts he&apos;ll actually wear</h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
-              Thoughtful pieces under {formatPrice(1500)}, each one arriving in our signature TATTV pouch with a handwritten note.
-            </p>
-            <div className="mt-8">
-              <Link href="/shop?tag=gifts" className="btn btn-dark">
-                Shop Gifts
-              </Link>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-px">
-            {GIFT_PICKS.map((slug) => {
-              const p = getProduct(slug)!;
-              return (
-                <Link key={slug} href={`/product/${slug}`} className="group relative aspect-square overflow-hidden">
-                  <ProductImage product={p} sizes="25vw" className="transition-transform duration-700 group-hover:scale-105" />
-                  <span className="absolute bottom-3 left-3 bg-white px-2 py-1 text-[11px] font-semibold">{formatPrice(p.price)}</span>
-                </Link>
-              );
-            })}
-          </div>
         </div>
       </section>
 

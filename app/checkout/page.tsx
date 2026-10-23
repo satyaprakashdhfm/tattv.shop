@@ -18,7 +18,6 @@ const PAYMENT_METHODS = [
 export default function CheckoutPage() {
   const { cart, subtotal, clearCart } = useStore();
   const [payment, setPayment] = useState("upi");
-  const [gift, setGift] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const shipping = shippingFor(subtotal);
 
@@ -83,11 +82,6 @@ export default function CheckoutPage() {
               <input required placeholder="Pincode" aria-label="Pincode" pattern="[0-9]{6}" title="6-digit pincode" className="field" />
               <input disabled value="India" aria-label="Country" className="field bg-sand text-muted" />
             </div>
-            <label className="mt-5 flex items-center gap-3 text-sm">
-              <input type="checkbox" checked={gift} onChange={(e) => setGift(e.target.checked)} className="h-4 w-4 accent-ink" />
-              This is a gift. Add a complimentary handwritten note.
-            </label>
-            {gift && <textarea placeholder="Your message" aria-label="Gift message" maxLength={200} className="field mt-3 h-24 py-3" />}
           </fieldset>
 
           <fieldset>
@@ -144,12 +138,6 @@ export default function CheckoutPage() {
                 <dt>Shipping</dt>
                 <dd>{shipping ? formatPrice(shipping) : "Complimentary"}</dd>
               </div>
-              {gift && (
-                <div className="flex justify-between">
-                  <dt>Gift box & note</dt>
-                  <dd>Complimentary</dd>
-                </div>
-              )}
               <div className="flex justify-between border-t border-ink/10 pt-4 text-base font-medium">
                 <dt>Total</dt>
                 <dd>{formatPrice(subtotal + shipping)}</dd>

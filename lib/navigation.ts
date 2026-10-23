@@ -15,6 +15,5 @@ export const NAV: NavItem[] = [
   { label: "Rings", href: "/shop?category=rings" },
   { label: "Bracelets", href: "/shop?category=bracelets" },
   { label: "Wallets", href: "/shop?category=wallets" },
-  { label: "Gifts", href: "/shop?tag=gifts" },
   { label: "Our Story", href: "/about" },
 ];

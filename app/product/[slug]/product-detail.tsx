@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BadgeCheck, Check, ChevronDown, Gift, Heart, Minus, Plus, RotateCcw, Truck } from "lucide-react";
+import { BadgeCheck, Check, ChevronDown, Heart, Minus, Package, Plus, RotateCcw, Truck } from "lucide-react";
 import { COLLECTIONS, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 import { ProductImage } from "@/components/product-image";
@@ -207,7 +207,7 @@ export function ProductDetail({ product }: { product: Product }) {
               <RotateCcw size={20} strokeWidth={1.2} /> 15-Day Returns
             </li>
             <li className="flex flex-col items-center gap-2">
-              <Gift size={20} strokeWidth={1.2} /> Gift Boxed
+              <Package size={20} strokeWidth={1.2} /> Secure Packaging
             </li>
           </ul>
 

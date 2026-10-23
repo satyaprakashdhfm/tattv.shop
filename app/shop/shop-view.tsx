@@ -18,7 +18,6 @@ import { ProductCard } from "@/components/product-card";
 const TAGS: Record<string, { title: string; blurb: string; test: (p: Product) => boolean }> = {
   new: { title: "New Arrivals", blurb: "The latest additions to the TATTV collection.", test: (p) => !!p.isNew },
   bestseller: { title: "Bestsellers", blurb: "The pieces our clients return to, again and again.", test: (p) => !!p.bestseller },
-  gifts: { title: "The Gift Edit", blurb: "Thoughtful pieces under ₹1,500, beautifully packed.", test: (p) => p.price <= 1500 },
 };
 
 const PRICES = [
