@@ -20,11 +20,6 @@ import { ProductCard } from "@/components/product-card";
 const TAGS: Record<string, { title: string; blurb: string; test: (p: Product) => boolean }> = {
   new: { title: "New Arrivals", blurb: "The latest additions to the TATTV collection.", test: (p) => !!p.isNew },
   bestseller: { title: "Bestsellers", blurb: "The pieces our clients return to, again and again.", test: (p) => !!p.bestseller },
-  elements: {
-    title: "Pancha Tattva",
-    blurb: "Five pendants honouring the five elements: earth, water, fire, air and space.",
-    test: (p) => !!p.element,
-  },
   gifts: { title: "The Gift Edit", blurb: "Thoughtful pieces under ₹4,999, beautifully boxed.", test: (p) => unitPrice(p) <= 4999 },
 };
 

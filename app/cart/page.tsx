@@ -35,7 +35,7 @@ export default function CartPage() {
             ))}
           </div>
           <aside className="lg:col-span-4">
-            <div className="bg-sand p-8 lg:sticky lg:top-36">
+            <div className="bg-sand p-8 lg:sticky lg:top-28">
               <p className="eyebrow mb-6">Order Summary</p>
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between">

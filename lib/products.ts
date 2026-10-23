@@ -1,6 +1,5 @@
 export type CategoryId = "chains" | "rings" | "bracelets" | "wallets";
 export type CollectionId = "modern" | "classic";
-export type ElementId = "prithvi" | "jal" | "agni" | "vayu" | "akash";
 
 export type MetalTone = "silver" | "gold" | "black" | "steel";
 export type LeatherTone = "leather-black" | "leather-tan" | "leather-brown" | "leather-navy";
@@ -31,7 +30,6 @@ export interface Product {
   name: string;
   category: CategoryId;
   collection: CollectionId;
-  element?: ElementId;
   price: number;
   compareAt?: number;
   options: ProductOption[];
@@ -69,14 +67,6 @@ export const COLLECTIONS: { id: CollectionId; name: string; tagline: string; blu
   },
 ];
 
-export const ELEMENTS: { id: ElementId; name: string; english: string; shape: PendantShape; meaning: string }[] = [
-  { id: "prithvi", name: "Prithvi", english: "Earth", shape: "square", meaning: "Grounding & stability" },
-  { id: "jal", name: "Jal", english: "Water", shape: "drop", meaning: "Flow & adaptability" },
-  { id: "agni", name: "Agni", english: "Fire", shape: "triangle", meaning: "Drive & transformation" },
-  { id: "vayu", name: "Vayu", english: "Air", shape: "hexagon", meaning: "Freedom & movement" },
-  { id: "akash", name: "Akash", english: "Space", shape: "disc", meaning: "Clarity & expansion" },
-];
-
 export const TONES: Record<Tone, { label: string; swatch: string }> = {
   silver: { label: "Sterling Silver", swatch: "linear-gradient(135deg,#fafafa,#bdbdbd 50%,#8d8d8d)" },
   gold: { label: "Gold Vermeil", swatch: "linear-gradient(135deg,#fbe7b0,#d4a952 50%,#9b722b)" },
@@ -102,19 +92,17 @@ const CHAIN_LENGTHS = { label: "Length", values: ['18"', '20"', '22"', '24"'] };
 const RING_SIZES = { label: "Ring Size", values: ["8", "10", "12", "14", "16", "18", "20", "22", "24"] };
 const WRIST_SIZES = { label: "Wrist Size", values: ['S · 7"', 'M · 7.5"', 'L · 8"', 'XL · 8.5"'] };
 
-const elementPendant = (
-  element: ElementId,
-  name: string,
+const geometricPendant = (
   shape: PendantShape,
+  name: string,
   price: number,
   copy: string,
   extra: Partial<Product> = {},
 ): Product => ({
-  slug: `${element}-${shape}-pendant`,
+  slug: `${shape === "drop" ? "teardrop" : shape}-pendant`,
   name,
   category: "chains",
   collection: "modern",
-  element,
   price,
   options: [SILVER, GOLD, BLACK],
   sizes: CHAIN_LENGTHS,
@@ -122,11 +110,11 @@ const elementPendant = (
   rating: 4.8,
   reviews: 64,
   short: copy,
-  description: `Part of the Pancha Tattva series. ${copy} Hand-finished in 925 sterling silver and hung on a 2mm cable chain, it is designed to be worn close and layered freely.`,
+  description: `${copy} Hand-finished in 925 sterling silver and hung on a 2mm cable chain, it is designed to be worn close and layered freely.`,
   details: [
     "Pendant: 28mm, solid 925 sterling silver",
     "Chain: 2mm cable chain with lobster clasp",
-    "Element symbol engraved on reverse",
+    "Engravable reverse",
     "BIS hallmarked, nickel free",
   ],
   ...extra,
@@ -134,19 +122,19 @@ const elementPendant = (
 
 export const PRODUCTS: Product[] = [
   // ——— Chains & Pendants ———
-  elementPendant("agni", "Agni Triangle Pendant", "triangle", 4990, "The rising triangle of fire, a symbol of drive and transformation.", {
+  geometricPendant("triangle", "Triangle Pendant", 4990, "A sharp, polished triangle with an inset border: bold geometry, quietly worn.", {
     badge: "Bestseller",
     bestseller: true,
     rating: 4.9,
     reviews: 212,
   }),
-  elementPendant("prithvi", "Prithvi Square Pendant", "square", 4990, "The square of earth, an emblem of grounding, strength and stability.", {
+  geometricPendant("square", "Square Pendant", 4990, "A solid square plate with a recessed frame, strong and understated.", {
     bestseller: true,
     reviews: 148,
   }),
-  elementPendant("jal", "Jal Drop Pendant", "drop", 4790, "The drop of water, honouring flow, calm and adaptability.", { isNew: true, badge: "New" }),
-  elementPendant("vayu", "Vayu Hexagon Pendant", "hexagon", 5290, "The hexagon of air, for freedom of thought and movement.", { isNew: true, badge: "New" }),
-  elementPendant("akash", "Akash Bindu Pendant", "disc", 5490, "The open circle of space with a single bindu at its centre: clarity and expansion.", {
+  geometricPendant("drop", "Teardrop Pendant", 4790, "A smooth teardrop with a softly bevelled inner line.", { isNew: true, badge: "New" }),
+  geometricPendant("hexagon", "Hexagon Pendant", 5290, "An architectural hexagon with a fine inner ring.", { isNew: true, badge: "New" }),
+  geometricPendant("disc", "Circle Disc Pendant", 5490, "A polished disc with a concentric inner ring and a single centre point.", {
     badge: "Limited Edition",
     rating: 5,
     reviews: 41,
@@ -184,7 +172,7 @@ export const PRODUCTS: Product[] = [
     reviews: 38,
     short: "The TATTV monogram, cast in solid silver and set on a box chain.",
     description:
-      "Taken directly from our emblem, the interlocking T sits inside an open frame: two elements, one form. Cast in solid silver and finished by hand.",
+      "Taken directly from our emblem, the interlocking T sits inside an open frame. Cast in solid silver and finished by hand.",
     details: ["Pendant: 20 × 24mm", "1.6mm box chain", "Solid 925 sterling silver", "Signature TATTV clasp"],
   },
   {
@@ -381,7 +369,7 @@ export const PRODUCTS: Product[] = [
     rating: 4.8,
     reviews: 265,
     short: "Matte black onyx beads with a sterling accent.",
-    description: "8mm matte onyx beads on a durable stretch cord, finished with a single sterling silver element bead.",
+    description: "8mm matte onyx beads on a durable stretch cord, finished with a single sterling silver accent bead.",
     details: ["8mm natural onyx beads", "Sterling silver accent bead", "Reinforced stretch cord", "Stackable"],
   },
   {
@@ -555,7 +543,7 @@ export function searchProducts(query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   return PRODUCTS.filter((p) =>
-    [p.name, p.short, categoryName(p.category), p.collection, p.element ?? "", ...p.options.map((o) => o.label)]
+    [p.name, p.short, categoryName(p.category), p.collection, ...p.options.map((o) => o.label)]
       .join(" ")
       .toLowerCase()
       .includes(q),

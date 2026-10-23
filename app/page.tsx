@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Gift, PenTool, RotateCcw, ShieldCheck, Truck } from "lucide-react";
-import { CATEGORIES, COLLECTIONS, ELEMENTS, PRODUCTS, getProduct, unitPrice, type Art, type Tone } from "@/lib/products";
+import { CATEGORIES, COLLECTIONS, PRODUCTS, getProduct, unitPrice, type Art, type Tone } from "@/lib/products";
 import { ProductArt } from "@/components/product-art";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
@@ -25,7 +25,7 @@ const SERVICES = [
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
   const bestsellers = PRODUCTS.filter((p) => p.bestseller).slice(0, 8);
-  const heroProduct = getProduct("agni-triangle-pendant")!;
+  const heroProduct = getProduct("triangle-pendant")!;
 
   return (
     <>
@@ -46,8 +46,8 @@ export default function HomePage() {
               <Link href="/shop" className="btn btn-light">
                 Shop Men&apos;s
               </Link>
-              <Link href="/shop?tag=elements" className="btn btn-outline-light">
-                Discover Pancha Tattva
+              <Link href="/collections" className="btn btn-outline-light">
+                Explore Collections
               </Link>
             </div>
           </div>
@@ -111,9 +111,9 @@ export default function HomePage() {
             <Link
               key={col.id}
               href={`/shop?collection=${col.id}`}
-              className={`group relative flex min-h-[560px] flex-col justify-end overflow-hidden p-8 md:min-h-[720px] md:p-14 ${dark ? "bg-ink text-white" : "bg-sand-dark text-ink"}`}
+              className={`group flex flex-col overflow-hidden ${dark ? "bg-ink text-white" : "bg-sand-dark text-ink"}`}
             >
-              <div className="absolute inset-x-0 top-0 h-[62%] overflow-hidden">
+              <div className="aspect-[4/3] w-full overflow-hidden">
                 <ProductArt
                   art={feature.art}
                   tone={dark ? "silver" : "gold"}
@@ -122,7 +122,7 @@ export default function HomePage() {
                   title={feature.name}
                 />
               </div>
-              <div className="relative z-10 max-w-sm">
+              <div className="max-w-sm p-8 md:p-14 md:pt-10">
                 <p className={`eyebrow mb-3 ${dark ? "text-white/60" : "text-muted"}`}>The {col.name} Collection</p>
                 <h2 className="display text-5xl md:text-6xl">{col.tagline}</h2>
                 <p className={`mt-4 text-sm leading-relaxed ${dark ? "text-white/70" : "text-ink/70"}`}>{col.blurb}</p>
@@ -131,41 +131,6 @@ export default function HomePage() {
             </Link>
           );
         })}
-      </section>
-
-      {/* Pancha Tattva */}
-      <section className="bg-ink py-20 text-white md:py-28">
-        <div className="container-x">
-          <div className="mx-auto max-w-2xl text-center">
-            <Image src="/brand/mark-white.png" alt="" width={253} height={294} className="mx-auto h-auto w-10" />
-            <p className="eyebrow mt-6 text-white/60">Signature Series</p>
-            <h2 className="display mt-3 text-5xl md:text-6xl">Pancha Tattva</h2>
-            <p className="mt-5 font-light leading-relaxed text-white/70">
-              <em>Tattva</em> means element. Our signature pendants honour the five elements of nature, each one a symbol to carry close: earth, water, fire, air and space.
-            </p>
-          </div>
-          <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {ELEMENTS.map((el) => {
-              const p = PRODUCTS.find((x) => x.element === el.id)!;
-              return (
-                <Link key={el.id} href={`/product/${p.slug}`} className="group text-center">
-                  <div className="aspect-square overflow-hidden">
-                    <ProductArt art={p.art} tone="silver" view="detail" backdrop="dark" className="h-full w-full transition-transform duration-700 group-hover:scale-110" title={p.name} />
-                  </div>
-                  <p className="mt-4 font-serif text-2xl">{el.name}</p>
-                  <p className="eyebrow mt-1 text-white/50">
-                    {el.english} · {el.meaning}
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
-          <div className="mt-14 text-center">
-            <Link href="/shop?tag=elements" className="btn btn-outline-light">
-              Find Your Element
-            </Link>
-          </div>
-        </div>
       </section>
 
       {/* Bestsellers */}

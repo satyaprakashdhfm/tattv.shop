@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Phone } from "lucide-react";
+import { CONTACT } from "@/lib/site";
 import { NewsletterForm } from "./newsletter-form";
+import { InstagramIcon, WhatsAppIcon, YouTubeIcon } from "./social-icons";
 
 const COLUMNS = [
   {
@@ -28,14 +31,18 @@ const COLUMNS = [
     links: [
       { label: "Our Story", href: "/about" },
       { label: "Collections", href: "/collections" },
-      { label: "Pancha Tattva", href: "/shop?tag=elements" },
       { label: "My Account", href: "/account" },
       { label: "Wishlist", href: "/wishlist" },
     ],
   },
 ];
 
-const SOCIAL = ["Instagram", "Facebook", "Pinterest", "YouTube"];
+const SOCIAL = [
+  { label: "Instagram", href: CONTACT.instagram, icon: InstagramIcon, external: true },
+  { label: "WhatsApp", href: `https://wa.me/${CONTACT.whatsapp}`, icon: WhatsAppIcon, external: true },
+  { label: "Call us", href: `tel:${CONTACT.phone}`, icon: Phone, external: false },
+  { label: "YouTube", href: CONTACT.youtube, icon: YouTubeIcon, external: true },
+];
 
 export function Footer() {
   return (
@@ -67,14 +74,21 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="container-x flex flex-col gap-4 py-6 text-xs text-white/50 md:flex-row md:items-center md:justify-between">
           <p>© {new Date().getFullYear()} TATTV. Energize Your Style Element.</p>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            {SOCIAL.map((s) => (
-              <span key={s} className="uppercase tracking-[0.18em] hover:text-white cursor-pointer">
-                {s}
-              </span>
+          <ul className="flex items-center gap-3">
+            {SOCIAL.map(({ label, href, icon: Icon, external }) => (
+              <li key={label}>
+                <a
+                  href={href}
+                  aria-label={label}
+                  title={label}
+                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white/70 transition-colors hover:border-white hover:text-white"
+                >
+                  <Icon size={18} strokeWidth={1.5} />
+                </a>
+              </li>
             ))}
-          </div>
-          <p>UPI · Visa · Mastercard · RuPay · Net Banking</p>
+          </ul>
         </div>
       </div>
     </footer>

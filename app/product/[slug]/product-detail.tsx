@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Check, ChevronDown, Gift, Heart, Minus, Plus, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
-import { COLLECTIONS, ELEMENTS, TONES, getOption, unitPrice, type Product } from "@/lib/products";
+import { COLLECTIONS, TONES, getOption, unitPrice, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 import { ProductArt } from "@/components/product-art";
 import { useStore } from "@/components/store-provider";
@@ -34,7 +34,6 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
 
   const saved = wishlist.includes(product.slug);
   const price = unitPrice(product, option.id);
-  const element = ELEMENTS.find((e) => e.id === product.element);
   const collection = COLLECTIONS.find((c) => c.id === product.collection)!;
 
   const handleAdd = () => {
@@ -117,9 +116,9 @@ export function ProductDetail({ product, initialOptionId }: { product: Product; 
 
       {/* Buy box */}
       <div className="min-w-0 lg:col-span-5">
-        <div className="lg:sticky lg:top-36">
+        <div className="lg:sticky lg:top-28">
           <p className="eyebrow text-muted">
-            {collection.name} Collection{element && ` · ${element.name} (${element.english})`}
+            {collection.name} Collection
           </p>
           <h1 className="display mt-3 text-4xl md:text-5xl">{product.name}</h1>
           <div className="mt-3 flex items-center gap-2 text-sm">

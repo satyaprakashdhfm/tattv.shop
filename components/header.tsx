@@ -61,34 +61,45 @@ export function Header() {
         <CloseOnNavigate onNavigate={closeAll} />
       </Suspense>
 
-      <div className="container-x grid h-16 grid-cols-[1fr_auto_1fr] items-center md:h-20">
-        <div className="flex items-center gap-4">
-          <button aria-label="Open menu" className="lg:hidden" onClick={() => setMobileOpen(true)}>
-            <Menu size={22} strokeWidth={1.5} />
-          </button>
-          <button
-            aria-label="Search"
-            onClick={() => setSearchOpen(true)}
-            className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted hover:text-ink"
-          >
-            <Search size={19} strokeWidth={1.5} />
-            <span className="hidden lg:inline">Search</span>
-          </button>
-        </div>
+      <div className="container-x flex h-16 items-center gap-4 md:h-20">
+        <button aria-label="Open menu" className="-ml-1 p-1 xl:hidden" onClick={() => setMobileOpen(true)}>
+          <Menu size={22} strokeWidth={1.5} />
+        </button>
 
-        <Link href="/" aria-label="TATTV home" className="block">
+        <Link href="/" aria-label="TATTV home" className="shrink-0">
           <Image
             src="/brand/logo-black.png"
             alt="TATTV · Energize Your Style Element"
             width={1147}
             height={294}
             priority
-            className={`h-auto transition-all duration-300 ${scrolled ? "w-[120px] md:w-[150px]" : "w-[130px] md:w-[180px]"}`}
+            className={`h-auto transition-all duration-300 ${scrolled ? "w-[118px] md:w-[136px]" : "w-[124px] md:w-[150px]"}`}
           />
         </Link>
 
-        <div className="flex items-center justify-end gap-5">
-          <Link href="/account" aria-label="Account" className="hidden sm:block hover:opacity-60">
+        {/* Desktop navigation */}
+        <nav className="ml-6 hidden h-full xl:block 2xl:ml-12" aria-label="Main">
+          <ul className="flex h-full items-center gap-6 2xl:gap-9">
+            {NAV.map((item, i) => (
+              <li key={item.label} className="flex h-full items-center" onMouseEnter={() => setActive(item.columns ? i : null)}>
+                <Link
+                  href={item.href}
+                  className={`relative whitespace-nowrap py-2 text-[11px] font-medium uppercase tracking-[0.16em] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-ink after:transition-transform ${
+                    active === i ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-5" onMouseEnter={() => setActive(null)}>
+          <button aria-label="Search" onClick={() => setSearchOpen(true)} className="hover:opacity-60">
+            <Search size={20} strokeWidth={1.5} />
+          </button>
+          <Link href="/account" aria-label="Account" className="hidden hover:opacity-60 sm:block">
             <User size={20} strokeWidth={1.5} />
           </Link>
           <Link href="/wishlist" aria-label="Wishlist" className="relative hover:opacity-60">
@@ -102,27 +113,9 @@ export function Header() {
         </div>
       </div>
 
-      {/* Desktop navigation */}
-      <nav className="hidden lg:block" aria-label="Main">
-        <ul className="flex items-center justify-center gap-9 pb-4">
-          {NAV.map((item, i) => (
-            <li key={item.label} onMouseEnter={() => setActive(item.columns ? i : null)}>
-              <Link
-                href={item.href}
-                className={`eyebrow relative py-2 transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-ink after:transition-transform ${
-                  active === i ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100"
-                }`}
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
       {/* Mega menu */}
       {panel?.columns && (
-        <div className="absolute inset-x-0 top-full hidden animate-slide-down border-t border-line bg-white shadow-[0_24px_40px_-24px_rgba(0,0,0,.25)] lg:block">
+        <div className="absolute inset-x-0 top-full hidden animate-slide-down border-t border-line bg-white shadow-[0_24px_40px_-24px_rgba(0,0,0,.25)] xl:block">
           <div className="container-x grid grid-cols-12 gap-10 py-10">
             {panel.columns.map((col) => (
               <div key={col.title} className="col-span-2">
@@ -159,7 +152,7 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 xl:hidden">
           <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm animate-slide-in-left flex-col bg-white">
             <div className="flex h-16 items-center justify-between border-b border-line px-5">

@@ -16,7 +16,8 @@ npm run build && npm start
 | `components/` | Header + mega menu, cart drawer, search overlay, product card/rail, footer |
 | `components/store-provider.tsx` | Cart & wishlist state, persisted to `localStorage` |
 | `components/product-art.tsx` | Procedural SVG product renderings, placeholders until real photography exists |
-| `lib/products.ts` | Product catalogue, categories, collections, Pancha Tattva elements |
+| `lib/products.ts` | Product catalogue, categories, collections |
+| `lib/site.ts` | Contact details and social links (placeholders) |
 | `lib/navigation.ts` | Main navigation and mega-menu content |
 | `scripts/prepare-logos.mjs` | Builds `public/brand/*` and `app/icon.png` from `images/Bag logo.jpg.jpeg` (`npm run prepare-logos`) |
 

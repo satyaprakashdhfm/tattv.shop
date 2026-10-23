@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ELEMENTS, PRODUCTS } from "@/lib/products";
+import { COLLECTIONS, getProduct } from "@/lib/products";
 import { ProductArt } from "@/components/product-art";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ const PILLARS = [
 ];
 
 export default function AboutPage() {
-  const agni = PRODUCTS.find((p) => p.element === "agni")!;
+  const pendant = getProduct("triangle-pendant")!;
   return (
     <>
       <section className="bg-ink text-white">
@@ -38,12 +38,11 @@ export default function AboutPage() {
           </p>
           <p className="mt-4 leading-relaxed text-muted">
             We design two kinds of pieces. <strong className="font-medium text-ink">Modern</strong>, with clean architectural lines and bold oxidised finishes.
-            <strong className="font-medium text-ink"> Classic</strong>, with heritage links, signets and leather that age beautifully. Between them sits our
-            signature series, Pancha Tattva, honouring the five elements of nature.
+            <strong className="font-medium text-ink"> Classic</strong>, with heritage links, signets and leather that age beautifully.
           </p>
         </div>
         <div className="aspect-square bg-sand">
-          <ProductArt art={agni.art} tone="gold" className="h-full w-full" title={agni.name} />
+          <ProductArt art={pendant.art} tone="gold" className="h-full w-full" title={pendant.name} />
         </div>
       </section>
 
@@ -63,19 +62,19 @@ export default function AboutPage() {
       </section>
 
       <section className="container-x py-20 text-center md:py-28">
-        <p className="eyebrow text-muted">Pancha Tattva</p>
-        <h2 className="display mt-3 text-5xl">Five elements. Find yours.</h2>
-        <div className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-8 sm:grid-cols-5">
-          {ELEMENTS.map((el) => (
-            <div key={el.id}>
-              <p className="font-serif text-2xl">{el.name}</p>
-              <p className="eyebrow mt-1 text-muted">{el.english}</p>
-              <p className="mt-2 text-sm text-muted">{el.meaning}</p>
+        <p className="eyebrow text-muted">Collections</p>
+        <h2 className="display mt-3 text-5xl">Modern or classic. Or both.</h2>
+        <div className="mx-auto mt-12 grid max-w-3xl gap-10 sm:grid-cols-2">
+          {COLLECTIONS.map((col) => (
+            <div key={col.id}>
+              <p className="font-serif text-3xl">{col.name}</p>
+              <p className="eyebrow mt-2 text-muted">{col.tagline}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">{col.blurb}</p>
             </div>
           ))}
         </div>
-        <Link href="/shop?tag=elements" className="btn btn-dark mt-12">
-          Shop Pancha Tattva
+        <Link href="/collections" className="btn btn-dark mt-12">
+          Explore Collections
         </Link>
       </section>
     </>

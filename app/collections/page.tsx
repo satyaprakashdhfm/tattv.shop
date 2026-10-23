@@ -6,7 +6,7 @@ import { ProductCard } from "@/components/product-card";
 
 export const metadata: Metadata = {
   title: "Collections",
-  description: "Explore the TATTV Modern and Classic collections and the Pancha Tattva signature series.",
+  description: "Explore the TATTV Modern and Classic collections.",
 };
 
 export default function CollectionsPage() {

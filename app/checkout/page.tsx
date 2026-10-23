@@ -110,7 +110,7 @@ export default function CheckoutPage() {
         </div>
 
         <aside className="lg:col-span-5">
-          <div className="bg-sand p-8 lg:sticky lg:top-36">
+          <div className="bg-sand p-8 lg:sticky lg:top-28">
             <p className="eyebrow mb-6">Order Summary</p>
             <ul className="space-y-4">
               {cart.map((line) => {

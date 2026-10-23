@@ -9,7 +9,7 @@ import { formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
 import { ProductArt } from "./product-art";
 
-const POPULAR = ["Cuban", "Signet", "Pendant", "Onyx", "Wallet", "Agni"];
+const POPULAR = ["Cuban", "Signet", "Pendant", "Onyx", "Wallet", "Chain"];
 
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useStore();

@@ -24,14 +24,13 @@ export const NAV: NavItem[] = [
         title: "Shop",
         links: [
           { label: "All Chains & Pendants", href: "/shop?category=chains" },
-          { label: "Pancha Tattva Pendants", href: "/shop?tag=elements" },
           { label: "Modern", href: "/shop?category=chains&collection=modern" },
           { label: "Classic", href: "/shop?category=chains&collection=classic" },
         ],
       },
       { title: "By Material", links: [...byMaterial("chains"), { label: "Stainless Steel", href: "/shop?category=chains&material=steel" }] },
     ],
-    featured: ["agni-triangle-pendant", "cuban-link-chain"],
+    featured: ["triangle-pendant", "cuban-link-chain"],
   },
   {
     label: "Rings",
@@ -90,7 +89,6 @@ export const NAV: NavItem[] = [
         links: [
           { label: "Modern", href: "/shop?collection=modern" },
           { label: "Classic", href: "/shop?collection=classic" },
-          { label: "Pancha Tattva", href: "/shop?tag=elements" },
           { label: "Bestsellers", href: "/shop?tag=bestseller" },
         ],
       },
