@@ -25,7 +25,7 @@ function Panel({ panel }: { panel: TrendPanel }) {
   const [p1, p2] = connector(focus, insetBox);
 
   return (
-    <article className="group overflow-hidden rounded-xl bg-ink">
+    <article className="group min-w-0 overflow-hidden rounded-xl bg-ink">
       <h3 className="bg-[#7a5a3a] px-4 py-3 text-center text-lg font-medium text-white md:text-xl">{panel.title}</h3>
       <div className="relative aspect-[3/4]">
         <Image src={panel.image} alt="" fill sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />
@@ -76,7 +76,7 @@ export function TrendPanels({ title, panels }: { title: string; panels: TrendPan
     <section className="mt-6 bg-[#e8dccb] py-10 md:mt-8 md:py-14">
       <div className="container-x">
         <h2 className="title mb-7 text-center text-lg md:mb-9 md:text-xl">{title}</h2>
-        <div className="mx-auto grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
           {panels.map((p) => (
             <Panel key={p.title} panel={p} />
           ))}

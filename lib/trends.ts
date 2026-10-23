@@ -26,8 +26,8 @@ export const TRENDS: TrendPanel[] = [
     image: "/images/trends/trend-1.jpg",
     href: "/shop?category=chains",
     cta: "Explore Chains",
-    focus: { x: 0.47, y: 0.2, w: 0.34, h: 0.15 },
-    inset: { x: 0.1, y: 0.5, w: 0.42 },
+    focus: { x: 0.534, y: 0.654, w: 0.117, h: 0.156 },
+    inset: { x: 0.07, y: 0.44, w: 0.3 },
   },
   {
     title: "2. Make It Yours",
@@ -35,8 +35,8 @@ export const TRENDS: TrendPanel[] = [
     image: "/images/trends/trend-2.jpg",
     href: "/shop?category=rings",
     cta: "Explore Rings",
-    focus: { x: 0.6, y: 0.7, w: 0.14, h: 0.08 },
-    inset: { x: 0.1, y: 0.18, w: 0.4 },
+    focus: { x: 0.391, y: 0.459, w: 0.117, h: 0.112 },
+    inset: { x: 0.6, y: 0.52, w: 0.34 },
   },
   {
     title: "3. Stack It Right",
@@ -44,7 +44,7 @@ export const TRENDS: TrendPanel[] = [
     image: "/images/trends/trend-3.jpg",
     href: "/shop?category=bracelets",
     cta: "Explore Bracelets",
-    focus: { x: 0.49, y: 0.68, w: 0.18, h: 0.18 },
-    inset: { x: 0.08, y: 0.2, w: 0.38 },
+    focus: { x: 0.156, y: 0.415, w: 0.352, h: 0.215 },
+    inset: { x: 0.05, y: 0.67, w: 0.42 },
   },
 ];

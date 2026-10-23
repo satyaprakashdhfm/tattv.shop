@@ -5,6 +5,8 @@ import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
+import { TrendPanels } from "@/components/trend-panels";
+import { TRENDS } from "@/lib/trends";
 
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
@@ -85,6 +87,9 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Styling guide: worn photos with zoomed close-ups of each piece */}
+      <TrendPanels title="Style Your Element" panels={TRENDS} />
 
       {/* Bestsellers */}
       <section className="container-x pb-12 pt-5 md:pb-14 md:pt-6">
