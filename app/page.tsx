@@ -37,7 +37,7 @@ export default function HomePage() {
       <section className="py-16 md:py-20">
         <div className="container-x">
           <SectionHeading title="New Arrivals" href="/shop?tag=new" />
-          <ProductRail products={newArrivals} />
+          <ProductRail products={newArrivals} cta="discover" />
         </div>
       </section>
 

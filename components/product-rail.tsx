@@ -7,7 +7,7 @@ import { ProductCard } from "./product-card";
 
 const AUTOPLAY_MS = 3500;
 
-export function ProductRail({ products }: { products: Product[] }) {
+export function ProductRail({ products, cta }: { products: Product[]; cta?: "cart" | "discover" }) {
   const ref = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
 
@@ -50,7 +50,7 @@ export function ProductRail({ products }: { products: Product[] }) {
       <div ref={ref} className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-5 px-5 md:mx-0 md:scroll-px-0 md:px-0">
         {products.map((p) => (
           <div key={p.slug} className="w-[72%] shrink-0 snap-start sm:w-[42%] lg:w-[calc(25%-15px)]">
-            <ProductCard product={p} />
+            <ProductCard product={p} cta={cta} />
           </div>
         ))}
       </div>

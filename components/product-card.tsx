@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { ProductImage } from "./product-image";
 import { useStore } from "./store-provider";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, cta = "cart" }: { product: Product; cta?: "cart" | "discover" }) {
   const { wishlist, toggleWishlist, addToCart } = useStore();
   const [picking, setPicking] = useState(false);
   const saved = wishlist.includes(product.slug);
@@ -21,7 +21,9 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   return (
-    <article className="group flex h-full flex-col bg-white">
+    <article
+      className={`group flex h-full flex-col bg-white ${cta === "discover" ? "border border-transparent transition-colors duration-300 hover:border-line focus-within:border-line" : ""}`}
+    >
       <div className="relative aspect-square overflow-hidden bg-sand">
         <Link href={href} aria-label={product.name} className="absolute inset-0">
           <ProductImage
@@ -55,7 +57,15 @@ export function ProductCard({ product }: { product: Product }) {
         </p>
 
         <div className="mt-auto pt-4">
-          {picking && product.sizes ? (
+          {cta === "discover" ? (
+            // Space is always reserved so the card doesn't jump; the button fades in on hover/focus (always shown on touch screens).
+            <Link
+              href={href}
+              className="btn btn-dark h-11 w-full translate-y-1 px-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100"
+            >
+              Discover
+            </Link>
+          ) : picking && product.sizes ? (
             <div className="animate-fade-in">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-medium uppercase tracking-[0.14em]">Select {product.sizes.label}</p>
