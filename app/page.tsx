@@ -12,23 +12,22 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative h-[480px] overflow-hidden bg-ink text-white sm:h-[520px] lg:h-[min(64vh,580px)] lg:min-h-[480px]">
+      <section className="relative h-[520px] overflow-hidden bg-ink text-white sm:h-[560px] lg:h-[min(72vh,640px)] lg:min-h-[520px]">
         <Image
           src="/images/hero/hero-bg-new.jpg"
           alt="Man at sunset wearing a TATTV chain, bracelets and onyx ring, holding a leather wallet"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[68%_30%] lg:object-[50%_30%]"
+          className="object-cover object-[68%_45%] lg:object-[50%_45%]"
         />
-        {/* Darken the lower half so the centred copy reads over the sky and the suit. */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 via-40% to-transparent to-70%" />
-        <div className="container-x absolute inset-x-0 bottom-0 flex flex-col items-center pb-12 text-center md:pb-14">
-          <p className="eyebrow animate-fade-in text-white/85">The Men&apos;s Collection</p>
-          <h1 className="display mt-4 max-w-3xl animate-fade-in text-3xl font-normal leading-tight sm:text-4xl lg:text-[44px]">
+        {/* No overlay on the photo: the copy carries its own soft shadow so the jewellery stays clearly visible. */}
+        <div className="container-x absolute inset-0 flex flex-col items-center justify-center pt-10 text-center [text-shadow:0_1px_3px_rgba(0,0,0,0.6),0_2px_18px_rgba(0,0,0,0.55)]">
+          <p className="eyebrow animate-fade-in font-semibold text-white">The Men&apos;s Collection</p>
+          <h1 className="display mt-4 max-w-3xl animate-fade-in text-3xl font-medium leading-tight text-white sm:text-4xl lg:text-[46px]">
             Chains, rings, bracelets and everyday essentials designed to define your style.
           </h1>
-          <Link href="/shop" className="btn btn-outline-light mt-8 h-11 animate-fade-in">
+          <Link href="/shop" className="btn mt-8 h-11 animate-fade-in border border-white bg-white text-ink [text-shadow:none] hover:bg-ink hover:text-white hover:border-ink">
             Discover the Collection
           </Link>
         </div>
