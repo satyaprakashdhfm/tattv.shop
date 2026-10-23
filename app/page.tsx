@@ -33,8 +33,16 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* New arrivals */}
+      <section className="py-16 md:py-20">
+        <div className="container-x">
+          <SectionHeading title="New Arrivals" href="/shop?tag=new" />
+          <ProductRail products={newArrivals} />
+        </div>
+      </section>
+
       {/* Shop by category */}
-      <section className="pb-4 pt-16 md:pb-6 md:pt-20">
+      <section className="py-4 md:py-6">
         <h2 className="title mb-8 text-center text-lg md:mb-10 md:text-xl">Shop by Category</h2>
         <div className="grid grid-cols-2 gap-2.5 px-2.5 lg:grid-cols-4">
           {CATEGORIES.map((c) => (
@@ -52,14 +60,6 @@ export default function HomePage() {
               </span>
             </Link>
           ))}
-        </div>
-      </section>
-
-      {/* New arrivals */}
-      <section className="py-16 md:py-20">
-        <div className="container-x">
-          <SectionHeading title="New Arrivals" href="/shop?tag=new" />
-          <ProductRail products={newArrivals} />
         </div>
       </section>
 

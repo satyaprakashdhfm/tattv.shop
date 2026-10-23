@@ -61,25 +61,28 @@ export function Header() {
         <CloseOnNavigate onNavigate={closeAll} />
       </Suspense>
 
-      <div className="container-x flex h-16 items-center gap-4 md:h-20">
-        <button aria-label="Open menu" className="-ml-1 p-1 xl:hidden" onClick={() => setMobileOpen(true)}>
-          <Menu size={22} strokeWidth={1.5} />
-        </button>
+      {/* Equal side columns keep the nav at the true centre of the bar. */}
+      <div className="container-x grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 md:h-20">
+        <div className="flex items-center gap-4">
+          <button aria-label="Open menu" className="-ml-1 p-1 xl:hidden" onClick={() => setMobileOpen(true)}>
+            <Menu size={22} strokeWidth={1.5} />
+          </button>
 
-        <Link href="/" aria-label="TATTV home" className="shrink-0">
-          <Image
-            src="/brand/logo-black.png"
-            alt="TATTV · Energize Your Style Element"
-            width={1147}
-            height={294}
-            priority
-            className={`h-auto transition-all duration-300 ${scrolled ? "w-[118px] md:w-[136px]" : "w-[124px] md:w-[150px]"}`}
-          />
-        </Link>
+          <Link href="/" aria-label="TATTV home" className="shrink-0">
+            <Image
+              src="/brand/logo-black.png"
+              alt="TATTV · Energize Your Style Element"
+              width={1147}
+              height={294}
+              priority
+              className={`h-auto transition-all duration-300 ${scrolled ? "w-[118px] md:w-[136px]" : "w-[124px] md:w-[150px]"}`}
+            />
+          </Link>
+        </div>
 
         {/* Desktop navigation */}
-        <nav className="ml-6 hidden h-full xl:block 2xl:ml-12" aria-label="Main">
-          <ul className="flex h-full items-center gap-6 2xl:gap-9">
+        <nav className="hidden h-full xl:block" aria-label="Main">
+          <ul className="flex h-full items-center justify-center gap-7 2xl:gap-10">
             {NAV.map((item, i) => (
               <li key={item.label} className="flex h-full items-center" onMouseEnter={() => setActive(item.columns ? i : null)}>
                 <Link
@@ -95,7 +98,7 @@ export function Header() {
           </ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-5" onMouseEnter={() => setActive(null)}>
+        <div className="flex items-center justify-end gap-5" onMouseEnter={() => setActive(null)}>
           <button aria-label="Search" onClick={() => setSearchOpen(true)} className="hover:opacity-60">
             <Search size={20} strokeWidth={1.5} />
           </button>
