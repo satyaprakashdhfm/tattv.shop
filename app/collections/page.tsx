@@ -22,13 +22,13 @@ export default function CollectionsPage() {
 
       {COLLECTIONS.map((col, i) => {
         const items = PRODUCTS.filter((p) => p.collection === col.id);
-        const photos = [...items.filter((p) => p.bestseller), ...items.filter((p) => !p.bestseller)].slice(0, 4).map((p) => p.slug);
+        const photos = items.flatMap((p) => p.images).slice(0, 4);
         const dark = col.id === "modern";
         return (
           <section key={col.id} className={i % 2 ? "bg-white" : ""}>
             <div className="container-x py-20 md:py-24">
               <div className={`grid items-center gap-10 lg:grid-cols-2 ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}>
-                <PhotoMosaic slugs={photos} className={`mx-auto w-full max-w-xl ${dark ? "bg-ink" : "bg-sand-dark"}`} />
+                <PhotoMosaic images={photos} className={`mx-auto w-full max-w-xl ${dark ? "bg-ink" : "bg-sand-dark"}`} />
                 <div className="max-w-md">
                   <p className="eyebrow text-muted">The {col.name} Collection</p>
                   <h2 className="title mt-3 text-xl md:text-2xl">{col.tagline}</h2>

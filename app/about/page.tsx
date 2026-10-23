@@ -36,11 +36,11 @@ export default function AboutPage() {
           </p>
           <p className="mt-4 leading-relaxed text-muted">
             We design two kinds of pieces. <strong className="font-medium text-ink">Modern</strong>, with clean architectural lines and bold oxidised finishes.
-            <strong className="font-medium text-ink"> Classic</strong>, with heritage links, signets and leather that age beautifully.
+            <strong className="font-medium text-ink"> Classic</strong>, with polished steel and leather that age beautifully.
           </p>
         </div>
         <div className="relative aspect-[4/5] w-full max-w-lg justify-self-center overflow-hidden bg-ink">
-          <Image src="/images/categories/rings.jpg" alt="TATTV signet rings" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
+          <Image src="/images/categories/rings.jpg" alt="TATTV curb link rings" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
         </div>
       </section>
 

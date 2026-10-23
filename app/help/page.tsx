@@ -102,9 +102,9 @@ export default function HelpPage() {
           <p>Sizes refer to bracelet length. Measure your wrist snugly and add about ½&quot; for a comfortable fit: S (7&quot;) suits a 6.5&quot; wrist, M (7.5&quot;) a 7&quot; wrist, L (8&quot;) a 7.5&quot; wrist and XL (8.5&quot;) an 8&quot; wrist.</p>
         </Section>
         <Section id="care" title="Jewellery Care">
-          <p>Sterling silver naturally oxidises over time. Store each piece in its TATTV pouch and polish with the anti-tarnish cloth provided.</p>
+          <p>Store each piece in its TATTV pouch and wipe it with a soft, dry cloth after wearing to keep the finish bright.</p>
           <p>Remove jewellery before swimming, showering, exercising or applying fragrance. Leather should be kept dry and conditioned occasionally.</p>
-          <p>All silver jewellery comes with lifetime complimentary polishing. Just get in touch.</p>
+          <p>Something not looking its best? Get in touch and we will help you care for it.</p>
         </Section>
         <Section id="contact" title="Contact Us">
           <p>Our client care team is available Monday to Saturday, 10am to 7pm IST.</p>

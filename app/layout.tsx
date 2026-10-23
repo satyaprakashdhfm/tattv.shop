@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s | TATTV",
   },
   description:
-    "TATTV crafts modern and classic men's jewellery in sterling silver, gold vermeil and full-grain leather. Energize your style element.",
+    "TATTV crafts modern and classic men's jewellery in stainless steel and genuine leather. Energize your style element.",
 };
 
 export const viewport: Viewport = {

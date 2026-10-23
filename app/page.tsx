@@ -9,12 +9,14 @@ import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
 import { formatPrice } from "@/lib/format";
 
+const photo = (name: string) => `/images/products/${name}.jpg`;
+
 const COLLECTION_PHOTOS: Record<string, string[]> = {
-  modern: ["mesh-cuff-bracelet", "black-spinner-ring", "wave-tag-pendant", "braided-leather-bracelet"],
-  classic: ["stripe-signet-ring", "gold-cable-bangle", "lion-medallion-ring", "leather-bifold-wallet"],
+  modern: [photo("lightning-tag-pendant"), photo("mesh-inlay-bangle"), photo("curb-link-ring"), photo("leather-card-wallet-2")],
+  classic: [photo("star-dog-tag-pendant"), photo("twin-cable-bangle"), photo("mesh-inlay-bangle-2"), photo("leather-card-wallet")],
 };
 
-const GIFT_PICKS = ["black-leather-bar-bracelet", "classic-band-ring", "halo-ring-pendant", "black-spinner-ring"];
+const GIFT_PICKS = ["curb-link-ring", "leather-card-wallet", "star-dog-tag-pendant", "mesh-inlay-bangle"];
 
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
@@ -44,10 +46,10 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <Link href="/shop?category=rings" className="group relative mx-auto block aspect-[4/5] w-full max-w-[520px] overflow-hidden" aria-label="Shop rings">
+          <Link href="/product/twin-cable-bangle" className="group relative mx-auto block aspect-[4/5] w-full max-w-[520px] overflow-hidden" aria-label="Twin Cable Bangle">
             <Image
-              src="/images/hero/bands.jpg"
-              alt="TATTV band rings on black satin"
+              src="/images/hero/cable-bangle.jpg"
+              alt="TATTV Twin Cable Bangle on black satin"
               fill
               priority
               sizes="(min-width: 1024px) 520px, 100vw"
@@ -97,7 +99,7 @@ export default function HomePage() {
               href={`/shop?collection=${col.id}`}
               className={`group flex flex-col overflow-hidden ${dark ? "bg-ink text-white" : "bg-sand-dark text-ink"}`}
             >
-              <PhotoMosaic slugs={COLLECTION_PHOTOS[col.id]} />
+              <PhotoMosaic images={COLLECTION_PHOTOS[col.id]} />
               <div className="max-w-sm p-8 md:p-12">
                 <p className={`eyebrow mb-3 ${dark ? "text-white/60" : "text-muted"}`}>The {col.name} Collection</p>
                 <h2 className="title text-xl md:text-2xl">{col.tagline}</h2>

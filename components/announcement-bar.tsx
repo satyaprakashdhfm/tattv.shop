@@ -6,8 +6,8 @@ import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 
 const MESSAGES = [
   `Complimentary shipping across India on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}`,
-  "Free personal engraving on signets, tags & wallets",
-  "Easy 15-day returns · BIS hallmarked silver",
+  "Easy 15-day returns & exchanges",
+  "Every order arrives gift-ready in a TATTV pouch",
 ];
 
 export function AnnouncementBar() {
