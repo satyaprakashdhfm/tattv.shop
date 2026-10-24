@@ -1,3 +1,5 @@
+import { PREVIEW_PRODUCTS, SHOW_PREVIEW_PRODUCTS } from "./preview-products";
+
 export type CategoryId = "chains" | "rings" | "bracelets" | "wallets";
 export type CollectionId = "modern" | "classic";
 export type Finish = "silver" | "gold" | "black" | "two-tone" | "leather";
@@ -159,6 +161,8 @@ export const PRODUCTS: Product[] = [
     description: "Smooth genuine leather in a slim bifold, with four card slots, a centre pocket and a snap-button note sleeve.",
     details: ["4 card slots + centre pocket", "Snap-button note sleeve", "Genuine leather, contrast stitching", "10.5 × 7.5cm closed"],
   },
+  // Sample pieces appended after the real catalogue (see lib/preview-products.ts).
+  ...(SHOW_PREVIEW_PRODUCTS ? PREVIEW_PRODUCTS : []),
 ];
 
 export const getProduct = (slug: string) => PRODUCTS.find((p) => p.slug === slug);

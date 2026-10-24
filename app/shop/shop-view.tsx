@@ -44,11 +44,18 @@ const SORTS = [
   { id: "price-desc", label: "Price: High to Low" },
 ];
 
+/** Products shown per batch: three full rows of the three-column grid. */
+const PAGE_SIZE = 9;
+
 const list = (v: string | null) => (v ? v.split(",").filter(Boolean) : []);
 
 export function ShopView() {
   const params = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // How many products are revealed; resets to one batch whenever the filters/sort (the URL) change.
+  const viewKey = params.toString();
+  const [reveal, setReveal] = useState({ key: viewKey, count: PAGE_SIZE });
+  const visibleCount = reveal.key === viewKey ? reveal.count : PAGE_SIZE;
 
   const category = params.get("category") ?? "";
   const collections = list(params.get("collection"));
@@ -209,10 +216,27 @@ export function ShopView() {
         <div className="grid gap-10 items-start lg:grid-cols-[220px_1fr] xl:gap-14">
           <aside className="hidden lg:block">{filters}</aside>
           {results.length ? (
-            <div className="grid grid-cols-2 content-start gap-3 md:grid-cols-3 md:gap-5">
-              {results.map((p) => (
-                <ProductCard key={p.slug} product={p} />
-              ))}
+            <div>
+              <div className="grid grid-cols-2 content-start gap-3 md:grid-cols-3 md:gap-5">
+                {results.slice(0, visibleCount).map((p) => (
+                  <ProductCard key={p.slug} product={p} />
+                ))}
+              </div>
+              {results.length > PAGE_SIZE && (
+                <div className="mx-auto mt-12 flex max-w-xs flex-col items-center text-center">
+                  <p className="text-sm text-muted" aria-live="polite">
+                    Showing {Math.min(visibleCount, results.length)} of {results.length} pieces
+                  </p>
+                  <div className="mt-3 h-0.5 w-full bg-line">
+                    <div className="h-full bg-ink transition-all duration-500" style={{ width: `${(Math.min(visibleCount, results.length) / results.length) * 100}%` }} />
+                  </div>
+                  {visibleCount < results.length && (
+                    <button onClick={() => setReveal({ key: viewKey, count: visibleCount + PAGE_SIZE })} className="btn btn-outline mt-6 w-full">
+                      Load More
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="py-20 text-center">
