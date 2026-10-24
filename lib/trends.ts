@@ -15,7 +15,7 @@ export interface TrendPanel {
   cta: string;
   /** Where the item sits in the photo. */
   focus: Region;
-  /** Where the magnified close-up is drawn; only x, y and width are used, height follows the focus shape. */
+  /** Where the thumbnail of the focus region is drawn; only x, y and width are used, height follows the focus shape. */
   inset: { x: number; y: number; w: number };
 }
 
@@ -26,8 +26,8 @@ export const TRENDS: TrendPanel[] = [
     image: "/images/trends/trend-1.jpg",
     href: "/shop?category=chains",
     cta: "Explore Chains",
-    focus: { x: 0.534, y: 0.654, w: 0.117, h: 0.156 },
-    inset: { x: 0.07, y: 0.44, w: 0.3 },
+    focus: { x: 0.31, y: 0.29, w: 0.47, h: 0.55 },
+    inset: { x: 0.07, y: 0.655, w: 0.2 },
   },
   {
     title: "2. Make It Yours",
@@ -35,8 +35,8 @@ export const TRENDS: TrendPanel[] = [
     image: "/images/trends/trend-2.jpg",
     href: "/shop?category=rings",
     cta: "Explore Rings",
-    focus: { x: 0.391, y: 0.459, w: 0.117, h: 0.112 },
-    inset: { x: 0.6, y: 0.52, w: 0.34 },
+    focus: { x: 0.23, y: 0.385, w: 0.4, h: 0.25 },
+    inset: { x: 0.68, y: 0.62, w: 0.24 },
   },
   {
     title: "3. Stack It Right",
@@ -44,7 +44,7 @@ export const TRENDS: TrendPanel[] = [
     image: "/images/trends/trend-3.jpg",
     href: "/shop?category=bracelets",
     cta: "Explore Bracelets",
-    focus: { x: 0.156, y: 0.415, w: 0.352, h: 0.215 },
-    inset: { x: 0.05, y: 0.67, w: 0.42 },
+    focus: { x: 0.14, y: 0.395, w: 0.37, h: 0.255 },
+    inset: { x: 0.68, y: 0.43, w: 0.24 },
   },
 ];
