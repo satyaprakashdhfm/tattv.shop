@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
+import { EditorialBanner } from "@/components/editorial-banner";
 import { TrendPanels } from "@/components/trend-panels";
 import { TRENDS } from "@/lib/trends";
 
@@ -48,27 +48,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Editorial campaign banner: copy overlays the photo's dark left side from lg up; stacks above it on smaller screens. */}
-      <section className="relative mt-2 flex flex-col-reverse overflow-hidden bg-[#0d0d0b] text-white lg:block lg:aspect-[3/1]">
-        <div className="relative aspect-[3/2] w-full sm:aspect-[2/1] lg:absolute lg:inset-0 lg:aspect-auto">
-          <Image
-            src="/images/banners/editorial.jpg"
-            alt="TATTV steel and gold cable bangles arranged on dark stone"
-            fill
-            sizes="100vw"
-            className="object-cover object-[72%_55%] sm:object-[70%_50%] lg:object-center"
-          />
-        </div>
-        <div className="container-x relative pb-2 pt-10 lg:absolute lg:inset-0 lg:flex lg:items-center lg:py-0">
-          <div className="max-w-sm">
-            <p className="eyebrow text-white/60">The Steel Edit</p>
-            <h2 className="display mt-4 text-3xl font-normal leading-tight md:text-[42px]">Built for every day. Made to last.</h2>
-            <Link href="/shop" className="mt-7 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.22em] text-white/90 hover:text-white">
-              <span className="underline-reveal">Shop the Edit</span> <ArrowRight size={14} strokeWidth={1.5} />
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Editorial campaign banner */}
+      <EditorialBanner
+        className="mt-2"
+        image="/images/banners/editorial.jpg"
+        alt="TATTV steel and gold cable bangles arranged on dark stone"
+        eyebrow="The Steel Edit"
+        title="Built for every day. Made to last."
+        cta="Shop the Edit"
+        href="/shop"
+      />
 
       {/* Shop by category */}
       <section className="pb-5 pt-10 md:pb-6 md:pt-12">
@@ -91,6 +80,19 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Second editorial banner */}
+      <EditorialBanner
+        className="mt-6 md:mt-8"
+        image="/images/banners/editorial-car.jpg"
+        alt="Man in a dark suit opening a car door, wearing TATTV gold signet rings and stacked bracelets"
+        eyebrow="The Signature Edit"
+        title="Arrive like you mean it."
+        cta="Shop Rings"
+        href="/shop?category=rings"
+        ratio="lg:aspect-[5/2]"
+        position="object-[52%_55%] sm:object-[55%_50%] lg:object-center"
+      />
 
       {/* Styling guide: worn photos with zoomed close-ups of each piece */}
       <TrendPanels title="Style Your Element" panels={TRENDS} />
