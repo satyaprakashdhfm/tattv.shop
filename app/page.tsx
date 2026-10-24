@@ -14,25 +14,29 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative h-[520px] overflow-hidden bg-ink text-white sm:h-[560px] lg:h-[min(72vh,640px)] lg:min-h-[520px]">
-        <Image
-          src="/images/hero/hero-bg-new.jpg"
-          alt="Man at sunset wearing a TATTV chain, bracelets and onyx ring, holding a leather wallet"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[68%_45%] lg:object-[50%_45%]"
-        />
-        {/* No overlay on the photo: the copy carries its own soft shadow so the jewellery stays clearly visible. */}
-        <div className="container-x absolute inset-0 flex flex-col items-center justify-center pt-10 text-center [text-shadow:0_1px_3px_rgba(0,0,0,0.6),0_2px_18px_rgba(0,0,0,0.55)]">
-          <p className="eyebrow animate-fade-in font-semibold text-white">The Men&apos;s Collection</p>
-          <h1 className="display mt-4 max-w-3xl animate-fade-in text-3xl font-medium leading-tight text-white sm:text-4xl lg:text-[46px]">
-            Chains, rings, bracelets and everyday essentials designed to define your style.
-          </h1>
-          <Link href="/shop" className="btn mt-8 h-11 animate-fade-in border border-white bg-white text-ink [text-shadow:none] hover:bg-ink hover:text-white hover:border-ink">
-            Discover the Collection
-          </Link>
+      {/* Hero: copy sits on the sunlit wall on the left from xl up; below xl it stacks under the photo. */}
+      <section className="relative flex flex-col overflow-hidden bg-[#ece5da] xl:block xl:h-[min(72vh,640px)] xl:min-h-[520px]">
+        <div className="relative aspect-[4/3] sm:aspect-[16/9] lg:aspect-[21/9] xl:absolute xl:inset-0 xl:aspect-auto">
+          <Image
+            src="/images/hero/hero-bg-new-one.jpg"
+            alt="Man in a linen shirt wearing a TATTV pendant, curb and ID bracelets and a black-inlay band ring"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[64%_40%] xl:object-[92%_35%]"
+          />
+          <div className="absolute inset-y-0 left-0 hidden w-1/2 bg-gradient-to-r from-[#ece5da]/70 via-[#ece5da]/35 to-transparent xl:block" />
+        </div>
+        <div className="container-x relative py-10 xl:absolute xl:inset-0 xl:flex xl:items-center xl:py-0">
+          <div className="max-w-xl animate-fade-in xl:max-w-[340px] 2xl:max-w-[420px]">
+            <p className="eyebrow font-semibold text-ink/70">The Men&apos;s Collection</p>
+            <h1 className="display mt-4 text-3xl font-medium leading-tight text-ink sm:text-4xl xl:text-[34px] 2xl:text-[42px]">
+              Chains, rings, bracelets and everyday essentials designed to define your style.
+            </h1>
+            <Link href="/shop" className="btn btn-dark mt-8 h-11">
+              Discover the Collection
+            </Link>
+          </div>
         </div>
       </section>
 
