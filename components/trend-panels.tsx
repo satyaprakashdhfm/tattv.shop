@@ -35,7 +35,7 @@ function Panel({ panel }: { panel: TrendPanel }) {
 
   return (
     <article className="min-w-0 overflow-hidden rounded-xl bg-ink">
-      <h3 className="bg-[#7a5a3a] px-4 py-3 text-center text-lg font-medium text-white md:text-xl">{panel.title}</h3>
+      <h3 className="bg-(--tp-tab) px-4 py-3 text-center text-lg font-medium text-(--tp-tab-text) md:text-xl">{panel.title}</h3>
       <div className="relative aspect-[3/4]">
         {/* Photo in black & white; only the two boxes show the piece in colour. */}
         <Image src={panel.image} alt="" fill sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" className="object-cover grayscale contrast-[1.08]" />
@@ -58,7 +58,7 @@ function Panel({ panel }: { panel: TrendPanel }) {
 
         <Link
           href={panel.href}
-          className="absolute bottom-5 right-5 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-[#b49a7f]/90 px-5 py-2 text-[15px] font-medium text-white backdrop-blur-sm transition hover:bg-[#7a5a3a]"
+          className="absolute bottom-5 right-5 inline-flex items-center gap-1.5 rounded-full border border-(--tp-btn-border) bg-(--tp-btn) px-5 py-2 text-[15px] font-medium text-(--tp-btn-text) transition hover:bg-(--tp-btn-hover) hover:text-(--tp-btn-hover-text)"
         >
           {panel.cta} <ChevronRight size={16} />
         </Link>
@@ -67,11 +67,38 @@ function Panel({ panel }: { panel: TrendPanel }) {
   );
 }
 
-export function TrendPanels({ title, panels }: { title: string; panels: TrendPanel[] }) {
+export interface TrendTheme {
+  bg: string;
+  title: string;
+  tab: string;
+  tabText: string;
+  btn: string;
+  btnText: string;
+  btnBorder: string;
+  btnHover: string;
+  btnHoverText: string;
+}
+
+export const TREND_THEMES = {
+  beige: { bg: "#e8dccb", title: "#0b0b0b", tab: "#7a5a3a", tabText: "#ffffff", btn: "rgba(180,154,127,0.9)", btnText: "#ffffff", btnBorder: "rgba(255,255,255,0.7)", btnHover: "#7a5a3a", btnHoverText: "#ffffff" },
+} satisfies Record<string, TrendTheme>;
+
+export function TrendPanels({ title, panels, theme = TREND_THEMES.beige }: { title: string; panels: TrendPanel[]; theme?: TrendTheme }) {
+  const vars = {
+    "--tp-bg": theme.bg,
+    "--tp-title": theme.title,
+    "--tp-tab": theme.tab,
+    "--tp-tab-text": theme.tabText,
+    "--tp-btn": theme.btn,
+    "--tp-btn-text": theme.btnText,
+    "--tp-btn-border": theme.btnBorder,
+    "--tp-btn-hover": theme.btnHover,
+    "--tp-btn-hover-text": theme.btnHoverText,
+  } as React.CSSProperties;
   return (
-    <section className="mt-6 bg-[#e8dccb] py-10 md:mt-8 md:py-14">
+    <section className="mt-6 bg-(--tp-bg) py-10 md:mt-8 md:py-14" style={vars}>
       <div className="container-x">
-        <h2 className="title mb-7 text-center text-lg md:mb-9 md:text-xl">{title}</h2>
+        <h2 className="title mb-7 text-center text-lg text-(--tp-title) md:mb-9 md:text-xl">{title}</h2>
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
           {panels.map((p) => (
             <Panel key={p.title} panel={p} />

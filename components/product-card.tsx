@@ -45,6 +45,15 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
         >
           <Heart size={16} strokeWidth={1.5} className={saved ? "fill-ink" : ""} />
         </button>
+        {cta === "discover" && (
+          // Slides up over the bottom of the photo on hover/focus (always shown on touch screens), so no space is reserved below the price.
+          <Link
+            href={href}
+            className="btn btn-dark absolute inset-x-3 bottom-3 h-10 translate-y-2 px-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100"
+          >
+            Discover
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">
@@ -56,37 +65,31 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
           {product.compareAt && <span className="ml-2 text-sm font-normal text-muted line-through">{formatPrice(product.compareAt)}</span>}
         </p>
 
-        <div className="mt-auto pt-4">
-          {cta === "discover" ? (
-            // Space is always reserved so the card doesn't jump; the button fades in on hover/focus (always shown on touch screens).
-            <Link
-              href={href}
-              className="btn btn-dark h-11 w-full translate-y-1 px-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100"
-            >
-              Discover
-            </Link>
-          ) : picking && product.sizes ? (
-            <div className="animate-fade-in">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-[11px] font-medium uppercase tracking-[0.14em]">Select {product.sizes.label}</p>
-                <button aria-label="Cancel" onClick={() => setPicking(false)} className="text-muted hover:text-ink">
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {product.sizes.values.map((s) => (
-                  <button key={s} onClick={() => add(s)} className="h-9 min-w-10 border border-line px-2 text-xs transition hover:border-ink hover:bg-ink hover:text-white">
-                    {s}
+        {cta === "cart" && (
+          <div className="mt-auto pt-4">
+            {picking && product.sizes ? (
+              <div className="animate-fade-in">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em]">Select {product.sizes.label}</p>
+                  <button aria-label="Cancel" onClick={() => setPicking(false)} className="text-muted hover:text-ink">
+                    <X size={14} />
                   </button>
-                ))}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {product.sizes.values.map((s) => (
+                    <button key={s} onClick={() => add(s)} className="h-9 min-w-10 border border-line px-2 text-xs transition hover:border-ink hover:bg-ink hover:text-white">
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <button onClick={() => (product.sizes ? setPicking(true) : add())} className="btn btn-dark h-11 w-full px-4">
-              Add to Cart
-            </button>
-          )}
-        </div>
+            ) : (
+              <button onClick={() => (product.sizes ? setPicking(true) : add())} className="btn btn-dark h-11 w-full px-4">
+                Add to Cart
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

@@ -45,7 +45,7 @@ export default function HomePage() {
       </section>
 
       {/* Editorial campaign banner: copy overlays the photo's dark left side from lg up; stacks above it on smaller screens. */}
-      <section className="relative mt-6 flex flex-col-reverse overflow-hidden bg-[#0d0d0b] text-white md:mt-8 lg:block lg:aspect-[3/1]">
+      <section className="relative mt-2 flex flex-col-reverse overflow-hidden bg-[#0d0d0b] text-white lg:block lg:aspect-[3/1]">
         <div className="relative aspect-[3/2] w-full sm:aspect-[2/1] lg:absolute lg:inset-0 lg:aspect-auto">
           <Image
             src="/images/banners/editorial.jpg"
