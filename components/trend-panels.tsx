@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Region, TrendPanel } from "@/lib/trends";
 
 const pct = (n: number) => `${(n * 100).toFixed(3)}%`;
@@ -58,9 +58,9 @@ function Panel({ panel }: { panel: TrendPanel }) {
 
         <Link
           href={panel.href}
-          className="absolute bottom-5 right-5 inline-flex items-center gap-1.5 rounded-full border border-(--tp-btn-border) bg-(--tp-btn) px-5 py-2 text-[15px] font-medium text-(--tp-btn-text) transition hover:bg-(--tp-btn-hover) hover:text-(--tp-btn-hover-text)"
+          className="group/cta absolute bottom-6 right-6 inline-flex h-10 items-center gap-2.5 border border-(--tp-btn-border) bg-(--tp-btn) px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-(--tp-btn-text) transition-colors duration-300 hover:bg-(--tp-btn-hover) hover:text-(--tp-btn-hover-text)"
         >
-          {panel.cta} <ChevronRight size={16} />
+          {panel.cta} <ArrowRight size={14} strokeWidth={1.5} className="transition-transform duration-300 group-hover/cta:translate-x-1" />
         </Link>
       </div>
     </article>
@@ -80,10 +80,10 @@ export interface TrendTheme {
 }
 
 export const TREND_THEMES = {
-  beige: { bg: "#e8dccb", title: "#0b0b0b", tab: "#7a5a3a", tabText: "#ffffff", btn: "rgba(180,154,127,0.9)", btnText: "#ffffff", btnBorder: "rgba(255,255,255,0.7)", btnHover: "#7a5a3a", btnHoverText: "#ffffff" },
+  stoneInk: { bg: "#ece9e4", title: "#0b0b0b", tab: "#0b0b0b", tabText: "#ffffff", btn: "#ffffff", btnText: "#0b0b0b", btnBorder: "#ffffff", btnHover: "#0b0b0b", btnHoverText: "#ffffff" },
 } satisfies Record<string, TrendTheme>;
 
-export function TrendPanels({ title, panels, theme = TREND_THEMES.beige }: { title: string; panels: TrendPanel[]; theme?: TrendTheme }) {
+export function TrendPanels({ title, panels, theme = TREND_THEMES.stoneInk }: { title: string; panels: TrendPanel[]; theme?: TrendTheme }) {
   const vars = {
     "--tp-bg": theme.bg,
     "--tp-title": theme.title,
