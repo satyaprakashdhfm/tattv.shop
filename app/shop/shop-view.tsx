@@ -29,6 +29,8 @@ const BANNERS: Partial<Record<Product["category"], { src: string; position: stri
   wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%" },
 };
 
+const NEW_ARRIVALS_BANNER = { src: "/images/shop/new.jpg", position: "70% 50%" };
+
 const PRICES = [
   { id: "u1000", label: "Under ₹1,000", test: (n: number) => n < 1000 },
   { id: "1000-1500", label: "₹1,000 to ₹1,500", test: (n: number) => n >= 1000 && n <= 1500 },
@@ -100,8 +102,8 @@ export function ShopView() {
             }
           : { title: "All Men's Jewellery", blurb: "Chains, pendants, rings, bracelets and fine leather, crafted to be worn every day." };
 
-  const banner = !q && !tag && category ? BANNERS[category as Product["category"]] : undefined;
-  // New Arrivals leads with new pieces; other strips show the whole catalogue.
+  const banner = q ? undefined : tag === "new" ? NEW_ARRIVALS_BANNER : !tag && category ? BANNERS[category as Product["category"]] : undefined;
+  // Fallback strip for views without their own photo (all jewellery, bestsellers, search).
   const stripProducts = [...PRODUCTS].sort((a, b) => Number(!!b.isNew) - Number(!!a.isNew)).slice(0, 6);
 
   const activeChips = [
@@ -204,10 +206,10 @@ export function ShopView() {
           </div>
         )}
 
-        <div className="grid gap-10 lg:grid-cols-[220px_1fr] xl:gap-14">
+        <div className="grid gap-10 items-start lg:grid-cols-[220px_1fr] xl:gap-14">
           <aside className="hidden lg:block">{filters}</aside>
           {results.length ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
+            <div className="grid grid-cols-2 content-start gap-3 md:grid-cols-3 md:gap-5">
               {results.map((p) => (
                 <ProductCard key={p.slug} product={p} />
               ))}
