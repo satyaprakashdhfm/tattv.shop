@@ -53,7 +53,7 @@ export function Footer() {
           <p className="mt-2 max-w-sm text-sm text-white/60">Early access to new collections, private events and stories of craft. No noise.</p>
           <NewsletterForm />
         </div>
-        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:col-span-7 lg:col-start-6">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:col-span-8 lg:col-start-5">
           {COLUMNS.map((col) => (
             <div key={col.title}>
               <p className="eyebrow mb-5 text-white/50">{col.title}</p>
@@ -68,6 +68,22 @@ export function Footer() {
               </ul>
             </div>
           ))}
+          <div>
+            <p className="eyebrow mb-5 text-white/50">Contact</p>
+            <ul className="space-y-3 text-sm text-white/85">
+              <li>
+                <a href={`tel:${CONTACT.phone}`} className="link-underline hover:text-white">
+                  {CONTACT.phoneDisplay}
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${CONTACT.email}`} className="link-underline break-all hover:text-white">
+                  {CONTACT.email}
+                </a>
+              </li>
+              <li className="text-white/50">Mon–Sat, 10am–7pm IST</li>
+            </ul>
+          </div>
         </div>
       </div>
       <div className="border-t border-white/10">

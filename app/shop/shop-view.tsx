@@ -21,15 +21,25 @@ const TAGS: Record<string, { title: string; blurb: string; test: (p: Product) =>
   bestseller: { title: "Bestsellers", blurb: "The pieces our clients return to, again and again.", test: (p) => !!p.bestseller },
 };
 
-/** Header backgrounds per page: a photo (with focal point) or, when absent, a strip of product photos. */
-const BANNERS: Partial<Record<Product["category"], { src: string; position: string }>> = {
-  chains: { src: "/images/shop/chains.jpg", position: "62% 50%" },
-  rings: { src: "/images/shop/rings.jpg", position: "50% 42%" },
-  bracelets: { src: "/images/shop/bracelets.jpg", position: "62% 50%" },
-  wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%" },
+/**
+ * Header photo per page, shown unfiltered. `tone` is the brightness behind the title:
+ * dark photos get white copy with a soft shadow, light ones get ink copy.
+ */
+interface Banner {
+  src: string;
+  position: string;
+  tone: "dark" | "light";
+}
+
+const BANNERS: Partial<Record<Product["category"], Banner>> = {
+  chains: { src: "/images/shop/chains.jpg", position: "62% 50%", tone: "dark" },
+  rings: { src: "/images/shop/rings.jpg", position: "50% 42%", tone: "dark" },
+  bracelets: { src: "/images/shop/bracelets.jpg", position: "62% 50%", tone: "dark" },
+  wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%", tone: "dark" },
 };
 
-const NEW_ARRIVALS_BANNER = { src: "/images/shop/new.jpg", position: "70% 50%" };
+const NEW_ARRIVALS_BANNER: Banner = { src: "/images/shop/new.jpg", position: "70% 50%", tone: "dark" };
+const ALL_BANNER: Banner = { src: "/images/shop/all.jpg", position: "75% 50%", tone: "light" };
 
 const PRICES = [
   { id: "u1000", label: "Under ₹1,000", test: (n: number) => n < 1000 },
@@ -109,9 +119,8 @@ export function ShopView() {
             }
           : { title: "All Men's Jewellery", blurb: "Chains, pendants, rings, bracelets and fine leather, crafted to be worn every day." };
 
-  const banner = q ? undefined : tag === "new" ? NEW_ARRIVALS_BANNER : !tag && category ? BANNERS[category as Product["category"]] : undefined;
-  // Fallback strip for views without their own photo (all jewellery, bestsellers, search).
-  const stripProducts = [...PRODUCTS].sort((a, b) => Number(!!b.isNew) - Number(!!a.isNew)).slice(0, 6);
+  const banner = (tag === "new" ? NEW_ARRIVALS_BANNER : !q && !tag && category ? BANNERS[category as Product["category"]] : undefined) ?? ALL_BANNER;
+  const light = banner.tone === "light";
 
   const activeChips = [
     ...(tag && TAGS[tag] ? [{ label: TAGS[tag].title, clear: () => update("tag", null) }] : []),
@@ -145,35 +154,23 @@ export function ShopView() {
 
   return (
     <>
-      <section className="relative isolate flex h-[240px] items-center overflow-hidden bg-ink text-white md:h-[320px]">
-        {banner ? (
-          <>
-            <Image src={banner.src} alt="" fill priority sizes="100vw" className="-z-20 object-cover" style={{ objectPosition: banner.position }} />
-            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/80 via-black/45 to-black/5" />
-          </>
-        ) : (
-          <>
-            {/* Strip of product photos (New Arrivals, all jewellery, search) */}
-            <div className="absolute inset-0 -z-20 grid grid-cols-3 md:grid-cols-6">
-              {stripProducts.map((p) => (
-                <div key={p.slug} className="relative">
-                  <Image src={p.images[0]} alt="" fill priority sizes="(min-width: 768px) 17vw, 34vw" className="object-cover" />
-                </div>
-              ))}
-            </div>
-            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/60 to-black/30" />
-          </>
-        )}
+      <section
+        className={`relative isolate flex h-[240px] items-center overflow-hidden md:h-[320px] ${
+          light ? "bg-sand text-ink" : "bg-ink text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55),0_2px_16px_rgba(0,0,0,0.45)]"
+        }`}
+      >
+        {/* Photo shown as-is (no overlay); the copy's colour/shadow carries legibility. */}
+        <Image src={banner.src} alt="" fill priority sizes="100vw" className="-z-10 object-cover" style={{ objectPosition: banner.position }} />
         <div className="container-x">
-          <nav className="mb-4 text-xs text-white/70" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-white">
+          <nav className={`mb-4 text-xs ${light ? "text-ink/70" : "text-white/85"}`} aria-label="Breadcrumb">
+            <Link href="/" className={light ? "hover:text-ink" : "hover:text-white"}>
               Home
             </Link>
             <span className="mx-2">/</span>
-            <span className="text-white">Shop</span>
+            <span className={light ? "text-ink" : "text-white"}>Shop</span>
           </nav>
           <h1 className="title text-2xl md:text-3xl">{heading.title}</h1>
-          {heading.blurb && <p className="mt-3 max-w-md text-white/80">{heading.blurb}</p>}
+          {heading.blurb && <p className={`mt-3 max-w-md ${light ? "text-ink/80" : "text-white/90"}`}>{heading.blurb}</p>}
         </div>
       </section>
 
