@@ -226,7 +226,7 @@ export function ShopView() {
                   {results.length} {results.length === 1 ? "product" : "products"}
                 </p>
                 {activeChips.map((chip) => (
-                  <button key={chip.label} onClick={chip.clear} className="flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs hover:border-ink" aria-label={`Remove ${chip.label}`}>
+                  <button key={chip.label} onClick={chip.clear} className="flex items-center gap-1.5 rounded-full bg-sand-dark px-3.5 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-[#d9d3c9]" aria-label={`Remove ${chip.label}`}>
                     {chip.label} <X size={12} />
                   </button>
                 ))}

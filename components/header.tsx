@@ -72,7 +72,8 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-[transform,box-shadow] duration-300 ease-out motion-reduce:transition-none ${
+      // Tailwind v4's translate-y-* sets the CSS `translate` property, so that (not `transform`) is what must transition.
+      className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-[translate,box-shadow] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
         hidden && active === null && !mobileOpen ? "-translate-y-full" : "translate-y-0"
       } ${scrolled ? "shadow-[0_1px_0_var(--color-line)]" : "border-b border-line"}`}
       onMouseLeave={() => setActive(null)}

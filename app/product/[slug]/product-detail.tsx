@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, Truck } from "lucide-react";
-import { COLLECTIONS, categoryName, type Product } from "@/lib/products";
+import { COLLECTIONS, MATERIALS, categoryName, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 import { ProductImage } from "@/components/product-image";
 import { useStore } from "@/components/store-provider";
@@ -14,19 +14,56 @@ function deliveryDate(days: number) {
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
 
+/** Gallery views: every photo, plus a close-up of the first so each product has at least two. */
+interface View {
+  index: number;
+  closeUp?: boolean;
+}
+
+const galleryViews = (product: Product): View[] => [...product.images.map((_, index) => ({ index })), { index: 0, closeUp: true }];
+
+const TYPE_LABEL: Record<Product["category"], string> = {
+  chains: "Chain / Pendant",
+  rings: "Ring",
+  bracelets: "Bracelet",
+  wallets: "Wallet",
+};
+
+/** Spec rows for the Details table, built from the catalogue fields and the free-text details. */
+function specRows(product: Product): [string, string][] {
+  const closure = product.details.find((d) => /clasp|closure|zip|snap/i.test(d));
+  const dimension = product.details.find((d) => /:\s*\d|\d\s*(mm|cm)/i.test(d) && d !== closure);
+  const leather = product.finish === "leather";
+  const rows: [string, string][] = [
+    ["SKU", `TTV-${product.slug.split("-").map((w) => w.slice(0, 3)).join("-").toUpperCase()}`],
+    ["Material", product.material],
+    ["Finish", MATERIALS.find((m) => m.id === product.finish)?.name ?? product.finish],
+    ["Type", TYPE_LABEL[product.category]],
+  ];
+  if (dimension) rows.push(["Dimensions", dimension.replace(/^[^:]*:\s*/, "")]);
+  if (product.sizes) rows.push([product.sizes.label === "Length" ? "Lengths" : "Sizes", product.sizes.values.join(", ")]);
+  if (closure) rows.push(["Closure", closure]);
+  rows.push(["Hypoallergenic", leather ? "Not applicable" : "Yes"]);
+  rows.push(["Tarnish-Free", leather ? "Not applicable" : "Yes"]);
+  rows.push(["Country of Origin", "India"]);
+  return rows;
+}
+
 export function ProductDetail({ product }: { product: Product }) {
   const { addToCart, wishlist, toggleWishlist } = useStore();
   const [size, setSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [viewIndex, setViewIndex] = useState(0);
   const [sizeError, setSizeError] = useState(false);
-  const [openPanel, setOpenPanel] = useState<string | null>("Description");
+  const [tab, setTab] = useState("Description");
   const [pincode, setPincode] = useState("");
   const [pinResult, setPinResult] = useState<string | null>(null);
 
   const saved = wishlist.includes(product.slug);
   const price = product.price;
   const collection = COLLECTIONS.find((c) => c.id === product.collection)!;
+  const views = galleryViews(product);
+  const view = views[viewIndex];
 
   const handleAdd = () => {
     if (product.sizes && !size) {
@@ -36,18 +73,37 @@ export function ProductDetail({ product }: { product: Product }) {
     addToCart({ slug: product.slug, size: size ?? undefined }, qty);
   };
 
-  const panels = [
-    { title: "Description", body: <p>{product.description}</p> },
+  const tabs: { title: string; body: React.ReactNode }[] = [
+    {
+      title: "Description",
+      body: (
+        <div className="space-y-3">
+          <p>{product.description}</p>
+          <ul className="space-y-1.5">
+            {product.details.map((d) => (
+              <li key={d} className="flex gap-3">
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-ink" /> {d}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ),
+    },
     {
       title: "Details",
       body: (
-        <ul className="space-y-2">
-          {product.details.map((d) => (
-            <li key={d} className="flex gap-3">
-              <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-ink" /> {d}
-            </li>
-          ))}
-        </ul>
+        <table className="w-full overflow-hidden border border-line text-sm">
+          <tbody>
+            {specRows(product).map(([label, value], i) => (
+              <tr key={label} className={i % 2 ? "bg-white" : "bg-sand"}>
+                <th scope="row" className="w-[42%] border-b border-line px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-ink">
+                  {label}
+                </th>
+                <td className="border-b border-line px-4 py-3 text-ink/80">{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ),
     },
     {
@@ -66,67 +122,89 @@ export function ProductDetail({ product }: { product: Product }) {
     {
       title: "Shipping & Returns",
       body: (
-        <p>
-          Complimentary insured shipping on orders above {formatPrice(FREE_SHIPPING_THRESHOLD)}. Dispatched within 24 hours. Returns and exchanges accepted within 15 days of
-          delivery (engraved pieces are final sale).
-        </p>
+        <div className="space-y-3">
+          <p>Complimentary insured shipping on orders above {formatPrice(FREE_SHIPPING_THRESHOLD)}. Dispatched within 24 hours.</p>
+          <p>Returns and exchanges accepted within 15 days of delivery (engraved pieces are final sale).</p>
+        </div>
       ),
     },
   ];
+  const activeTab = tabs.find((t) => t.title === tab) ?? tabs[0];
 
   return (
     <section className="container-x grid gap-8 py-6 md:py-10 lg:grid-cols-2 lg:gap-12 xl:gap-16">
-      {/* Gallery */}
+      {/* Gallery: hovering (or tapping/focusing) a thumbnail shows it in the main frame. */}
       <div className="min-w-0">
         <div className="flex flex-col-reverse gap-3 md:flex-row">
-          {product.images.length > 1 && (
-            <div className="no-scrollbar flex gap-3 overflow-x-auto md:w-[72px] md:shrink-0 md:flex-col">
-              {product.images.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setViewIndex(i)}
-                  aria-label={`View image ${i + 1}`}
-                  className={`relative aspect-square w-[72px] shrink-0 overflow-hidden border transition ${viewIndex === i ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
-                >
-                  <ProductImage product={product} index={i} sizes="72px" />
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="relative aspect-square flex-1 overflow-hidden bg-sand">
-            <ProductImage key={viewIndex} product={product} index={viewIndex} priority sizes="(min-width: 1024px) 45vw, 100vw" className="animate-fade-in" />
-            {product.badge && <span className="absolute left-4 top-4 bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em]">{product.badge}</span>}
+          <div className="no-scrollbar flex gap-3 overflow-x-auto md:w-[76px] md:shrink-0 md:flex-col">
+            {views.map((v, i) => (
+              <button
+                key={i}
+                onMouseEnter={() => setViewIndex(i)}
+                onFocus={() => setViewIndex(i)}
+                onClick={() => setViewIndex(i)}
+                aria-label={`View ${v.closeUp ? "close-up" : `image ${v.index + 1}`}`}
+                aria-current={viewIndex === i}
+                className={`relative aspect-square w-[76px] shrink-0 overflow-hidden border-2 bg-sand transition-colors ${
+                  viewIndex === i ? "border-ink" : "border-transparent hover:border-line"
+                }`}
+              >
+                <ProductImage product={product} index={v.index} sizes="76px" className={v.closeUp ? "scale-[1.9]" : ""} />
+              </button>
+            ))}
+          </div>
+          <div className="relative aspect-square flex-1 overflow-hidden border border-line bg-sand">
+            <ProductImage
+              key={viewIndex}
+              product={product}
+              index={view.index}
+              priority
+              sizes="(min-width: 1024px) 45vw, 100vw"
+              className={`animate-fade-in ${view.closeUp ? "scale-[1.9]" : ""}`}
+            />
+            {(product.soldOut || product.badge) && (
+              <span className={`absolute left-4 top-4 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] ${product.soldOut ? "bg-ink text-white" : "bg-white"}`}>
+                {product.soldOut ? "Sold Out" : product.badge}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Buy box */}
-      <div className="min-w-0 lg:max-w-[520px]">
-        <div className="lg:sticky lg:top-28">
+      <div className="min-w-0 lg:max-w-[540px]">
+        <div>
           <p className="eyebrow text-muted">
             {collection.name} Collection · {categoryName(product.category)}
           </p>
           <h1 className="display mt-3 text-[32px] font-normal leading-[1.1] md:text-[40px]">{product.name}</h1>
-          <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-xl font-medium">{formatPrice(price)}</span>
-            {product.compareAt && <span className="text-base text-muted line-through">{formatPrice(product.compareAt)}</span>}
-            <span className="text-xs text-muted">Inclusive of all taxes</span>
-          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p className="flex items-baseline gap-2">
+              <span className="text-2xl font-medium">{formatPrice(price)}</span>
+              {product.compareAt && <span className="text-base text-muted line-through">{formatPrice(product.compareAt)}</span>}
+            </p>
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${product.soldOut ? "text-muted" : "text-emerald-700"}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${product.soldOut ? "bg-muted" : "bg-emerald-600"}`} />
+              {product.soldOut ? "Out of stock" : "In stock"}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted">Inclusive of all taxes</p>
           <p className="mt-5 leading-relaxed text-ink/75">{product.short}</p>
 
-          <div className="mt-7 border-t border-line pt-6">
-            <dl className="flex gap-2 text-sm">
-              <dt className="text-muted">Material</dt>
-              <dd className="font-medium">{product.material}</dd>
-            </dl>
+          {/* Options */}
+          <div className="mt-7 space-y-6 border-t border-line pt-6">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">Material</p>
+              <p className="mt-2 inline-block border border-line bg-white px-3 py-1.5 text-sm">{product.material}</p>
+            </div>
 
-            {/* Size */}
             {product.sizes && (
-              <div className="mt-6">
-                <div className="flex items-center justify-between text-sm">
-                  <p>
-                    <span className="text-muted">{product.sizes.label}</span>
-                    {size && <span className="ml-2 font-medium">{size}</span>}
+              <div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">
+                    {product.sizes.label}
+                    {size && <span className="ml-2 font-normal normal-case tracking-normal text-muted">{size}</span>}
                   </p>
                   <Link href="/help#size-guide" className="text-xs text-muted underline underline-offset-4 hover:text-ink">
                     Size Guide
@@ -169,7 +247,7 @@ export function ProductDetail({ product }: { product: Product }) {
               </button>
             ) : (
               <button onClick={handleAdd} className="btn btn-dark flex-1 !px-4">
-                Add to Bag
+                Add to Bag · {formatPrice(price * qty)}
               </button>
             )}
             <button
@@ -184,7 +262,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
           {/* Delivery check */}
           <form
-            className="mt-4 flex items-center gap-3 border-b border-line"
+            className="mt-4 flex items-center gap-3 border border-line bg-white px-4"
             onSubmit={(e) => {
               e.preventDefault();
               setPinResult(/^\d{6}$/.test(pincode) ? `Delivery by ${deliveryDate(pincode.startsWith("1") || pincode.startsWith("4") || pincode.startsWith("5") || pincode.startsWith("6") ? 2 : 4)}` : "Please enter a valid 6-digit pincode");
@@ -199,7 +277,7 @@ export function ProductDetail({ product }: { product: Product }) {
               aria-label="Pincode"
               className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
             />
-            <button type="submit" className="text-[11px] font-medium uppercase tracking-[0.16em] hover:underline hover:underline-offset-4">
+            <button type="submit" className="text-[11px] font-semibold uppercase tracking-[0.16em] hover:underline hover:underline-offset-4">
               Check
             </button>
           </form>
@@ -209,36 +287,40 @@ export function ProductDetail({ product }: { product: Product }) {
             </p>
           )}
 
-          <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
-            <li className="flex items-center gap-2">
-              <BadgeCheck size={16} strokeWidth={1.3} /> Quality checked
+          <ul className="mt-5 grid grid-cols-3 border border-line bg-white text-center text-[11px] text-ink/75">
+            <li className="flex flex-col items-center gap-1.5 px-2 py-3">
+              <BadgeCheck size={18} strokeWidth={1.3} /> Quality checked
             </li>
-            <li className="flex items-center gap-2">
-              <RotateCcw size={16} strokeWidth={1.3} /> 15-day returns
+            <li className="flex flex-col items-center gap-1.5 border-x border-line px-2 py-3">
+              <RotateCcw size={18} strokeWidth={1.3} /> 15-day returns
             </li>
-            <li className="flex items-center gap-2">
-              <Package size={16} strokeWidth={1.3} /> Secure packaging
+            <li className="flex flex-col items-center gap-1.5 px-2 py-3">
+              <Package size={18} strokeWidth={1.3} /> Secure packaging
             </li>
           </ul>
 
-          {/* Accordions */}
-          <div className="mt-7 divide-y divide-line border-y border-line">
-            {panels.map((panel) => {
-              const open = openPanel === panel.title;
-              return (
-                <div key={panel.title}>
-                  <button
-                    className="flex w-full items-center justify-between py-4 text-left text-[12px] font-medium uppercase tracking-[0.18em]"
-                    onClick={() => setOpenPanel(open ? null : panel.title)}
-                    aria-expanded={open}
-                  >
-                    {panel.title}
-                    {open ? <Minus size={14} strokeWidth={1.5} /> : <Plus size={14} strokeWidth={1.5} />}
-                  </button>
-                  {open && <div className="animate-fade-in pb-5 text-sm leading-relaxed text-ink/75">{panel.body}</div>}
-                </div>
-              );
-            })}
+          {/* Tabs */}
+          <div className="mt-9">
+            <div role="tablist" aria-label="Product information" className="no-scrollbar flex gap-6 overflow-x-auto border-b border-line">
+              {tabs.map((t) => (
+                <button
+                  key={t.title}
+                  role="tab"
+                  id={`tab-${t.title}`}
+                  aria-selected={t.title === activeTab.title}
+                  aria-controls="product-tabpanel"
+                  onClick={() => setTab(t.title)}
+                  className={`-mb-px shrink-0 whitespace-nowrap border-b-2 pb-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors ${
+                    t.title === activeTab.title ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"
+                  }`}
+                >
+                  {t.title}
+                </button>
+              ))}
+            </div>
+            <div id="product-tabpanel" role="tabpanel" aria-labelledby={`tab-${activeTab.title}`} className="animate-fade-in pt-5 text-sm leading-relaxed text-ink/75">
+              {activeTab.body}
+            </div>
           </div>
         </div>
       </div>
