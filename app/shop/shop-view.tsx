@@ -36,8 +36,8 @@ interface Banner {
 
 const BANNERS: Partial<Record<Product["category"], Banner>> = {
   chains: { src: "/images/shop/chains.jpg", position: "75% 60%", tone: "light" },
-  rings: { src: "/images/shop/rings.jpg", position: "75% 60%", tone: "light" },
-  bracelets: { src: "/images/shop/bracelets.jpg", position: "20% 50%", tone: "light", align: "right" },
+  rings: { src: "/images/shop/rings.jpg", position: "85% 55%", tone: "light" },
+  bracelets: { src: "/images/shop/bracelets.jpg", position: "0% 55%", tone: "light", align: "right" },
   wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%", tone: "dark" },
 };
 
@@ -199,7 +199,7 @@ export function ShopView() {
       {/* Photo shown as-is (no overlay). From md up the copy sits on the photo's empty side;
           on phones it stacks under the photo so it never covers the jewellery. */}
       <section
-        className={`relative isolate overflow-hidden md:flex md:h-[320px] md:items-center ${
+        className={`relative isolate overflow-hidden md:flex md:h-[clamp(320px,23vw,460px)] md:items-center ${
           light ? "bg-sand text-ink" : "bg-ink text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55),0_2px_16px_rgba(0,0,0,0.45)]"
         }`}
       >
