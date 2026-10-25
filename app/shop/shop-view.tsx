@@ -47,6 +47,11 @@ const PRICES = [
   { id: "1500p", label: "Above ₹1,500", test: (n: number) => n > 1500 },
 ];
 
+const AVAILABILITY = [
+  { id: "in", label: "In stock", test: (p: Product) => !p.soldOut },
+  { id: "out", label: "Out of stock", test: (p: Product) => !!p.soldOut },
+];
+
 const SORTS = [
   { id: "featured", label: "Featured" },
   { id: "new", label: "Newest" },
@@ -71,6 +76,7 @@ export function ShopView() {
   const collections = list(params.get("collection"));
   const materials = list(params.get("material"));
   const prices = list(params.get("price"));
+  const stock = list(params.get("stock"));
   const tag = params.get("tag") ?? "";
   const q = params.get("q") ?? "";
   const sort = params.get("sort") ?? "featured";
@@ -92,13 +98,19 @@ export function ShopView() {
     document.body.style.overflow = filtersOpen ? "hidden" : "";
   }, [filtersOpen]);
 
+  // The page's own scope (search / New Arrivals / Bestsellers); filter counts are taken from it.
+  const scope = (() => {
+    const items = q ? searchProducts(q) : PRODUCTS;
+    return tag && TAGS[tag] ? items.filter(TAGS[tag].test) : items;
+  })();
+
   const results = (() => {
-    let items = q ? searchProducts(q) : PRODUCTS;
-    if (tag && TAGS[tag]) items = items.filter(TAGS[tag].test);
+    let items = scope;
     if (category) items = items.filter((p) => p.category === category);
     if (collections.length) items = items.filter((p) => collections.includes(p.collection));
     if (materials.length) items = items.filter((p) => materials.includes(p.finish));
     if (prices.length) items = items.filter((p) => PRICES.some((r) => prices.includes(r.id) && r.test(p.price)));
+    if (stock.length) items = items.filter((p) => AVAILABILITY.some((a) => stock.includes(a.id) && a.test(p)));
     const sorted = [...items];
     if (sort === "price-asc") sorted.sort((a, b) => a.price - b.price);
     if (sort === "price-desc") sorted.sort((a, b) => b.price - a.price);
@@ -129,26 +141,53 @@ export function ShopView() {
     ...collections.map((c) => ({ label: COLLECTIONS.find((x) => x.id === c)?.name ?? c, clear: () => toggle("collection", collections, c) })),
     ...materials.map((m) => ({ label: MATERIALS.find((x) => x.id === m)?.name ?? m, clear: () => toggle("material", materials, m) })),
     ...prices.map((p) => ({ label: PRICES.find((x) => x.id === p)?.label ?? p, clear: () => toggle("price", prices, p) })),
+    ...stock.map((s) => ({ label: AVAILABILITY.find((x) => x.id === s)?.label ?? s, clear: () => toggle("stock", stock, s) })),
   ];
 
+  // "Clear all" keeps the page itself (search / New Arrivals) and drops only the sidebar filters.
+  const sidebarActive = !!category || materials.length + prices.length + stock.length + collections.length > 0;
+  const clearFilters = () => {
+    const next = new URLSearchParams();
+    if (q) next.set("q", q);
+    if (tag) next.set("tag", tag);
+    if (sort !== "featured") next.set("sort", sort);
+    const qs = next.toString();
+    window.history.replaceState(null, "", qs ? `/shop?${qs}` : "/shop");
+  };
+
   const filters = (
-    <div className="space-y-8">
-      <FilterGroup title="Category">
-        <Radio label="All Categories" checked={!category} onChange={() => update("category", null)} />
-        {CATEGORIES.map((c) => (
-          <Radio key={c.id} label={c.name} checked={category === c.id} onChange={() => update("category", c.id)} count={PRODUCTS.filter((p) => p.category === c.id).length} />
-        ))}
-      </FilterGroup>
-      <FilterGroup title="Material">
-        {MATERIALS.map((m) => (
-          <Checkbox key={m.id} label={m.name} checked={materials.includes(m.id)} onChange={() => toggle("material", materials, m.id)} />
-        ))}
-      </FilterGroup>
-      <FilterGroup title="Price">
-        {PRICES.map((p) => (
-          <Checkbox key={p.id} label={p.label} checked={prices.includes(p.id)} onChange={() => toggle("price", prices, p.id)} />
-        ))}
-      </FilterGroup>
+    <div>
+      <div className="hidden items-center justify-between pb-4 lg:flex">
+        <p className="text-sm font-semibold">Filters</p>
+        {sidebarActive && (
+          <button onClick={clearFilters} className="text-xs text-muted underline underline-offset-4 hover:text-ink">
+            Clear all
+          </button>
+        )}
+      </div>
+      <div className="divide-y divide-line border-t border-line">
+        <FilterGroup title="Category">
+          <Radio label="All Categories" checked={!category} onChange={() => update("category", null)} />
+          {CATEGORIES.map((c) => (
+            <Radio key={c.id} label={c.name} checked={category === c.id} onChange={() => update("category", c.id)} count={scope.filter((p) => p.category === c.id).length} />
+          ))}
+        </FilterGroup>
+        <FilterGroup title="Material">
+          {MATERIALS.map((m) => (
+            <Checkbox key={m.id} label={m.name} checked={materials.includes(m.id)} onChange={() => toggle("material", materials, m.id)} />
+          ))}
+        </FilterGroup>
+        <FilterGroup title="Price">
+          {PRICES.map((p) => (
+            <Checkbox key={p.id} label={p.label} checked={prices.includes(p.id)} onChange={() => toggle("price", prices, p.id)} />
+          ))}
+        </FilterGroup>
+        <FilterGroup title="Availability">
+          {AVAILABILITY.map((a) => (
+            <Checkbox key={a.id} label={a.label} checked={stock.includes(a.id)} onChange={() => toggle("stock", stock, a.id)} count={scope.filter(a.test).length} />
+          ))}
+        </FilterGroup>
+      </div>
     </div>
   );
 
@@ -175,75 +214,69 @@ export function ShopView() {
       </section>
 
       <div className="container-x py-10 md:py-14">
-        <div className="mb-8 flex items-center justify-between gap-4 border-b border-line pb-5">
-          <div className="flex items-center gap-6">
-            <button onClick={() => setFiltersOpen(true)} className="eyebrow flex items-center gap-2 lg:hidden">
-              <SlidersHorizontal size={16} strokeWidth={1.5} /> Filter
-            </button>
-            <p className="text-sm text-muted">
-              {results.length} {results.length === 1 ? "piece" : "pieces"}
-            </p>
-          </div>
-          <label className="relative flex items-center gap-2 text-sm">
-            <span className="hidden text-muted sm:inline">Sort by</span>
-            <select value={sort} onChange={(e) => update("sort", e.target.value === "featured" ? null : e.target.value)} className="appearance-none bg-transparent pr-6 font-medium outline-none">
-              {SORTS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="pointer-events-none absolute right-0" />
-          </label>
-        </div>
-
-        {activeChips.length > 0 && (
-          <div className="mb-8 flex flex-wrap items-center gap-2">
-            {activeChips.map((chip) => (
-              <button key={chip.label} onClick={chip.clear} className="flex items-center gap-2 bg-sand px-3 py-1.5 text-xs hover:bg-sand-dark">
-                {chip.label} <X size={12} />
-              </button>
-            ))}
-            <button onClick={() => window.history.replaceState(null, "", "/shop")} className="ml-2 text-xs underline underline-offset-4">
-              Clear all
-            </button>
-          </div>
-        )}
-
-        <div className="grid gap-10 items-start lg:grid-cols-[220px_1fr] xl:gap-14">
-          <aside className="hidden lg:block">{filters}</aside>
-          {results.length ? (
-            <div>
-              <div className="grid grid-cols-2 content-start gap-3 md:grid-cols-3 md:gap-5">
-                {results.slice(0, visibleCount).map((p) => (
-                  <ProductCard key={p.slug} product={p} />
+        <div className="grid items-start gap-10 lg:grid-cols-[230px_1fr] xl:gap-12">
+          <aside className="hidden lg:sticky lg:top-24 lg:block">{filters}</aside>
+          <div className="min-w-0">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => setFiltersOpen(true)} className="mr-2 flex items-center gap-2 border border-line bg-white px-3 py-1.5 text-xs font-medium lg:hidden">
+                  <SlidersHorizontal size={14} strokeWidth={1.5} /> Filters
+                </button>
+                <p className="mr-2 text-sm text-muted">
+                  {results.length} {results.length === 1 ? "product" : "products"}
+                </p>
+                {activeChips.map((chip) => (
+                  <button key={chip.label} onClick={chip.clear} className="flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs hover:border-ink" aria-label={`Remove ${chip.label}`}>
+                    {chip.label} <X size={12} />
+                  </button>
                 ))}
               </div>
-              {results.length > PAGE_SIZE && (
-                <div className="mx-auto mt-12 flex max-w-xs flex-col items-center text-center">
-                  <p className="text-sm text-muted" aria-live="polite">
-                    Showing {Math.min(visibleCount, results.length)} of {results.length} pieces
-                  </p>
-                  <div className="mt-3 h-0.5 w-full bg-line">
-                    <div className="h-full bg-ink transition-all duration-500" style={{ width: `${(Math.min(visibleCount, results.length) / results.length) * 100}%` }} />
-                  </div>
-                  {visibleCount < results.length && (
-                    <button onClick={() => setReveal({ key: viewKey, count: visibleCount + PAGE_SIZE })} className="btn btn-outline mt-6 w-full">
-                      Load More
-                    </button>
-                  )}
+              <label className="relative flex shrink-0 items-center gap-2 text-sm">
+                <span className="hidden text-muted sm:inline">Sort by</span>
+                <select value={sort} onChange={(e) => update("sort", e.target.value === "featured" ? null : e.target.value)} className="appearance-none bg-transparent pr-6 font-medium outline-none">
+                  {SORTS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="pointer-events-none absolute right-0" />
+              </label>
+            </div>
+
+            {results.length ? (
+              <div>
+                <div className="grid grid-cols-2 content-start gap-3 md:grid-cols-3 md:gap-5">
+                  {results.slice(0, visibleCount).map((p) => (
+                    <ProductCard key={p.slug} product={p} />
+                  ))}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="py-20 text-center">
-              <p className="title text-base md:text-lg">No pieces found</p>
-              <p className="mt-3 text-muted">Try removing a filter or two.</p>
-              <button onClick={() => window.history.replaceState(null, "", "/shop")} className="btn btn-dark mt-8">
-                View All Jewellery
-              </button>
-            </div>
-          )}
+                {results.length > PAGE_SIZE && (
+                  <div className="mx-auto mt-12 flex max-w-xs flex-col items-center text-center">
+                    <p className="text-sm text-muted" aria-live="polite">
+                      Showing {Math.min(visibleCount, results.length)} of {results.length} pieces
+                    </p>
+                    <div className="mt-3 h-0.5 w-full bg-line">
+                      <div className="h-full bg-ink transition-all duration-500" style={{ width: `${(Math.min(visibleCount, results.length) / results.length) * 100}%` }} />
+                    </div>
+                    {visibleCount < results.length && (
+                      <button onClick={() => setReveal({ key: viewKey, count: visibleCount + PAGE_SIZE })} className="btn btn-outline mt-6 w-full">
+                        Load More
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="py-20 text-center">
+                <p className="title text-base md:text-lg">No pieces found</p>
+                <p className="mt-3 text-muted">Try removing a filter or two.</p>
+                <button onClick={clearFilters} className="btn btn-dark mt-8">
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -252,10 +285,17 @@ export function ShopView() {
           <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={() => setFiltersOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm animate-slide-in-left flex-col bg-white">
             <div className="flex h-16 items-center justify-between border-b border-line px-5">
-              <p className="eyebrow">Filter</p>
-              <button aria-label="Close filters" onClick={() => setFiltersOpen(false)}>
-                <X size={22} strokeWidth={1.5} />
-              </button>
+              <p className="text-sm font-semibold">Filters</p>
+              <div className="flex items-center gap-5">
+                {sidebarActive && (
+                  <button onClick={clearFilters} className="text-xs text-muted underline underline-offset-4">
+                    Clear all
+                  </button>
+                )}
+                <button aria-label="Close filters" onClick={() => setFiltersOpen(false)}>
+                  <X size={22} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-5">{filters}</div>
             <div className="border-t border-line p-5">
@@ -271,22 +311,34 @@ export function ShopView() {
 }
 
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
   return (
-    <fieldset>
-      <legend className="eyebrow mb-4">{title}</legend>
-      <div className="space-y-3">{children}</div>
+    <fieldset className="py-4">
+      <legend className="contents">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em]"
+        >
+          {title}
+          <ChevronDown size={14} strokeWidth={1.5} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </legend>
+      {open && <div className="mt-4 space-y-3">{children}</div>}
     </fieldset>
   );
 }
 
-function Checkbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+function Checkbox({ label, checked, onChange, count }: { label: string; checked: boolean; onChange: () => void; count?: number }) {
   return (
     <label className="flex cursor-pointer items-center gap-3 text-sm">
       <input type="checkbox" checked={checked} onChange={onChange} className="peer sr-only" />
       <span className="flex h-4 w-4 items-center justify-center border border-ink/40 peer-checked:border-ink peer-checked:bg-ink peer-focus-visible:ring-1 peer-focus-visible:ring-ink">
         {checked && <span className="h-1.5 w-1.5 bg-white" />}
       </span>
-      {label}
+      <span className={checked ? "font-medium" : ""}>{label}</span>
+      {count !== undefined && <span className="ml-auto text-xs text-muted">{count}</span>}
     </label>
   );
 }

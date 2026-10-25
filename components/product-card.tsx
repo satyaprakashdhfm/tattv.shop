@@ -32,18 +32,20 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
           />
           {hasAlt && <ProductImage product={product} index={1} className="opacity-0 transition-opacity duration-700 group-hover:opacity-100" />}
         </Link>
-        {product.badge && (
-          <span className="pointer-events-none absolute left-3 top-3 bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em]">
-            {product.badge}
+        {(product.soldOut || product.badge) && (
+          <span
+            className={`pointer-events-none absolute left-3 top-3 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${product.soldOut ? "bg-ink text-white" : "bg-white"}`}
+          >
+            {product.soldOut ? "Sold Out" : product.badge}
           </span>
         )}
         <button
           aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={saved}
           onClick={() => toggleWishlist(product.slug)}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/85 backdrop-blur transition hover:bg-white"
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center text-white transition-transform hover:scale-110"
         >
-          <Heart size={16} strokeWidth={1.5} className={saved ? "fill-ink" : ""} />
+          <Heart size={17} strokeWidth={1.6} className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)] ${saved ? "fill-white" : ""}`} />
         </button>
       </div>
 
@@ -68,7 +70,11 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
 
         {cta === "cart" && (
           <div className="mt-auto pt-4">
-            {picking && product.sizes ? (
+            {product.soldOut ? (
+              <button disabled className="btn h-11 w-full border border-line bg-sand px-4 text-muted">
+                Sold Out
+              </button>
+            ) : picking && product.sizes ? (
               <div className="animate-fade-in">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[11px] font-medium uppercase tracking-[0.14em]">Select {product.sizes.label}</p>

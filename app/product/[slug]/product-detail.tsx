@@ -163,9 +163,15 @@ export function ProductDetail({ product }: { product: Product }) {
                 <Plus size={14} />
               </button>
             </div>
-            <button onClick={handleAdd} className="btn btn-dark flex-1 !px-4">
-              Add to Bag
-            </button>
+            {product.soldOut ? (
+              <button disabled className="btn flex-1 border border-line bg-sand !px-4 text-muted">
+                Sold Out
+              </button>
+            ) : (
+              <button onClick={handleAdd} className="btn btn-dark flex-1 !px-4">
+                Add to Bag
+              </button>
+            )}
             <button
               onClick={() => toggleWishlist(product.slug)}
               aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}

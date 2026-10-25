@@ -19,6 +19,8 @@ export interface Product {
   badge?: "New" | "Bestseller" | "Limited Edition";
   isNew?: boolean;
   bestseller?: boolean;
+  /** Out of stock: still listed, but can't be added to the bag. */
+  soldOut?: boolean;
   short: string;
   description: string;
   details: string[];

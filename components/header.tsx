@@ -33,10 +33,28 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
+  // Slide away while scrolling down, come back on any scroll up. Small jitters are ignored.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
+    let lastY = window.scrollY;
+    let ticking = false;
+    const update = () => {
+      const y = window.scrollY;
+      setScrolled(y > 40);
+      if (y < 120) setHidden(false);
+      else if (y > lastY + 6) setHidden(true);
+      else if (y < lastY - 6) setHidden(false);
+      if (Math.abs(y - lastY) > 6) lastY = y;
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -54,7 +72,9 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-shadow ${scrolled ? "shadow-[0_1px_0_var(--color-line)]" : "border-b border-line"}`}
+      className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-[transform,box-shadow] duration-300 ease-out motion-reduce:transition-none ${
+        hidden && active === null && !mobileOpen ? "-translate-y-full" : "translate-y-0"
+      } ${scrolled ? "shadow-[0_1px_0_var(--color-line)]" : "border-b border-line"}`}
       onMouseLeave={() => setActive(null)}
     >
       <Suspense fallback={null}>
