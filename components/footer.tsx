@@ -18,10 +18,10 @@ const COLUMNS = [
     title: "Client Care",
     links: [
       { label: "Shipping", href: "/help#shipping" },
-      { label: "Returns & Exchanges", href: "/help#returns" },
+      { label: "Returns & Exchanges", href: "/returns" },
       { label: "Size Guide", href: "/help#size-guide" },
       { label: "Jewellery Care", href: "/help#care" },
-      { label: "Contact Us", href: "/help#contact" },
+      { label: "Contact Us", href: "/contact" },
     ],
   },
   {

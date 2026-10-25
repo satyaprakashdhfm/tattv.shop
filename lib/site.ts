@@ -6,4 +6,9 @@ export const CONTACT = {
   whatsapp: "910000000000",
   instagram: "https://www.instagram.com/",
   youtube: "https://www.youtube.com/",
+  hours: "Mon–Sat, 10am–7pm IST",
+  address: ["TATTV Studio, Sample Street", "Hyderabad, Telangana 500001, India"],
 };
+
+/** Return/exchange window in days, used in copy and the request form. */
+export const RETURN_WINDOW_DAYS = 15;

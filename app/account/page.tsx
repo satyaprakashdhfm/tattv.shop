@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Heart, LayoutGrid, LogOut, MapPin, Package, Truck, User } from "lucide-react";
+import { ChevronRight, Headphones, Heart, LayoutGrid, LogOut, MapPin, Package, RotateCcw, Truck, User } from "lucide-react";
 import { useStore } from "@/components/store-provider";
 import { ProductCard } from "@/components/product-card";
 import { ProductImage } from "@/components/product-image";
@@ -19,6 +19,11 @@ const SECTIONS = [
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
+
+const HELP_LINKS = [
+  { href: "/returns", icon: RotateCcw, title: "Returns & Exchanges", text: "Start a return or exchange" },
+  { href: "/contact", icon: Headphones, title: "Contact Support", text: "Email, WhatsApp or call us" },
+];
 
 const orderTotal = (order: Order) =>
   order.items.reduce((sum, i) => sum + (getProduct(i.slug)?.price ?? 0) * i.qty, 0) + order.shipping;
@@ -151,6 +156,12 @@ function Dashboard({ account }: { account: Account }) {
               <Icon size={16} strokeWidth={1.5} /> {label}
             </button>
           ))}
+          <p className="mt-5 hidden px-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted lg:block">Help</p>
+          {HELP_LINKS.map(({ href, icon: Icon, title }) => (
+            <Link key={href} href={href} className="flex shrink-0 items-center gap-3 bg-white px-4 py-2.5 text-sm text-ink/80 transition-colors hover:bg-sand lg:bg-transparent lg:py-3">
+              <Icon size={16} strokeWidth={1.5} /> {title}
+            </Link>
+          ))}
           <button onClick={signOut} className="flex shrink-0 items-center gap-3 px-4 py-2.5 text-sm text-ink/70 hover:bg-sand lg:mt-4 lg:border-t lg:border-line lg:py-3">
             <LogOut size={16} strokeWidth={1.5} /> Sign Out
           </button>
@@ -236,6 +247,24 @@ function Overview({ account, go }: { account: Account; go: (s: SectionId) => voi
           </button>
         </div>
       </section>
+
+      <section>
+        <SectionTitle>Need Help?</SectionTitle>
+        <div className="grid gap-3 md:grid-cols-2">
+          {HELP_LINKS.map(({ href, icon: Icon, title, text }) => (
+            <Link key={href} href={href} className="group flex items-center gap-4 border border-line bg-white p-5 transition-colors hover:border-ink">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sand">
+                <Icon size={17} strokeWidth={1.5} />
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm font-medium">{title}</span>
+                <span className="block text-xs text-muted">{text}</span>
+              </span>
+              <ChevronRight size={16} className="text-muted transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -288,6 +317,14 @@ function OrderCard({ order }: { order: Order }) {
       </ul>
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3 text-xs text-muted">
         <span>Ship to: {order.address}</span>
+        {order.status === "Delivered" && (
+          <Link
+            href={`/returns?order=${order.id}&item=${encodeURIComponent(order.items.map((i) => getProduct(i.slug)?.name ?? i.slug).join(", "))}`}
+            className="flex items-center gap-1.5 text-ink underline underline-offset-4"
+          >
+            <RotateCcw size={13} strokeWidth={1.5} /> Return / Exchange
+          </Link>
+        )}
         {order.tracking && (
           <span className="flex items-center gap-2 text-ink">
             <Truck size={14} strokeWidth={1.5} /> {order.tracking}
