@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { CONTACT } from "@/lib/site";
-import { NewsletterForm } from "./newsletter-form";
 import { InstagramIcon, WhatsAppIcon, YouTubeIcon } from "./social-icons";
 
 const COLUMNS = [
@@ -49,11 +48,38 @@ export function Footer() {
       <div className="container-x grid gap-12 py-16 lg:grid-cols-12 lg:py-20">
         <div className="lg:col-span-4">
           <Image src="/brand/logo-white.png" alt="TATTV" width={1147} height={294} className="h-auto w-[180px]" />
-          <p className="mt-8 font-serif text-2xl leading-snug">Join the TATTV circle</p>
-          <p className="mt-2 max-w-sm text-sm text-white/60">Early access to new collections, private events and stories of craft. No noise.</p>
-          <NewsletterForm />
+          <p className="mt-6 max-w-xs text-sm leading-relaxed text-white/60">Modern and classic jewellery for men, made to be worn every day.</p>
+          <ul className="mt-6 flex items-center gap-3">
+            {SOCIAL.map(({ label, href, icon: Icon, external }) => (
+              <li key={label}>
+                <a
+                  href={href}
+                  aria-label={label}
+                  title={label}
+                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white/70 transition-colors hover:border-white hover:text-white"
+                >
+                  <Icon size={17} strokeWidth={1.5} />
+                </a>
+              </li>
+            ))}
+          </ul>
+          <ul className="mt-6 space-y-2.5 text-sm text-white/80">
+            <li>
+              <a href={`tel:${CONTACT.phone}`} className="inline-flex items-center gap-3 hover:text-white">
+                <Phone size={15} strokeWidth={1.5} className="text-white/50" />
+                <span className="link-underline">{CONTACT.phoneDisplay}</span>
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${CONTACT.email}`} className="inline-flex items-center gap-3 hover:text-white">
+                <Mail size={15} strokeWidth={1.5} className="text-white/50" />
+                <span className="link-underline break-all">{CONTACT.email}</span>
+              </a>
+            </li>
+          </ul>
         </div>
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:col-span-8 lg:col-start-5">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-3 lg:col-span-8 lg:col-start-5">
           {COLUMNS.map((col) => (
             <div key={col.title}>
               <p className="eyebrow mb-5 text-white/50">{col.title}</p>
@@ -68,42 +94,12 @@ export function Footer() {
               </ul>
             </div>
           ))}
-          <div>
-            <p className="eyebrow mb-5 text-white/50">Contact</p>
-            <ul className="space-y-3 text-sm text-white/85">
-              <li>
-                <a href={`tel:${CONTACT.phone}`} className="link-underline hover:text-white">
-                  {CONTACT.phoneDisplay}
-                </a>
-              </li>
-              <li>
-                <a href={`mailto:${CONTACT.email}`} className="link-underline break-all hover:text-white">
-                  {CONTACT.email}
-                </a>
-              </li>
-              <li className="text-white/50">Mon–Sat, 10am–7pm IST</li>
-            </ul>
-          </div>
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="container-x flex flex-col gap-4 py-6 text-xs text-white/50 md:flex-row md:items-center md:justify-between">
-          <p>© {new Date().getFullYear()} TATTV. Energize Your Style Element.</p>
-          <ul className="flex items-center gap-3">
-            {SOCIAL.map(({ label, href, icon: Icon, external }) => (
-              <li key={label}>
-                <a
-                  href={href}
-                  aria-label={label}
-                  title={label}
-                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white/70 transition-colors hover:border-white hover:text-white"
-                >
-                  <Icon size={18} strokeWidth={1.5} />
-                </a>
-              </li>
-            ))}
-          </ul>
+        <div className="container-x flex flex-col gap-2 py-6 text-xs text-white/50 md:flex-row md:items-center md:justify-between">
+          <p>© {new Date().getFullYear()} TATTV. All rights reserved.</p>
+          <p className="tracking-[0.14em] uppercase">Energize Your Style Element</p>
         </div>
       </div>
     </footer>
