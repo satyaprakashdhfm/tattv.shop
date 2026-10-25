@@ -27,6 +27,7 @@ const TYPE_LABEL: Record<Product["category"], string> = {
   rings: "Ring",
   bracelets: "Bracelet",
   wallets: "Wallet",
+  earrings: "Earrings",
 };
 
 /** Spec rows for the Details table, built from the catalogue fields and the free-text details. */

@@ -11,7 +11,67 @@ const WRIST_SIZES = { label: "Wrist Size", values: ['S · 7"', 'M · 7.5"', 'L �
 
 const img = (...names: string[]) => names.map((n) => `/images/products/preview/${n}.jpg`);
 
+// No earring photography yet: these use a branded "image coming soon" placeholder.
+const EARRING_PLACEHOLDER = ["/images/products/preview/earrings-placeholder.jpg"];
+
 export const PREVIEW_PRODUCTS: Product[] = [
+  {
+    slug: "onyx-stud-earrings",
+    name: "Onyx Stud Earrings",
+    category: "earrings",
+    collection: "classic",
+    price: 899,
+    material: "Stainless Steel & Onyx",
+    finish: "silver",
+    images: EARRING_PLACEHOLDER,
+    isNew: true,
+    badge: "New",
+    short: "Square black onyx studs set in polished steel.",
+    description: "A pair of square studs with polished black onyx faces, framed in steel. Understated enough for every day.",
+    details: ["Face: 6 × 6mm", "Stainless steel, natural onyx", "Butterfly backs", "Sold as a pair"],
+  },
+  {
+    slug: "steel-hoop-earrings",
+    name: "Steel Hoop Earrings",
+    category: "earrings",
+    collection: "modern",
+    price: 799,
+    material: "Stainless Steel",
+    finish: "silver",
+    images: EARRING_PLACEHOLDER,
+    bestseller: true,
+    short: "Slim polished hoops with a hinged click closure.",
+    description: "Clean, slim hoops in polished steel with a hinged click closure that stays secure all day.",
+    details: ["Diameter: 12mm", "Stainless steel", "Hinged click closure", "Sold as a pair"],
+  },
+  {
+    slug: "black-huggie-hoops",
+    name: "Black Huggie Hoops",
+    category: "earrings",
+    collection: "modern",
+    price: 849,
+    material: "Black IP Stainless Steel",
+    finish: "black",
+    images: EARRING_PLACEHOLDER,
+    isNew: true,
+    badge: "New",
+    short: "Matte black huggies that sit close to the ear.",
+    description: "Small matte black huggie hoops that hug the lobe, made for stacking or wearing alone.",
+    details: ["Diameter: 9mm", "Black IP stainless steel", "Hinged click closure", "Sold as a pair"],
+  },
+  {
+    slug: "cross-drop-earring",
+    name: "Cross Drop Earring",
+    category: "earrings",
+    collection: "classic",
+    price: 999,
+    material: "Oxidised Stainless Steel",
+    finish: "silver",
+    images: EARRING_PLACEHOLDER,
+    short: "A small oxidised cross on a fine hoop.",
+    description: "A single small cross with an antiqued finish, hanging from a fine hoop. Sold individually.",
+    details: ["Cross: 14mm", "Oxidised stainless steel", "Hinged hoop", "Sold individually"],
+  },
   {
     slug: "onyx-bar-pendant",
     name: "Onyx Bar Pendant",

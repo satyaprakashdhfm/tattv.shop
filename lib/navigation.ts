@@ -11,9 +11,10 @@ export interface NavItem extends NavLink {
 // Dropdown columns/featured products are supported by the header; add them back once the catalogue is larger.
 export const NAV: NavItem[] = [
   { label: "New Arrivals", href: "/shop?tag=new" },
+  { label: "Earrings", href: "/shop?category=earrings" },
   { label: "Chains", href: "/shop?category=chains" },
   { label: "Rings", href: "/shop?category=rings" },
   { label: "Bracelets", href: "/shop?category=bracelets" },
-  { label: "Wallets", href: "/shop?category=wallets" },
+  { label: "Daily Objects", href: "/shop?category=wallets" },
   { label: "Our Story", href: "/about" },
 ];

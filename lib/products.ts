@@ -1,6 +1,6 @@
 import { PREVIEW_PRODUCTS, SHOW_PREVIEW_PRODUCTS } from "./preview-products";
 
-export type CategoryId = "chains" | "rings" | "bracelets" | "wallets";
+export type CategoryId = "earrings" | "chains" | "rings" | "bracelets" | "wallets";
 export type CollectionId = "modern" | "classic";
 export type Finish = "silver" | "gold" | "black" | "two-tone" | "leather";
 
@@ -26,12 +26,16 @@ export interface Product {
   details: string[];
 }
 
-export const CATEGORIES: { id: CategoryId; name: string; blurb: string; image: string }[] = [
-  { id: "chains", name: "Chains", blurb: "Chains and pendants, layered or worn alone.", image: "/images/categories/chains.jpg" },
-  { id: "rings", name: "Rings", blurb: "Bands and sculpted forms made for everyday wear.", image: "/images/categories/rings.jpg" },
-  { id: "bracelets", name: "Bracelets", blurb: "Cuffs, bangles and leather with a quiet, confident weight.", image: "/images/categories/bracelets.jpg" },
-  { id: "wallets", name: "Wallets", blurb: "Genuine leather, clean lines, built to age well.", image: "/images/categories/wallets.jpg" },
+/** `name` is the plain label (menus, filters, breadcrumbs); `title` is the editorial name shown on tiles and page headers. */
+export const CATEGORIES: { id: CategoryId; name: string; title: string; blurb: string; image: string }[] = [
+  { id: "earrings", name: "Earrings", title: "On the Ear", blurb: "Studs, hoops and huggies, small details that sharpen the whole look.", image: "/images/categories/earrings.jpg" },
+  { id: "chains", name: "Chains", title: "Chain Reaction", blurb: "Chains and pendants, layered or worn alone.", image: "/images/categories/chains.jpg" },
+  { id: "bracelets", name: "Bracelets", title: "Around the Wrist", blurb: "Cuffs, bangles and leather with a quiet, confident weight.", image: "/images/categories/bracelets.jpg" },
+  { id: "rings", name: "Rings", title: "Ring Theory", blurb: "Bands and sculpted forms made for everyday wear.", image: "/images/categories/rings.jpg" },
+  { id: "wallets", name: "Daily Objects", title: "Daily Objects", blurb: "Wallets, bags and everyday carry in genuine leather, built to age well.", image: "/images/categories/wallets.jpg" },
 ];
+
+export const categoryTitle = (id: CategoryId) => CATEGORIES.find((c) => c.id === id)?.title ?? id;
 
 export const COLLECTIONS: { id: CollectionId; name: string; tagline: string; blurb: string }[] = [
   {

@@ -11,6 +11,7 @@ import {
   MATERIALS,
   PRODUCTS,
   categoryName,
+  categoryTitle,
   searchProducts,
   type Product,
 } from "@/lib/products";
@@ -29,12 +30,14 @@ interface Banner {
   src: string;
   position: string;
   tone: "dark" | "light";
+  /** Side of the banner the copy sits on: the photo's empty side. Defaults to left. */
+  align?: "left" | "right";
 }
 
 const BANNERS: Partial<Record<Product["category"], Banner>> = {
-  chains: { src: "/images/shop/chains.jpg", position: "62% 50%", tone: "dark" },
-  rings: { src: "/images/shop/rings.jpg", position: "50% 42%", tone: "dark" },
-  bracelets: { src: "/images/shop/bracelets.jpg", position: "62% 50%", tone: "dark" },
+  chains: { src: "/images/shop/chains.jpg", position: "75% 60%", tone: "light" },
+  rings: { src: "/images/shop/rings.jpg", position: "75% 60%", tone: "light" },
+  bracelets: { src: "/images/shop/bracelets.jpg", position: "20% 50%", tone: "light", align: "right" },
   wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%", tone: "dark" },
 };
 
@@ -123,7 +126,7 @@ export function ShopView() {
     : tag && TAGS[tag]
       ? TAGS[tag]
       : category
-        ? { title: categoryName(category as Product["category"]), blurb: CATEGORIES.find((c) => c.id === category)?.blurb ?? "" }
+        ? { title: categoryTitle(category as Product["category"]), blurb: CATEGORIES.find((c) => c.id === category)?.blurb ?? "" }
         : collections.length === 1
           ? {
               title: `The ${COLLECTIONS.find((c) => c.id === collections[0])?.name} Collection`,
@@ -193,14 +196,17 @@ export function ShopView() {
 
   return (
     <>
+      {/* Photo shown as-is (no overlay). From md up the copy sits on the photo's empty side;
+          on phones it stacks under the photo so it never covers the jewellery. */}
       <section
-        className={`relative isolate flex h-[240px] items-center overflow-hidden md:h-[320px] ${
+        className={`relative isolate overflow-hidden md:flex md:h-[320px] md:items-center ${
           light ? "bg-sand text-ink" : "bg-ink text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55),0_2px_16px_rgba(0,0,0,0.45)]"
         }`}
       >
-        {/* Photo shown as-is (no overlay); the copy's colour/shadow carries legibility. */}
-        <Image src={banner.src} alt="" fill priority sizes="100vw" className="-z-10 object-cover" style={{ objectPosition: banner.position }} />
-        <div className="container-x">
+        <div className="relative aspect-[8/3] md:absolute md:inset-0 md:aspect-auto">
+          <Image src={banner.src} alt="" fill priority sizes="100vw" className="object-cover" style={{ objectPosition: banner.position }} />
+        </div>
+        <div className={`container-x relative py-6 md:py-0 ${banner.align === "right" ? "md:flex md:flex-col md:items-end md:text-right" : ""}`}>
           <nav className={`mb-4 text-xs ${light ? "text-ink/70" : "text-white/85"}`} aria-label="Breadcrumb">
             <Link href="/" className={light ? "hover:text-ink" : "hover:text-white"}>
               Home

@@ -62,19 +62,19 @@ export default function HomePage() {
       {/* Shop by category */}
       <section className="pb-5 pt-10 md:pb-6 md:pt-12">
         <h2 className="title mb-6 text-center text-lg md:mb-7 md:text-xl">Shop by Category</h2>
-        <div className="grid grid-cols-2 gap-2.5 px-2.5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 px-2.5 md:grid-cols-5">
           {CATEGORIES.map((c) => (
-            <Link key={c.id} href={`/shop?category=${c.id}`} className="group relative block aspect-[3/4] overflow-hidden bg-ink">
+            <Link key={c.id} href={`/shop?category=${c.id}`} className="group relative block aspect-[3/4] overflow-hidden bg-ink last:col-span-2 last:aspect-[2/1] md:last:col-span-1 md:last:aspect-[3/4]">
               <Image
                 src={c.image}
                 alt={c.name}
                 fill
-                sizes="(min-width: 1024px) 25vw, 50vw"
+                sizes="(min-width: 768px) 20vw, 50vw"
                 className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
               />
               <span className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
-              <span className="absolute inset-x-0 bottom-7 text-center text-white md:bottom-9">
-                <span className="underline-reveal whitespace-nowrap text-[12px] font-semibold uppercase tracking-[0.06em] md:text-[13px]">Shop {c.name}</span>
+              <span className="absolute inset-x-0 bottom-7 px-3 text-center text-white md:bottom-9">
+                <span className="underline-reveal text-[12px] font-semibold uppercase tracking-[0.06em] md:text-[13px]">{c.title}</span>
               </span>
             </Link>
           ))}
