@@ -33,7 +33,7 @@ export default function HomePage() {
             <h1 className="display mt-4 text-3xl font-medium leading-tight text-ink sm:text-4xl xl:text-[34px] 2xl:text-[42px]">
               Chains, rings, bracelets and everyday essentials designed to define your style.
             </h1>
-            <Link href="/shop" className="btn btn-dark mt-8 h-11">
+            <Link href="/shop" className="btn btn-outline mt-8 h-11">
               Discover the Collection
             </Link>
           </div>
