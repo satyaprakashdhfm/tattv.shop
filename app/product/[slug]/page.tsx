@@ -28,21 +28,23 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      <div className="container-x pt-6">
-        <nav className="text-xs text-muted" aria-label="Breadcrumb">
-          <Link href="/" className="hover:text-ink">
-            Home
-          </Link>
-          <span className="mx-2">/</span>
-          <Link href={`/shop?category=${product.category}`} className="hover:text-ink">
-            {categoryName(product.category)}
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-ink">{product.name}</span>
-        </nav>
-      </div>
+      <div className="bg-cream">
+        <div className="container-x pt-6">
+          <nav className="text-xs text-muted" aria-label="Breadcrumb">
+            <Link href="/" className="hover:text-espresso">
+              Home
+            </Link>
+            <span className="mx-2 text-warm-line">/</span>
+            <Link href={`/shop?category=${product.category}`} className="hover:text-espresso">
+              {categoryName(product.category)}
+            </Link>
+            <span className="mx-2 text-warm-line">/</span>
+            <span className="text-espresso">{product.name}</span>
+          </nav>
+        </div>
 
-      <ProductDetail key={product.slug} product={product} />
+        <ProductDetail key={product.slug} product={product} />
+      </div>
 
       <section className="border-t border-line bg-white">
         <div className="container-x py-20">

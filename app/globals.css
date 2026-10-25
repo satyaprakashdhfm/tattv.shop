@@ -13,6 +13,12 @@
   --color-line: #e3e0da;
   --color-muted: #6f6b66;
   --color-gold: #a8834a;
+  /* Warm product-page palette */
+  --color-cream: #f7f1e8;
+  --color-bronze-soft: #f1e5d2;
+  --color-espresso: #2b211a;
+  --color-espresso-hover: #3e3128;
+  --color-warm-line: #e5dacb;
 
   --animate-fade-in: fade-in 0.25s ease-out;
   --animate-slide-in-right: slide-in-right 0.35s cubic-bezier(0.22, 1, 0.36, 1);
