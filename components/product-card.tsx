@@ -45,15 +45,6 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
         >
           <Heart size={16} strokeWidth={1.5} className={saved ? "fill-ink" : ""} />
         </button>
-        {cta === "discover" && (
-          // Slides up over the bottom of the photo on hover/focus (always shown on touch screens), so no space is reserved below the price.
-          <Link
-            href={href}
-            className="btn btn-dark absolute inset-x-3 bottom-3 h-10 translate-y-2 px-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100"
-          >
-            Discover
-          </Link>
-        )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">
@@ -64,6 +55,16 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
           {formatPrice(product.price)}
           {product.compareAt && <span className="ml-2 text-sm font-normal text-muted line-through">{formatPrice(product.compareAt)}</span>}
         </p>
+
+        {cta === "discover" && (
+          // Directly under the price; fades in on hover/focus (always shown on touch screens).
+          <Link
+            href={href}
+            className="btn btn-dark mt-3 h-10 w-full px-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+          >
+            Discover
+          </Link>
+        )}
 
         {cta === "cart" && (
           <div className="mt-auto pt-4">

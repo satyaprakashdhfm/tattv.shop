@@ -41,7 +41,7 @@ export default function HomePage() {
       </section>
 
       {/* New arrivals */}
-      <section className="pb-5 pt-10 md:pb-6 md:pt-12">
+      <section className="pb-2 pt-10 md:pt-12">
         <div className="container-x">
           <SectionHeading title="New Arrivals" href="/shop?tag=new" />
           <ProductRail products={newArrivals} cta="discover" />

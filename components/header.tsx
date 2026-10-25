@@ -75,7 +75,7 @@ export function Header() {
               width={1147}
               height={294}
               priority
-              className={`h-auto transition-all duration-300 ${scrolled ? "w-[118px] md:w-[136px]" : "w-[124px] md:w-[150px]"}`}
+              className={`h-auto transition-all duration-300 ${scrolled ? "w-[128px] md:w-[150px]" : "w-[136px] md:w-[168px]"}`}
             />
           </Link>
         </div>
@@ -87,7 +87,7 @@ export function Header() {
               <li key={item.label} className="flex h-full items-center" onMouseEnter={() => setActive(item.columns ? i : null)}>
                 <Link
                   href={item.href}
-                  className={`relative whitespace-nowrap py-2 text-[11px] font-medium uppercase tracking-[0.16em] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-ink after:transition-transform ${
+                  className={`relative whitespace-nowrap py-2 text-[12.5px] font-medium uppercase tracking-[0.15em] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-ink after:transition-transform ${
                     active === i ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100"
                   }`}
                 >
