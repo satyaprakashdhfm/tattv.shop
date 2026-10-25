@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getProduct } from "@/lib/products";
+import { checkDemoCredentials, type Account } from "@/lib/demo-account";
 
 export interface CartLine {
   key: string;
@@ -24,12 +25,19 @@ interface StoreValue {
   setCartOpen: (open: boolean) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  /** Signed-in customer (demo only until real authentication exists). */
+  account: Account | null;
+  /** False until the saved session has been read, so pages don't flash the signed-out view. */
+  sessionReady: boolean;
+  signIn: (email: string, password: string) => boolean;
+  signOut: () => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
 
 const CART_KEY = "tattv.cart.v2";
 const WISHLIST_KEY = "tattv.wishlist";
+const SESSION_KEY = "tattv.session";
 
 function writeStorage(key: string, value: unknown) {
   try {
@@ -54,11 +62,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [account, setAccount] = useState<Account | null>(null);
 
   useEffect(() => {
     setCart(readStorage<CartLine[]>(CART_KEY, []).filter((l) => getProduct(l.slug)));
     setWishlist(readStorage<string[]>(WISHLIST_KEY, []).filter((s) => getProduct(s)));
+    setAccount(readStorage<Account | null>(SESSION_KEY, null));
     setHydrated(true);
+  }, []);
+
+  const signIn = useCallback((email: string, password: string) => {
+    const found = checkDemoCredentials(email, password);
+    if (found) {
+      setAccount(found);
+      writeStorage(SESSION_KEY, found);
+    }
+    return !!found;
+  }, []);
+
+  const signOut = useCallback(() => {
+    setAccount(null);
+    try {
+      window.localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // Storage unavailable: the in-memory sign-out above is enough.
+    }
   }, []);
 
   useEffect(() => {
@@ -110,8 +138,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCartOpen,
       searchOpen,
       setSearchOpen,
+      account,
+      sessionReady: hydrated,
+      signIn,
+      signOut,
     };
-  }, [cart, wishlist, cartOpen, searchOpen, addToCart, updateQty, removeLine, clearCart, toggleWishlist]);
+  }, [cart, wishlist, cartOpen, searchOpen, account, hydrated, addToCart, updateQty, removeLine, clearCart, toggleWishlist, signIn, signOut]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

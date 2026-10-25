@@ -28,7 +28,7 @@ function CloseOnNavigate({ onNavigate }: { onNavigate: () => void }) {
 }
 
 export function Header() {
-  const { cartCount, wishlist, setCartOpen, setSearchOpen } = useStore();
+  const { cartCount, wishlist, setCartOpen, setSearchOpen, account } = useStore();
   const [active, setActive] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -123,8 +123,9 @@ export function Header() {
           <button aria-label="Search" onClick={() => setSearchOpen(true)} className="hover:opacity-60">
             <Search size={20} strokeWidth={1.5} />
           </button>
-          <Link href="/account" aria-label="Account" className="hidden hover:opacity-60 sm:block">
+          <Link href="/account" aria-label={account ? `My account (${account.firstName})` : "Sign in"} className="relative hidden hover:opacity-60 sm:block">
             <User size={20} strokeWidth={1.5} />
+            {account && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white" />}
           </Link>
           <Link href="/wishlist" aria-label="Wishlist" className="relative hover:opacity-60">
             <Heart size={20} strokeWidth={1.5} />
