@@ -31,19 +31,16 @@ const TYPE_LABEL: Record<Product["category"], string> = {
 
 /** Spec rows for the Details table, built from the catalogue fields and the free-text details. */
 function specRows(product: Product): [string, string][] {
-  const closure = product.details.find((d) => /clasp|closure|zip|snap/i.test(d));
-  const dimension = product.details.find((d) => /:\s*\d|\d\s*(mm|cm)/i.test(d) && d !== closure);
+  // Clasp lines also mention sizes ("2mm box chain with lobster clasp"), so skip them when picking dimensions.
+  const dimension = product.details.find((d) => /:\s*\d|\d\s*(mm|cm)/i.test(d) && !/clasp|closure|zip|snap/i.test(d));
   const leather = product.finish === "leather";
   const rows: [string, string][] = [
-    ["SKU", `TTV-${product.slug.split("-").map((w) => w.slice(0, 3)).join("-").toUpperCase()}`],
     ["Material", product.material],
     ["Finish", MATERIALS.find((m) => m.id === product.finish)?.name ?? product.finish],
     ["Type", TYPE_LABEL[product.category]],
   ];
   if (dimension) rows.push(["Dimensions", dimension.replace(/^[^:]*:\s*/, "")]);
   if (product.sizes) rows.push([product.sizes.label === "Length" ? "Lengths" : "Sizes", product.sizes.values.join(", ")]);
-  if (closure) rows.push(["Closure", closure]);
-  rows.push(["Hypoallergenic", leather ? "Not applicable" : "Yes"]);
   rows.push(["Tarnish-Free", leather ? "Not applicable" : "Yes"]);
   rows.push(["Country of Origin", "India"]);
   return rows;
@@ -132,9 +129,9 @@ export function ProductDetail({ product }: { product: Product }) {
   const activeTab = tabs.find((t) => t.title === tab) ?? tabs[0];
 
   return (
-    <section className="container-x grid gap-8 py-6 md:py-10 lg:grid-cols-2 lg:gap-12 xl:gap-16">
-      {/* Gallery: hovering (or tapping/focusing) a thumbnail shows it in the main frame. */}
-      <div className="min-w-0">
+    <section className="container-x grid items-start gap-8 py-6 md:py-10 lg:grid-cols-2 lg:gap-12 xl:gap-16">
+      {/* Gallery: stays pinned while the details column scrolls; hovering (or tapping/focusing) a thumbnail shows it. */}
+      <div className="min-w-0 lg:sticky lg:top-24">
         <div className="flex flex-col-reverse gap-3 md:flex-row">
           <div className="no-scrollbar flex gap-3 overflow-x-auto md:w-[76px] md:shrink-0 md:flex-col">
             {views.map((v, i) => (
