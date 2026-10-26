@@ -8,6 +8,7 @@ import { EditorialBanner } from "@/components/editorial-banner";
 import { TrendPanels } from "@/components/trend-panels";
 import { TRENDS } from "@/lib/trends";
 import { JewelleryLookZoom } from "@/components/jewellery-look-zoom";
+import { ReviewsSection } from "@/components/reviews-section";
 
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
@@ -85,26 +86,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Brand story */}
-      <section className="border-t border-line bg-white">
-        <div className="container-x grid items-center gap-10 py-14 md:py-20 lg:grid-cols-2">
-          <div className="relative mx-auto flex aspect-square w-full max-w-md items-center justify-center bg-ink">
-            <Image src="/brand/mark-white.png" alt="TATTV emblem" width={253} height={294} className="h-auto w-1/3" />
-          </div>
-          <div className="max-w-lg">
-            <p className="eyebrow text-muted">Our Story</p>
-            <h2 className="title mt-3 text-xl md:text-2xl">Two elements. One form.</h2>
-            <p className="mt-6 leading-relaxed text-muted">
-              Our emblem is two interlocking T&apos;s held within a frame: the modern and the classic, the self and the style. TATTV was founded on the idea that what
-              a man wears every day should carry meaning, weight and craft.
-            </p>
-            <p className="mt-4 leading-relaxed text-muted">Every piece is designed in India, quality-checked by hand and packed in our signature pouch.</p>
-            <Link href="/about" className="btn btn-outline mt-8">
-              Discover TATTV
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Customer reviews (placeholder content, see lib/reviews.ts) */}
+      <ReviewsSection />
     </>
   );
 }
