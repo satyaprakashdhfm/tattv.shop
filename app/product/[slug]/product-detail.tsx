@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck } from "lucide-react";
-import { COLLECTIONS, MATERIALS, categoryName, type Product } from "@/lib/products";
+import { ArrowRight, BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck } from "lucide-react";
+import { MATERIALS, categoryName, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 import { ProductImage } from "@/components/product-image";
 import { useStore } from "@/components/store-provider";
@@ -59,7 +59,6 @@ export function ProductDetail({ product }: { product: Product }) {
 
   const saved = wishlist.includes(product.slug);
   const price = product.price;
-  const collection = COLLECTIONS.find((c) => c.id === product.collection)!;
   const views = galleryViews(product);
   const view = views[viewIndex];
 
@@ -172,9 +171,10 @@ export function ProductDetail({ product }: { product: Product }) {
       {/* Buy box */}
       <div className="min-w-0 lg:max-w-[540px]">
         <div>
-          <p className="eyebrow text-gold">
-            {collection.name} Collection · {categoryName(product.category)}
-          </p>
+          <Link href={`/shop?category=${product.category}`} className="eyebrow group inline-flex items-center gap-2 text-gold hover:text-espresso">
+            {categoryName(product.category)}
+            <ArrowRight size={13} strokeWidth={1.8} className="transition-transform group-hover:translate-x-1" />
+          </Link>
           <h1 className="display mt-3 text-[32px] font-normal leading-[1.1] text-espresso md:text-[40px]">{product.name}</h1>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
