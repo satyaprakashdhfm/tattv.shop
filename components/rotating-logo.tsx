@@ -56,25 +56,30 @@ export function RotatingLogo({ widthClass }: { widthClass: string }) {
   // Outgoing slides drift left, incoming ones arrive from the right.
   const state = (i: number) =>
     i === active ? "translate-x-0 opacity-100" : i === (active + SLIDES - 1) % SLIDES ? "-translate-x-2 opacity-0" : "translate-x-2 opacity-0";
-  // `width` is included so the logo still shrinks smoothly when the header compacts on scroll.
-  const motion = "transition-[opacity,translate,width] duration-[350ms] ease-out motion-reduce:transition-none";
+  const motion = "transition-[opacity,translate] duration-[350ms] ease-out motion-reduce:transition-none";
 
+  // Geometry of the English lockup (logo-black.png, 1147×294): the emblem spans the left 21.7% at full
+  // height and the wordmark starts at 28.1%. Every language name starts at that same point.
   return (
-    <span className="relative block">
+    // The width lives on this box (inline-size containment ignores content width); names size off it via cqw.
+    <span className={`relative block transition-[width] duration-[350ms] ease-out [container-type:inline-size] ${widthClass}`}>
+      {/* English wordmark: the full logo image, with its own emblem clipped away (the shared emblem sits on top). */}
       <Image
         src="/brand/logo-black.png"
         alt="TATTV · Energize Your Style Element"
         width={1147}
         height={294}
         priority
-        className={`h-auto ${widthClass} ${motion} ${state(0)}`}
+        className={`h-auto w-full [clip-path:inset(0_0_0_24%)] ${motion} ${state(0)}`}
       />
+      {/* Shared emblem (from Tattv Logo-01): fixed, so it never moves or flickers between names. */}
+      <Image src="/brand/emblem-black.png" alt="" width={304} height={356} aria-hidden className="absolute left-0 top-0 h-full w-auto" />
       {NAMES.map((n, i) => (
         <span
           key={n.lang}
           lang={n.lang}
           aria-hidden
-          className={`absolute inset-0 flex items-center whitespace-nowrap text-[26px] leading-none text-ink md:text-[30px] ${n.font} ${motion} ${state(i + 1)}`}
+          className={`absolute inset-y-0 left-[28.1%] right-0 flex items-center whitespace-nowrap text-[19cqw] leading-none text-ink ${n.font} ${motion} ${state(i + 1)}`}
         >
           {n.text}
         </span>
