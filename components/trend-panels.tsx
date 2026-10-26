@@ -96,7 +96,7 @@ export function TrendPanels({ title, panels, theme = TREND_THEMES.stoneInk }: { 
     "--tp-btn-hover-text": theme.btnHoverText,
   } as React.CSSProperties;
   return (
-    <section className="bg-(--tp-bg) py-10 md:py-14" style={vars}>
+    <section className="bg-(--tp-bg) py-14 md:py-20" style={vars}>
       <div className="container-x">
         <h2 className="title mb-7 text-center text-lg text-(--tp-title) md:mb-9 md:text-xl">{title}</h2>
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">

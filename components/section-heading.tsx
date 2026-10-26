@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 export function SectionHeading({ title, href, cta = "Shop All" }: { title: string; href?: string; cta?: string }) {
   return (
-    <div className="relative mb-6 flex flex-col items-center gap-3 md:mb-7">
+    <div className="relative mb-8 flex flex-col items-center gap-3 md:mb-10">
       <h2 className="title text-center text-lg md:text-xl">{title}</h2>
       {href && (
         <Link

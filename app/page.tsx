@@ -19,7 +19,7 @@ export default function HomePage() {
       <JewelleryLookZoom />
 
       {/* New arrivals */}
-      <section className="pb-2 pt-10 md:pt-12">
+      <section className="pt-14 md:pt-20">
         <div className="container-x">
           <SectionHeading title="New Arrivals" href="/shop?tag=new" />
           <ProductRail products={newArrivals} cta="discover" />
@@ -28,7 +28,7 @@ export default function HomePage() {
 
       {/* Editorial campaign banner */}
       <EditorialBanner
-        className="mt-2"
+        className="mt-14 md:mt-20"
         image="/images/banners/editorial.jpg"
         alt="TATTV steel and gold cable bangles arranged on dark stone"
         eyebrow="The Steel Edit"
@@ -38,8 +38,8 @@ export default function HomePage() {
       />
 
       {/* Shop by category */}
-      <section className="pb-5 pt-10 md:pb-6 md:pt-12">
-        <h2 className="title mb-6 text-center text-lg md:mb-7 md:text-xl">Shop by Category</h2>
+      <section className="pt-14 md:pt-20">
+        <h2 className="title mb-8 text-center text-lg md:mb-10 md:text-xl">Shop by Category</h2>
         <div className="grid grid-cols-2 gap-2.5 px-2.5 md:grid-cols-5">
           {CATEGORIES.map((c) => (
             <Link key={c.id} href={`/shop?category=${c.id}`} className="group relative block aspect-[3/4] overflow-hidden bg-ink last:col-span-2 last:aspect-[2/1] md:last:col-span-1 md:last:aspect-[3/4]">
@@ -61,7 +61,7 @@ export default function HomePage() {
 
       {/* Second editorial banner */}
       <EditorialBanner
-        className="mt-6 md:mt-8"
+        className="mt-14 md:mt-20"
         image="/images/banners/editorial-car.jpg"
         alt="Man in a dark suit opening a car door, wearing TATTV gold signet rings and stacked bracelets"
         eyebrow="The Signature Edit"
@@ -76,7 +76,7 @@ export default function HomePage() {
       <TrendPanels title="Style Your Element" panels={TRENDS} />
 
       {/* Bestsellers */}
-      <section className="container-x pb-12 pt-5 md:pb-14 md:pt-6">
+      <section className="container-x py-14 md:py-20">
         <SectionHeading title="Bestsellers" href="/shop?tag=bestseller" />
         <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
           {bestsellers.map((p) => (
@@ -87,7 +87,7 @@ export default function HomePage() {
 
       {/* Brand story */}
       <section className="border-t border-line bg-white">
-        <div className="container-x grid items-center gap-10 py-12 md:py-16 lg:grid-cols-2">
+        <div className="container-x grid items-center gap-10 py-14 md:py-20 lg:grid-cols-2">
           <div className="relative mx-auto flex aspect-square w-full max-w-md items-center justify-center bg-ink">
             <Image src="/brand/mark-white.png" alt="TATTV emblem" width={253} height={294} className="h-auto w-1/3" />
           </div>
