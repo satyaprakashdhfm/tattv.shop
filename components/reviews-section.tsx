@@ -38,8 +38,8 @@ export function ReviewsSection() {
           <p className="mt-3 text-sm text-white/70">Worn every day, by men across India.</p>
         </div>
 
-        <div className="relative">
-          <button type="button" aria-label="Previous reviews" onClick={() => scrollBy(-1)} className={`${arrow} -left-2 md:-left-5`}>
+        <div className="relative md:px-10">
+          <button type="button" aria-label="Previous reviews" onClick={() => scrollBy(-1)} className={`${arrow} left-0`}>
             <ChevronLeft size={20} strokeWidth={1.6} />
           </button>
           <ul
@@ -57,19 +57,19 @@ export function ReviewsSection() {
             }}
             onPointerUp={() => (drag.current = null)}
             onPointerLeave={() => (drag.current = null)}
-            className="no-scrollbar -mx-5 flex cursor-grab snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-5 px-5 select-none active:cursor-grabbing md:mx-0 md:gap-5 md:scroll-px-0 md:px-0"
+            className="no-scrollbar -mx-5 flex cursor-grab snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-5 px-5 select-none active:cursor-grabbing md:mx-0 md:scroll-px-0 md:px-0"
           >
             {REVIEWS.map((r) => (
               <li
                 key={r.name}
-                className="flex w-[82%] shrink-0 snap-start flex-col rounded-3xl bg-[#f7f1e8] p-6 text-[#2b211a] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)] sm:w-[55%] md:w-[calc((100%-2.5rem)/3)] md:p-8"
+                className="flex w-[72%] shrink-0 snap-start flex-col rounded-2xl bg-[#f7f1e8] p-5 text-[#2b211a] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)] sm:w-[45%] md:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
               >
-                <Quote size={24} strokeWidth={1.3} className="text-gold" />
-                <blockquote className="mt-4 flex-1 text-[15px] leading-relaxed text-[#2b211a]/85">{r.quote}</blockquote>
-                <div className="mt-6 flex items-center gap-3 border-t border-[#e5dacb] pt-5">
+                <Quote size={18} strokeWidth={1.4} className="text-gold" />
+                <blockquote className="mt-2.5 flex-1 text-sm leading-relaxed text-[#2b211a]/85">{r.quote}</blockquote>
+                <div className="mt-4 flex items-center gap-2.5 border-t border-[#e5dacb] pt-3.5">
                   <span
                     aria-hidden
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d8bf94] to-[#a8834a] font-serif text-lg text-white"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d8bf94] to-[#a8834a] font-serif text-base text-white"
                   >
                     {r.name.charAt(0)}
                   </span>
@@ -81,7 +81,7 @@ export function ReviewsSection() {
               </li>
             ))}
           </ul>
-          <button type="button" aria-label="Next reviews" onClick={() => scrollBy(1)} className={`${arrow} -right-2 md:-right-5`}>
+          <button type="button" aria-label="Next reviews" onClick={() => scrollBy(1)} className={`${arrow} right-0`}>
             <ChevronRight size={20} strokeWidth={1.6} />
           </button>
         </div>
