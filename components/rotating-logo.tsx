@@ -12,10 +12,14 @@ const kannada = Noto_Serif_Kannada({ subsets: ["kannada"], weight: "500", displa
 const tamil = Noto_Serif_Tamil({ subsets: ["tamil"], weight: "500", display: "swap", preload: false });
 const malayalam = Noto_Serif_Malayalam({ subsets: ["malayalam"], weight: "500", display: "swap", preload: false });
 
-/** The brand name in each language, shown after the English logo in this order. */
-const NAMES = [
+/**
+ * The brand name in each language, shown after the English logo in this order.
+ * `size` (container-width units) and `drop` (em) optically balance scripts that sit high or small:
+ * Devanagari hangs from its headline, so it reads smaller and higher than the others at the same size.
+ */
+const NAMES: { text: string; lang: string; font: string; size?: number; drop?: number }[] = [
   { text: "తత్వ్", lang: "te", font: telugu.className },
-  { text: "तत्व्", lang: "hi", font: devanagari.className },
+  { text: "तत्व्", lang: "hi", font: devanagari.className, size: 22, drop: 0.12 },
   { text: "ತತ್ವ್", lang: "kn", font: kannada.className },
   { text: "தத்வ்", lang: "ta", font: tamil.className },
   { text: "തത്വ്", lang: "ml", font: malayalam.className },
@@ -79,7 +83,8 @@ export function RotatingLogo({ widthClass }: { widthClass: string }) {
           key={n.lang}
           lang={n.lang}
           aria-hidden
-          className={`absolute inset-y-0 left-[28.1%] right-0 flex items-center whitespace-nowrap text-[19cqw] leading-none text-ink ${n.font} ${motion} ${state(i + 1)}`}
+          className={`absolute inset-y-0 left-[28.1%] right-0 flex items-center whitespace-nowrap leading-none text-ink ${n.font} ${motion} ${state(i + 1)}`}
+          style={{ fontSize: `${n.size ?? 19}cqw`, paddingTop: n.drop ? `${n.drop * 2}em` : undefined }}
         >
           {n.text}
         </span>
