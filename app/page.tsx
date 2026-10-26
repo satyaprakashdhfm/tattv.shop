@@ -55,7 +55,7 @@ export default function HomePage() {
                   className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.05]"
                 />
               </span>
-              <span className="display mt-4 block text-[15px] font-normal tracking-[0.14em] uppercase md:text-[17px]">{c.title}</span>
+              <span className="title mt-4 block text-[13px] md:text-sm">{c.title}</span>
               <span className="mx-auto mt-2 flex w-14 items-center text-ink/60 transition-all duration-300 group-hover:w-20 group-hover:text-ink">
                 <span className="h-px flex-1 bg-current" />
                 <ChevronRight size={12} strokeWidth={1.5} className="-ml-1.5" />
