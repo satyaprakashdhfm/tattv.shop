@@ -29,7 +29,7 @@ export default function HomePage() {
 
       {/* Editorial campaign banner */}
       <EditorialBanner
-        className="mt-14 md:mt-20"
+        className="mt-10 md:mt-12"
         image="/images/banners/editorial.jpg"
         alt="TATTV steel and gold cable bangles arranged on dark stone"
         eyebrow="The Steel Edit"
@@ -66,7 +66,7 @@ export default function HomePage() {
       </section>
 
       {/* Bestsellers */}
-      <section className="container-x py-14 md:py-20">
+      <section className="container-x pb-8 pt-14 md:pb-10 md:pt-20">
         <SectionHeading title="Bestsellers" href="/shop?tag=bestseller" />
         <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
           {bestsellers.map((p) => (

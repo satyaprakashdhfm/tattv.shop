@@ -26,7 +26,7 @@ const PHOTOS = [
  */
 export function InstagramMarquee() {
   return (
-    <section className="py-14 md:py-20">
+    <section className="pb-14 pt-6 md:pb-20 md:pt-8">
       <div className="container-x mb-8 text-center md:mb-10">
         <HeadingRule title="Follow Us on Instagram" />
         <p className="mx-auto mt-3 max-w-xl text-sm text-balance text-muted">New drops, styling ideas and close-ups of every piece, straight from the studio.</p>
