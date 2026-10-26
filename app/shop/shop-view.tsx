@@ -39,10 +39,11 @@ const BANNERS: Partial<Record<Product["category"], Banner>> = {
   rings: { src: "/images/shop/rings.jpg", position: "85% 55%", tone: "light" },
   bracelets: { src: "/images/shop/bracelets.jpg", position: "0% 55%", tone: "light", align: "right" },
   wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%", tone: "dark" },
+  earrings: { src: "/images/shop/earrings.jpg", position: "15% 55%", tone: "dark", align: "right" },
 };
 
 const NEW_ARRIVALS_BANNER: Banner = { src: "/images/shop/new.jpg", position: "70% 50%", tone: "dark" };
-const ALL_BANNER: Banner = { src: "/images/shop/all.jpg", position: "75% 50%", tone: "light" };
+const ALL_BANNER: Banner = { src: "/images/shop/all.jpg", position: "80% 35%", tone: "light" };
 
 const PRICES = [
   { id: "u1000", label: "Under ₹1,000", test: (n: number) => n < 1000 },
