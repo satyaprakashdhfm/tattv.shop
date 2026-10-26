@@ -10,6 +10,7 @@ import { getProduct } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
 import { ProductImage } from "./product-image";
+import { RotatingLogo } from "./rotating-logo";
 
 function Badge({ count }: { count: number }) {
   if (!count) return null;
@@ -90,14 +91,7 @@ export function Header() {
           </button>
 
           <Link href="/" aria-label="TATTV home" className="shrink-0">
-            <Image
-              src="/brand/logo-black.png"
-              alt="TATTV · Energize Your Style Element"
-              width={1147}
-              height={294}
-              priority
-              className={`h-auto transition-all duration-300 ${scrolled ? "w-[128px] md:w-[150px]" : "w-[136px] md:w-[168px]"}`}
-            />
+            <RotatingLogo widthClass={scrolled ? "w-[128px] md:w-[150px]" : "w-[136px] md:w-[168px]"} />
           </Link>
         </div>
 
