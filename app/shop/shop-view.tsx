@@ -42,7 +42,7 @@ const BANNERS: Partial<Record<Product["category"], Banner>> = {
   earrings: { src: "/images/shop/earrings.jpg", position: "15% 55%", tone: "dark", align: "right" },
 };
 
-const NEW_ARRIVALS_BANNER: Banner = { src: "/images/shop/new.jpg", position: "70% 50%", tone: "dark" };
+const NEW_ARRIVALS_BANNER: Banner = { src: "/images/shop/new.jpg", position: "100% 55%", tone: "dark" };
 const ALL_BANNER: Banner = { src: "/images/shop/all.jpg", position: "80% 35%", tone: "light" };
 
 const PRICES = [
