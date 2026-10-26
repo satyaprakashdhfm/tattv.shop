@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight, Quote } from "lucide-react";
-import { getProduct } from "@/lib/products";
 import { REVIEWS, SHOW_REVIEWS } from "@/lib/reviews";
-import { ProductImage } from "./product-image";
 import { HeadingRule } from "./section-heading";
 
 /**
@@ -14,7 +11,7 @@ import { HeadingRule } from "./section-heading";
  */
 export function ReviewsSection() {
   const rowRef = useRef<HTMLUListElement>(null);
-  const drag = useRef<{ x: number; left: number; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; left: number } | null>(null);
 
   /** Scrolls the row by one card in `dir`. */
   const scrollBy = (dir: 1 | -1) => {
@@ -49,54 +46,40 @@ export function ReviewsSection() {
             ref={rowRef}
             onPointerDown={(e) => {
               if (e.pointerType !== "mouse" || !rowRef.current) return;
-              drag.current = { x: e.clientX, left: rowRef.current.scrollLeft, moved: false };
+              drag.current = { x: e.clientX, left: rowRef.current.scrollLeft };
             }}
             onPointerMove={(e) => {
               const d = drag.current;
               const row = rowRef.current;
               if (!d || !row) return;
               const dx = e.clientX - d.x;
-              if (Math.abs(dx) > 4) d.moved = true;
               row.scrollLeft = d.left - dx;
             }}
             onPointerUp={() => (drag.current = null)}
             onPointerLeave={() => (drag.current = null)}
-            // A drag must not also open the product link under the cursor.
-            onClickCapture={(e) => {
-              if (drag.current?.moved) e.preventDefault();
-            }}
             className="no-scrollbar -mx-5 flex cursor-grab snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-5 px-5 select-none active:cursor-grabbing md:mx-0 md:gap-5 md:scroll-px-0 md:px-0"
           >
-            {REVIEWS.map((r) => {
-              const product = getProduct(r.product);
-              return (
-                <li
-                  key={r.name}
-                  className="flex w-[82%] shrink-0 snap-start flex-col rounded-3xl bg-[#f7f1e8] p-6 text-[#2b211a] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)] sm:w-[55%] md:w-[calc((100%-2.5rem)/3)] md:p-7"
-                >
-                  <Quote size={22} strokeWidth={1.3} className="text-gold" />
-                  <blockquote className="mt-4 flex-1 leading-relaxed text-[#2b211a]/85">{r.quote}</blockquote>
-                  <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#e5dacb] pt-4">
-                    <p className="text-sm">
-                      <span className="font-medium">{r.name}</span>
-                      <span className="text-[#2b211a]/60"> · {r.city}</span>
-                    </p>
-                    {product && (
-                      <Link
-                        href={`/product/${product.slug}`}
-                        draggable={false}
-                        className="flex min-w-0 items-center gap-2 text-xs text-[#2b211a]/60 hover:text-[#2b211a]"
-                      >
-                        <span className="truncate">{product.name}</span>
-                        <span className="relative size-9 shrink-0 overflow-hidden rounded-full bg-[#efe6d8]">
-                          <ProductImage product={product} sizes="36px" />
-                        </span>
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
+            {REVIEWS.map((r) => (
+              <li
+                key={r.name}
+                className="flex w-[82%] shrink-0 snap-start flex-col rounded-3xl bg-[#f7f1e8] p-6 text-[#2b211a] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)] sm:w-[55%] md:w-[calc((100%-2.5rem)/3)] md:p-8"
+              >
+                <Quote size={24} strokeWidth={1.3} className="text-gold" />
+                <blockquote className="mt-4 flex-1 text-[15px] leading-relaxed text-[#2b211a]/85">{r.quote}</blockquote>
+                <div className="mt-6 flex items-center gap-3 border-t border-[#e5dacb] pt-5">
+                  <span
+                    aria-hidden
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#d8bf94] to-[#a8834a] font-serif text-lg text-white"
+                  >
+                    {r.name.charAt(0)}
+                  </span>
+                  <p className="leading-tight">
+                    <span className="block text-sm font-medium">{r.name}</span>
+                    <span className="mt-0.5 block text-xs text-[#2b211a]/60">{r.city}</span>
+                  </p>
+                </div>
+              </li>
+            ))}
           </ul>
           <button type="button" aria-label="Next reviews" onClick={() => scrollBy(1)} className={`${arrow} -right-2 md:-right-5`}>
             <ChevronRight size={20} strokeWidth={1.6} />
