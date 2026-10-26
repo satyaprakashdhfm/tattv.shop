@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Noto_Serif_Devanagari, Noto_Serif_Kannada, Noto_Serif_Malayalam, Noto_Serif_Tamil, Noto_Serif_Telugu } from "next/font/google";
+import { Noto_Sans_Telugu, Noto_Serif_Devanagari, Noto_Serif_Kannada, Noto_Serif_Malayalam, Noto_Serif_Tamil } from "next/font/google";
 
 // Script fonts load in the background (no preload) so they never delay the page; the English logo is an image.
-const telugu = Noto_Serif_Telugu({ subsets: ["telugu"], weight: "500", display: "swap", preload: false });
+// Telugu uses the Sans cut: Noto Serif Telugu draws the final va + virama in a non-standard stacked form.
+const telugu = Noto_Sans_Telugu({ subsets: ["telugu"], weight: "500", display: "swap", preload: false });
 const devanagari = Noto_Serif_Devanagari({ subsets: ["devanagari"], weight: "500", display: "swap", preload: false });
 const kannada = Noto_Serif_Kannada({ subsets: ["kannada"], weight: "500", display: "swap", preload: false });
 const tamil = Noto_Serif_Tamil({ subsets: ["tamil"], weight: "500", display: "swap", preload: false });
@@ -17,7 +18,7 @@ const NAMES = [
   { text: "तत्व्", lang: "hi", font: devanagari.className },
   { text: "ತತ್ವ್", lang: "kn", font: kannada.className },
   { text: "தத்வ்", lang: "ta", font: tamil.className },
-  { text: "തത്ത്", lang: "ml", font: malayalam.className },
+  { text: "തത്വ്", lang: "ml", font: malayalam.className },
 ];
 
 const SLIDES = NAMES.length + 1; // English logo + the five scripts
