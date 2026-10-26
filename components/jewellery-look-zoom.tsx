@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
@@ -565,19 +564,11 @@ function LookCard({ look, index }: { look: Look; index: number }) {
             </Link>
           </motion.div>
         ))}
-        {/* Closing tile: the category photo under a dark wash, with the count and an arrow. */}
+        {/* Closing tile: a faint warm tint with the arrow, label and piece count. */}
         <Link
           href={`/shop?category=${look.id}`}
-          className="group relative block aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-xl border border-white/15 transition hover:border-white/50 @3xl:w-32"
+          className="group relative block aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-xl border border-white/15 bg-gradient-to-br from-[#d8bf94]/15 via-white/[0.04] to-transparent transition hover:border-white/50 hover:from-[#d8bf94]/25 @3xl:w-32"
         >
-          <Image
-            src={category.image}
-            alt=""
-            fill
-            sizes="128px"
-            className="object-cover opacity-60 transition duration-500 group-hover:scale-105 group-hover:opacity-75"
-          />
-          <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
             <span
               className="flex size-9 items-center justify-center rounded-full border transition group-hover:translate-x-0.5"
