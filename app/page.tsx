@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
@@ -37,22 +38,29 @@ export default function HomePage() {
         href="/shop"
       />
 
-      {/* Shop by category */}
-      <section className="pt-14 md:pt-20">
-        <h2 className="title mb-8 text-center text-lg md:mb-10 md:text-xl">Shop by Category</h2>
-        <div className="grid grid-cols-2 gap-2.5 px-2.5 md:grid-cols-5">
+      {/* Shop by category: arch-topped photos with the name and an arrow beneath */}
+      <section className="container-x pt-14 md:pt-20">
+        <div className="mb-8 flex items-center justify-center gap-5 md:mb-12">
+          <span className="h-px w-10 bg-ink/25 md:w-20" />
+          <h2 className="display text-center text-2xl font-normal tracking-[0.12em] uppercase md:text-[32px]">Shop by Category</h2>
+          <span className="h-px w-10 bg-ink/25 md:w-20" />
+        </div>
+        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-5 px-5 md:mx-0 md:grid md:grid-cols-5 md:gap-6 md:overflow-visible md:px-0 lg:gap-8">
           {CATEGORIES.map((c) => (
-            <Link key={c.id} href={`/shop?category=${c.id}`} className="group relative block aspect-[3/4] overflow-hidden bg-ink last:col-span-2 last:aspect-[2/1] md:last:col-span-1 md:last:aspect-[3/4]">
-              <Image
-                src={c.image}
-                alt={c.name}
-                fill
-                sizes="(min-width: 768px) 20vw, 50vw"
-                className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
-              />
-              <span className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
-              <span className="absolute inset-x-0 bottom-7 px-3 text-center text-white md:bottom-9">
-                <span className="underline-reveal text-[12px] font-semibold uppercase tracking-[0.06em] md:text-[13px]">{c.title}</span>
+            <Link key={c.id} href={`/shop?category=${c.id}`} className="group block w-[42%] shrink-0 snap-start text-center sm:w-[30%] md:w-auto">
+              <span className="relative block aspect-[3/4] overflow-hidden rounded-t-full bg-sand">
+                <Image
+                  src={`/images/categories/arch/${c.id}.jpg`}
+                  alt={c.title}
+                  fill
+                  sizes="(min-width: 768px) 20vw, 42vw"
+                  className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.05]"
+                />
+              </span>
+              <span className="display mt-4 block text-[15px] font-normal tracking-[0.14em] uppercase md:text-[17px]">{c.title}</span>
+              <span className="mx-auto mt-2 flex w-14 items-center text-ink/60 transition-all duration-300 group-hover:w-20 group-hover:text-ink">
+                <span className="h-px flex-1 bg-current" />
+                <ChevronRight size={12} strokeWidth={1.5} className="-ml-1.5" />
               </span>
             </Link>
           ))}
