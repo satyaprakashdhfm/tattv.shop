@@ -367,7 +367,8 @@ export function JewelleryLookZoom() {
           className="absolute right-5 left-5 max-w-2xl @3xl:left-[6%]"
           style={{ opacity: introOpacity, bottom: `calc(6vh + ${lift}px)` }}
         >
-          <p className="text-[11px] tracking-[0.35em] uppercase" style={{ color: ACCENT }}>
+          {/* Lighter than ACCENT so the small eyebrow reads clearly on the dark photo. */}
+          <p className="text-xs font-medium tracking-[0.35em] text-[#f3e3c4] uppercase [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">
             The silver edit
           </p>
           <h1 className="mt-3 text-[clamp(2rem,min(7vw,7.5vh),3.75rem)] leading-[1.05] font-light tracking-tight text-balance">
