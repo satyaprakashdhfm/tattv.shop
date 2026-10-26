@@ -427,15 +427,15 @@ export function JewelleryLookZoom() {
             >
               <h2 className="text-2xl font-light tracking-tight @3xl:text-4xl">Shop the whole look</h2>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {LOOKS.map((l, i) => (
-                  <button
+                {/* Each opens that category's shop page (the labels on the photo still jump back to the piece). */}
+                {LOOKS.map((l) => (
+                  <Link
                     key={l.id}
-                    type="button"
-                    onClick={() => goTo(i)}
-                    className="rounded-full border border-white/20 bg-black/40 px-4 py-2 text-[11px] tracking-[0.2em] uppercase backdrop-blur-md transition hover:border-white/50"
+                    href={`/shop?category=${l.id}`}
+                    className="rounded-full border border-white/20 bg-black/40 px-4 py-2 text-[11px] tracking-[0.2em] uppercase backdrop-blur-md transition hover:border-white/60 hover:bg-black/60"
                   >
                     {categoryOf(l).title}
-                  </button>
+                  </Link>
                 ))}
               </div>
             </motion.div>
