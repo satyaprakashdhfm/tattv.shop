@@ -5,10 +5,9 @@ import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
 import { EditorialBanner } from "@/components/editorial-banner";
-import { TrendPanels } from "@/components/trend-panels";
-import { TRENDS } from "@/lib/trends";
 import { JewelleryLookZoom } from "@/components/jewellery-look-zoom";
 import { ReviewsSection } from "@/components/reviews-section";
+import { InstagramMarquee } from "@/components/instagram-marquee";
 
 export default function HomePage() {
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
@@ -60,22 +59,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Second editorial banner */}
-      <EditorialBanner
-        className="mt-14 md:mt-20"
-        image="/images/banners/editorial-car.jpg"
-        alt="Man in a dark suit opening a car door, wearing TATTV gold signet rings and stacked bracelets"
-        eyebrow="The Signature Edit"
-        title="Arrive like you mean it."
-        cta="Shop Rings"
-        href="/shop?category=rings"
-        ratio="lg:aspect-[5/2]"
-        position="object-[52%_55%] sm:object-[55%_50%] lg:object-center"
-      />
-
-      {/* Styling guide: worn photos with zoomed close-ups of each piece */}
-      <TrendPanels title="Style Your Element" panels={TRENDS} />
-
       {/* Bestsellers */}
       <section className="container-x py-14 md:py-20">
         <SectionHeading title="Bestsellers" href="/shop?tag=bestseller" />
@@ -85,6 +68,9 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Instagram strip, drifting continuously */}
+      <InstagramMarquee />
 
       {/* Customer reviews (placeholder content, see lib/reviews.ts) */}
       <ReviewsSection />
