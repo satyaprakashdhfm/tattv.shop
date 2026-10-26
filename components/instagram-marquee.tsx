@@ -30,15 +30,6 @@ export function InstagramMarquee() {
       <div className="container-x mb-8 text-center md:mb-10">
         <HeadingRule title="Follow Us on Instagram" />
         <p className="mx-auto mt-3 max-w-xl text-sm text-balance text-muted">New drops, styling ideas and close-ups of every piece, straight from the studio.</p>
-        <a
-          href={CONTACT.instagram}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-ink transition-colors hover:text-gold"
-        >
-          <InstagramIcon size={15} strokeWidth={1.5} /> {CONTACT.instagramHandle}
-        </a>
-        <p className="mt-1 text-xs text-muted">Wearing TATTV? Tag us to be featured.</p>
       </div>
 
       <div className="group overflow-hidden motion-reduce:overflow-x-auto">
