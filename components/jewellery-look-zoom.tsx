@@ -19,7 +19,7 @@ import { ProductImage } from "./product-image";
 /**
  * One photograph, scrolled like a camera. The look opens wide, then each
  * scroll — one flick of the wheel, one swipe — glides the camera to the
- * next piece: the earring, the pendant, the bracelet, the ring. It stops
+ * next piece: the earring, the pendant, the ring, the bracelet. It stops
  * there while that piece's card pops up beside it with products to swipe
  * through. The fifth pulls back to the whole look with every piece marked,
  * and the sixth carries on down the page.
@@ -52,8 +52,8 @@ export type Look = {
 export const LOOKS: Look[] = [
   { id: "earrings", fx: 0.533, fy: 0.208, zoom: 2.6, side: "right" },
   { id: "chains", fx: 0.505, fy: 0.466, zoom: 2.3, side: "left" },
-  { id: "bracelets", fx: 0.622, fy: 0.647, zoom: 2.3, side: "right" },
   { id: "rings", fx: 0.567, fy: 0.475, zoom: 2.7, side: "right" },
+  { id: "bracelets", fx: 0.622, fy: 0.647, zoom: 2.3, side: "right" },
 ];
 
 const categoryOf = (look: Look) => CATEGORIES.find((c) => c.id === look.id)!;
@@ -119,8 +119,8 @@ export function JewelleryLookZoom() {
     offset: ["start start", "end end"],
   });
   const p = useSpring(scrollYProgress, {
-    stiffness: 45,
-    damping: 14,
+    stiffness: 70,
+    damping: 17,
     mass: 1,
   });
 
@@ -129,8 +129,11 @@ export function JewelleryLookZoom() {
    * scrolls freely: a wheel flick, a swipe or an arrow key jumps the page
    * to the next stop and the spring glides the camera there. A trackpad's
    * momentum keeps firing wheel events for a second after the flick, so a
-   * gesture only counts once the wheel has gone quiet in between. Past the
-   * last stop the page scrolls on as normal, and back past the first.
+   * gesture only counts once the wheel has gone quiet in between. A gesture
+   * made while the camera is still gliding is queued, not dropped. From the
+   * top of the page (hero visible under the header) the first flick goes
+   * straight to the first piece. Past the last stop the page scrolls on as
+   * normal, and back past the first.
    */
   useEffect(() => {
     const el = ref.current;
@@ -140,18 +143,28 @@ export function JewelleryLookZoom() {
     let armed = true;
     let touch: { x: number; y: number } | null = null;
     let settle: number | undefined;
+    let queued: number | undefined;
+    /** Minimum gap between two steps, so one wheel notch never counts twice. */
+    const COOLDOWN = 320;
 
     const bounds = () => ({
       top: el.getBoundingClientRect().top + window.scrollY,
       range: el.offsetHeight - window.innerHeight,
     });
-    /** The page's place in the section, in stops; null outside it. */
+    /**
+     * The page's place in the section, in stops; null outside it. -1 means
+     * the page is above the section but the hero is already on screen
+     * (first load, with the bar and header above it).
+     */
     const position = () => {
       const { top, range } = bounds();
       const y = window.scrollY - top;
-      if (range <= 0 || y < -2 || y > range + 2) return null;
+      if (range <= 0 || y > range + 2) return null;
+      if (y < -2) return top - window.scrollY < window.innerHeight * 0.5 ? -1 : null;
       return (y / range) * LAST;
     };
+    /** Where a step in `dir` goes; from above the section, down goes straight to the first piece. */
+    const target = (k: number, dir: number) => (k < 0 ? (dir > 0 ? 1 : -1) : Math.round(k) + dir);
     const jump = (n: number) => {
       const { top, range } = bounds();
       window.scrollTo({ top: top + (n / LAST) * range, behavior: "instant" });
@@ -160,29 +173,41 @@ export function JewelleryLookZoom() {
     const step = (dir: number) => {
       const k = position();
       if (k === null) return false;
-      const next = Math.round(k) + dir;
+      const next = target(k, dir);
       if (next < 0 || next > LAST) return false;
       jump(next);
-      busyUntil = performance.now() + 650;
+      busyUntil = performance.now() + COOLDOWN;
       return true;
     };
     const busy = () => performance.now() < busyUntil;
+    /** True when a step in this direction stays inside the section. */
+    const canStep = (dir: number) => {
+      const k = position();
+      if (k === null) return false;
+      const next = target(k, dir);
+      return next >= 0 && next <= LAST;
+    };
+    /** Runs a gesture now, or right after the cooldown if one just ran. */
+    const request = (dir: number) => {
+      if (!canStep(dir)) return false;
+      window.clearTimeout(queued);
+      if (busy()) queued = window.setTimeout(() => step(dir), busyUntil - performance.now());
+      else step(dir);
+      return true;
+    };
 
     const onWheel = (e: WheelEvent) => {
       // Sideways swipes belong to the product rows.
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.ctrlKey) return;
-      if (position() === null) return;
+      const dir = Math.sign(e.deltaY);
+      if (!dir || !canStep(dir)) return;
+      e.preventDefault();
       const now = performance.now();
-      if (now - lastWheel > 220) armed = true;
+      if (now - lastWheel > 160) armed = true;
       lastWheel = now;
-      if (busy() || !armed) {
-        e.preventDefault();
-        return;
-      }
-      if (step(Math.sign(e.deltaY))) {
-        e.preventDefault();
-        armed = false;
-      }
+      if (!armed) return;
+      armed = false;
+      request(dir);
     };
 
     const onTouchStart = (e: TouchEvent) => {
@@ -193,18 +218,15 @@ export function JewelleryLookZoom() {
       const dx = touch.x - e.touches[0].clientX;
       const dy = touch.y - e.touches[0].clientY;
       if (Math.abs(dx) > Math.abs(dy)) return;
-      const k = position();
-      if (k === null) return;
-      const next = Math.round(k) + Math.sign(dy);
-      if (busy() || (next >= 0 && next <= LAST)) e.preventDefault();
+      if (canStep(Math.sign(dy))) e.preventDefault();
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (!touch) return;
       const dx = touch.x - e.changedTouches[0].clientX;
       const dy = touch.y - e.changedTouches[0].clientY;
       touch = null;
-      if (Math.abs(dy) < 30 || Math.abs(dx) > Math.abs(dy) || busy()) return;
-      step(Math.sign(dy));
+      if (Math.abs(dy) < 30 || Math.abs(dx) > Math.abs(dy)) return;
+      request(Math.sign(dy));
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -219,8 +241,7 @@ export function JewelleryLookZoom() {
                 ? -1
                 : 1
               : 0;
-      if (!dir || position() === null) return;
-      if (busy() || step(dir)) e.preventDefault();
+      if (dir && request(dir)) e.preventDefault();
     };
 
     // A dragged scrollbar can stop anywhere: settle on the nearest stop.
@@ -228,7 +249,7 @@ export function JewelleryLookZoom() {
       window.clearTimeout(settle);
       settle = window.setTimeout(() => {
         const k = position();
-        if (k !== null && Math.abs(k - Math.round(k)) > 0.01) {
+        if (k !== null && k >= 0 && Math.abs(k - Math.round(k)) > 0.01) {
           jump(clamp(Math.round(k), 0, LAST));
         }
       }, 180);
@@ -243,6 +264,7 @@ export function JewelleryLookZoom() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.clearTimeout(settle);
+      window.clearTimeout(queued);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
@@ -254,12 +276,17 @@ export function JewelleryLookZoom() {
 
   const w = useMotionValue(0);
   const h = useMotionValue(0);
+  // How far down the page the section starts (announcement bar + header); the
+  // opening text is lifted by this so it sits fully on screen on first load.
+  const [lift, setLift] = useState(0);
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([e]) => {
       w.set(e.contentRect.width);
       h.set(e.contentRect.height);
+      const section = ref.current;
+      if (section) setLift(Math.max(0, Math.round(section.getBoundingClientRect().top + window.scrollY)));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -324,11 +351,16 @@ export function JewelleryLookZoom() {
         {/* Darkened edges, so the words and cards read over the photo. */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(10,6,4,0.55))]" />
 
-        <motion.div className="absolute bottom-[8%] left-5 max-w-md @3xl:left-[6%]" style={{ opacity: introOpacity }}>
+        <motion.div
+          className="absolute right-5 left-5 max-w-2xl @3xl:left-[6%]"
+          style={{ opacity: introOpacity, bottom: `calc(6vh + ${lift}px)` }}
+        >
           <p className="text-[11px] tracking-[0.35em] uppercase" style={{ color: ACCENT }}>
             The silver edit
           </p>
-          <h1 className="mt-3 text-4xl font-light tracking-tight @3xl:text-6xl">Worn, not shown off.</h1>
+          <h1 className="mt-3 text-[clamp(2rem,min(7vw,7.5vh),3.75rem)] leading-[1.05] font-light tracking-tight text-balance">
+            Worn, not shown off.
+          </h1>
           <p className="mt-4 text-sm text-white/60">Scroll to see the look, piece by piece.</p>
         </motion.div>
 
@@ -405,6 +437,43 @@ export function JewelleryLookZoom() {
 function LookCard({ look, index }: { look: Look; index: number }) {
   const category = categoryOf(look);
   const products = PRODUCTS.filter((p) => p.category === look.id).slice(0, 4);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+
+  const resumeRef = useRef<number | undefined>(undefined);
+
+  /** Moves the row on by one box, looping back to the start at the end. */
+  const advance = () => {
+    const row = rowRef.current;
+    if (!row) return;
+    const box = row.firstElementChild as HTMLElement | null;
+    const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+    const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4;
+    row.scrollTo({ left: atEnd ? 0 : row.scrollLeft + (box?.offsetWidth ?? 120) + gap, behavior: "smooth" });
+  };
+
+  // Glide the product row one box every 2.5s; stays still for reduced-motion users.
+  useEffect(() => {
+    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(advance, 2500);
+    return () => window.clearInterval(t);
+  }, [paused]);
+  useEffect(() => () => window.clearTimeout(resumeRef.current), []);
+
+  /** Stops the row while the visitor is on it. */
+  const hold = () => {
+    window.clearTimeout(resumeRef.current);
+    setPaused(true);
+  };
+  /** Carries on 2s after the visitor leaves the row: one step, then the usual rhythm. */
+  const release = () => {
+    window.clearTimeout(resumeRef.current);
+    resumeRef.current = window.setTimeout(() => {
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) advance();
+      setPaused(false);
+    }, 2000);
+  };
+
   return (
     <motion.div
       className="overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-4 shadow-2xl backdrop-blur-xl @3xl:p-5"
@@ -430,7 +499,16 @@ function LookCard({ look, index }: { look: Look; index: number }) {
       </div>
       <p className="mt-3 text-sm text-white/60">{category.blurb}</p>
 
-      <div className="-mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 @3xl:-mx-5 @3xl:scroll-px-5 @3xl:px-5">
+      <div
+        ref={rowRef}
+        onMouseEnter={hold}
+        onMouseLeave={release}
+        onTouchStart={hold}
+        onTouchEnd={release}
+        onFocusCapture={hold}
+        onBlurCapture={release}
+        className="-mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 @3xl:-mx-5 @3xl:scroll-px-5 @3xl:px-5"
+      >
         {products.map((pr, k) => (
           <motion.div
             key={pr.slug}
@@ -515,15 +593,20 @@ function Hotspot({
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
       transition={{ delay: index * 0.08, type: "spring", stiffness: 300 }}
     >
-      <button type="button" onClick={onSelect} aria-label={label} className="group absolute -top-2.5 -left-2.5 flex items-center">
-        <span className="size-5 rounded-full border-2 bg-black/40 transition group-hover:scale-125" style={{ borderColor: ACCENT }} />
-        <span
-          className={`absolute top-1/2 hidden -translate-y-1/2 rounded-full border border-white/15 bg-black/50 px-3 py-1.5 text-[10px] tracking-[0.25em] whitespace-nowrap uppercase backdrop-blur-md @3xl:block ${
-            look.side === "right" ? "left-8" : "right-8"
-          }`}
-        >
-          {label}
-        </span>
+      {/* A hairline from the piece to its label; no marker sits on the piece itself. */}
+      <span
+        className={`pointer-events-none absolute top-0 hidden h-px w-7 @3xl:block ${look.side === "right" ? "left-2" : "right-2"}`}
+        style={{ backgroundColor: ACCENT }}
+      />
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={label}
+        className={`absolute top-0 hidden -translate-y-1/2 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] tracking-[0.25em] whitespace-nowrap uppercase backdrop-blur-md transition hover:border-white/60 @3xl:block ${
+          look.side === "right" ? "left-9" : "right-9"
+        }`}
+      >
+        {label}
       </button>
     </motion.div>
   );
