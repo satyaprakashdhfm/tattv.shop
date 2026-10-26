@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   AnimatePresence,
   motion,
@@ -145,7 +147,7 @@ export function JewelleryLookZoom() {
     let settle: number | undefined;
     let queued: number | undefined;
     /** Minimum gap between two steps, so one wheel notch never counts twice. */
-    const COOLDOWN = 320;
+    const COOLDOWN = 450;
 
     const bounds = () => ({
       top: el.getBoundingClientRect().top + window.scrollY,
@@ -176,7 +178,8 @@ export function JewelleryLookZoom() {
       const next = target(k, dir);
       if (next < 0 || next > LAST) return false;
       jump(next);
-      busyUntil = performance.now() + COOLDOWN;
+      // Hold longer on the opening and closing shots so they are seen before the page moves on.
+      busyUntil = performance.now() + (next === 0 || next === LAST ? 900 : COOLDOWN);
       return true;
     };
     const busy = () => performance.now() < busyUntil;
@@ -200,11 +203,21 @@ export function JewelleryLookZoom() {
       // Sideways swipes belong to the product rows.
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.ctrlKey) return;
       const dir = Math.sign(e.deltaY);
-      if (!dir || !canStep(dir)) return;
-      e.preventDefault();
-      const now = performance.now();
-      if (now - lastWheel > 160) armed = true;
+      if (!dir || position() === null) return;
+      // When the event was created, not handled: if the page stalls mid-flick (decoding the
+      // zoomed photo), the queued events keep their real spacing and stay one gesture.
+      const now = e.timeStamp;
+      // A pause this long means a new flick; shorter ones are the same gesture.
+      if (now - lastWheel > 260) armed = true;
       lastWheel = now;
+      if (!canStep(dir)) {
+        // At the first or last stop. Only a fresh gesture, after the camera has
+        // settled, may leave the section; the tail of the gesture that brought
+        // us here must not carry the page past the closing (or opening) shot.
+        if (!armed || busy()) e.preventDefault();
+        return;
+      }
+      e.preventDefault();
       if (!armed) return;
       armed = false;
       request(dir);
@@ -436,26 +449,31 @@ export function JewelleryLookZoom() {
 /** The card for the piece in focus: what it is, and its products to swipe. */
 function LookCard({ look, index }: { look: Look; index: number }) {
   const category = categoryOf(look);
-  const products = PRODUCTS.filter((p) => p.category === look.id).slice(0, 4);
+  const inCategory = PRODUCTS.filter((p) => p.category === look.id);
+  const products = inCategory.slice(0, 4);
+  const categoryCount = inCategory.length;
   const rowRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
 
   const resumeRef = useRef<number | undefined>(undefined);
 
-  /** Moves the row on by one box, looping back to the start at the end. */
-  const advance = () => {
+  /** Moves the row by one box in `dir`, looping round at either end. */
+  const advance = (dir: 1 | -1 = 1) => {
     const row = rowRef.current;
     if (!row) return;
     const box = row.firstElementChild as HTMLElement | null;
     const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+    const stepPx = (box?.offsetWidth ?? 120) + gap;
     const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4;
-    row.scrollTo({ left: atEnd ? 0 : row.scrollLeft + (box?.offsetWidth ?? 120) + gap, behavior: "smooth" });
+    const atStart = row.scrollLeft <= 4;
+    const left = dir > 0 ? (atEnd ? 0 : row.scrollLeft + stepPx) : atStart ? row.scrollWidth : row.scrollLeft - stepPx;
+    row.scrollTo({ left, behavior: "smooth" });
   };
 
   // Glide the product row one box every 2.5s; stays still for reduced-motion users.
   useEffect(() => {
     if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = window.setInterval(advance, 2500);
+    const t = window.setInterval(() => advance(1), 2500);
     return () => window.clearInterval(t);
   }, [paused]);
   useEffect(() => () => window.clearTimeout(resumeRef.current), []);
@@ -490,11 +508,30 @@ function LookCard({ look, index }: { look: Look; index: number }) {
       <div className="flex items-center gap-4">
         <Crop look={look} zoom={9} className="size-16 shrink-0 rounded-xl" />
         <div>
+          {/* The category name is not shown on the card; kept for screen readers. */}
+          <h3 className="sr-only">{category.title}</h3>
           <p className="text-[10px] tracking-[0.3em] text-white/45">
             0{index + 1} / 0{LOOKS.length}
           </p>
-          <h3 className="mt-1 text-base font-light tracking-[0.25em] uppercase @3xl:text-lg">{category.title}</h3>
           <span className="mt-2 block h-px w-10" style={{ backgroundColor: ACCENT }} />
+        </div>
+        {/* Manual control for the auto-scrolling row; a click pauses it, and it resumes 2s later. */}
+        <div className="ml-auto flex gap-1.5" onMouseEnter={hold} onMouseLeave={release}>
+          {([-1, 1] as const).map((dir) => (
+            <button
+              key={dir}
+              type="button"
+              aria-label={dir < 0 ? "Previous products" : "Next products"}
+              onClick={() => {
+                hold();
+                advance(dir);
+                release();
+              }}
+              className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/80 transition hover:border-white/60 hover:text-white"
+            >
+              {dir < 0 ? <ChevronLeft size={15} strokeWidth={1.6} /> : <ChevronRight size={15} strokeWidth={1.6} />}
+            </button>
+          ))}
         </div>
       </div>
       <p className="mt-3 text-sm text-white/60">{category.blurb}</p>
@@ -528,11 +565,31 @@ function LookCard({ look, index }: { look: Look; index: number }) {
             </Link>
           </motion.div>
         ))}
+        {/* Closing tile: the category photo under a dark wash, with the count and an arrow. */}
         <Link
           href={`/shop?category=${look.id}`}
-          className="grid aspect-square w-28 shrink-0 snap-start place-items-center rounded-xl border border-white/15 text-[11px] tracking-[0.2em] text-white/70 uppercase transition hover:border-white/40 @3xl:w-32"
+          className="group relative block aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-xl border border-white/15 transition hover:border-white/50 @3xl:w-32"
         >
-          View all →
+          <Image
+            src={category.image}
+            alt=""
+            fill
+            sizes="128px"
+            className="object-cover opacity-60 transition duration-500 group-hover:scale-105 group-hover:opacity-75"
+          />
+          <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
+            <span
+              className="flex size-9 items-center justify-center rounded-full border transition group-hover:translate-x-0.5"
+              style={{ borderColor: ACCENT, color: ACCENT }}
+            >
+              <ArrowRight size={15} strokeWidth={1.6} />
+            </span>
+            <span className="text-[11px] tracking-[0.2em] text-white uppercase">View all</span>
+            <span className="text-[10px] text-white/60">
+              {categoryCount} {categoryCount === 1 ? "piece" : "pieces"}
+            </span>
+          </span>
         </Link>
       </div>
     </motion.div>
