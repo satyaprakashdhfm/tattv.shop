@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { CONTACT } from "@/lib/site";
 import { InstagramIcon } from "./social-icons";
+import { HeadingRule } from "./section-heading";
 
 /** Photos for the strip; real Instagram posts can replace these. */
 const PHOTOS = [
@@ -27,7 +28,7 @@ export function InstagramMarquee() {
   return (
     <section className="py-14 md:py-20">
       <div className="container-x mb-8 text-center md:mb-10">
-        <h2 className="title text-lg md:text-xl">Follow Us on Instagram</h2>
+        <HeadingRule title="Follow Us on Instagram" />
         <a
           href={CONTACT.instagram}
           target="_blank"

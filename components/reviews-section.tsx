@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Quote } from "lucide-react";
 import { getProduct } from "@/lib/products";
 import { REVIEWS, SHOW_REVIEWS } from "@/lib/reviews";
 import { ProductImage } from "./product-image";
+import { HeadingRule } from "./section-heading";
 
 /**
  * "What our customers say": one row of rounded quote cards on a warm brown/gold band. The row
@@ -34,7 +35,9 @@ export function ReviewsSection() {
       <div className="container-x">
         <div className="mb-8 text-center md:mb-10">
           <p className="eyebrow text-[#e6cfa4]">Customer Love</p>
-          <h2 className="title mt-3 text-lg md:text-xl">What Our Customers Say</h2>
+          <div className="mt-3">
+            <HeadingRule title="What Our Customers Say" tone="light" />
+          </div>
           <p className="mt-3 text-sm text-white/70">Worn every day, by men across India.</p>
         </div>
 

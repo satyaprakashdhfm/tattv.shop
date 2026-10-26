@@ -1,10 +1,22 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+/** Section title in the site's bold uppercase style, flanked by fine horizontal lines. */
+export function HeadingRule({ title, as: Tag = "h2", tone = "ink" }: { title: string; as?: "h1" | "h2"; tone?: "ink" | "light" }) {
+  const line = `h-px w-8 shrink-0 sm:w-14 md:w-20 ${tone === "light" ? "bg-white/40" : "bg-ink/25"}`;
+  return (
+    <div className="flex items-center justify-center gap-4 md:gap-5">
+      <span className={line} />
+      <Tag className="title text-center text-lg md:text-xl">{title}</Tag>
+      <span className={line} />
+    </div>
+  );
+}
+
 export function SectionHeading({ title, href, cta = "Shop All" }: { title: string; href?: string; cta?: string }) {
   return (
     <div className="relative mb-8 flex flex-col items-center gap-3 md:mb-10">
-      <h2 className="title text-center text-lg md:text-xl">{title}</h2>
+      <HeadingRule title={title} />
       {href && (
         <Link
           href={href}

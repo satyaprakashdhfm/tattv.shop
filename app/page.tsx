@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
-import { SectionHeading } from "@/components/section-heading";
+import { HeadingRule, SectionHeading } from "@/components/section-heading";
 import { EditorialBanner } from "@/components/editorial-banner";
 import { JewelleryLookZoom } from "@/components/jewellery-look-zoom";
 import { ReviewsSection } from "@/components/reviews-section";
@@ -40,10 +40,8 @@ export default function HomePage() {
 
       {/* Shop by category: arch-topped photos with the name and an arrow beneath */}
       <section className="container-x pt-14 md:pt-20">
-        <div className="mb-8 flex items-center justify-center gap-5 md:mb-12">
-          <span className="h-px w-10 bg-ink/25 md:w-20" />
-          <h2 className="display text-center text-2xl font-normal tracking-[0.12em] uppercase md:text-[32px]">Shop by Category</h2>
-          <span className="h-px w-10 bg-ink/25 md:w-20" />
+        <div className="mb-8 md:mb-10">
+          <HeadingRule title="Shop by Category" />
         </div>
         <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-5 px-5 md:mx-0 md:grid md:grid-cols-5 md:gap-6 md:overflow-visible md:px-0 lg:gap-8">
           {CATEGORIES.map((c) => (
