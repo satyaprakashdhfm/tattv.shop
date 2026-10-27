@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Clock, Mail, MapPin, Phone, RotateCcw } from "lucide-react";
 import { WhatsAppIcon } from "@/components/social-icons";
-import { CONTACT } from "@/lib/site";
+import { CONTACT, WHATSAPP_HELLO } from "@/lib/site";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const CHANNELS = [
   { icon: Mail, title: "Email", value: CONTACT.email, href: `mailto:${CONTACT.email}`, note: "We reply within 24 hours" },
-  { icon: WhatsAppIcon, title: "WhatsApp", value: CONTACT.phoneDisplay, href: `https://wa.me/${CONTACT.whatsapp}`, note: "Message us anytime", external: true },
+  { icon: WhatsAppIcon, title: "WhatsApp", value: CONTACT.phoneDisplay, href: WHATSAPP_HELLO, note: "Message us anytime", external: true },
   { icon: Phone, title: "Phone", value: CONTACT.phoneDisplay, href: `tel:${CONTACT.phone}`, note: CONTACT.hours },
 ];
 

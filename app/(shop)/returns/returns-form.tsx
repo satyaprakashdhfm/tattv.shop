@@ -16,10 +16,31 @@ const REASONS = [
   "Other",
 ];
 
-export function ReturnsForm() {
+/** The returns page: the order and item can come pre-filled from the link (?order=…&item=…&type=exchange). */
+export function ReturnsFormFromLink() {
   const params = useSearchParams();
+  return <ReturnsForm order={params.get("order") ?? ""} items={params.get("item") ?? ""} initialType={params.get("type") === "exchange" ? "exchange" : "return"} />;
+}
+
+/**
+ * A return or exchange request, sent to Admin → Messages. Used on the returns page and in the
+ * pop-up on My Account's orders (`onDone` closes the pop-up).
+ */
+export function ReturnsForm({
+  order = "",
+  items = "",
+  email,
+  initialType = "return",
+  onDone,
+}: {
+  order?: string;
+  items?: string;
+  email?: string;
+  initialType?: "return" | "exchange";
+  onDone?: () => void;
+}) {
   const { account } = useStore();
-  const [type, setType] = useState<"return" | "exchange">(params.get("type") === "exchange" ? "exchange" : "return");
+  const [type, setType] = useState<"return" | "exchange">(initialType);
   const [photos, setPhotos] = useState<string[]>([]);
   const [reference, setReference] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,9 +57,15 @@ export function ReturnsForm() {
           Your {type} request <span className="font-medium text-ink">{reference}</span> has been logged. Our team will email you within 24 hours to arrange a free pickup.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href={account ? "/account" : "/shop"} className="btn btn-dark">
-            {account ? "Back to My Account" : "Continue Shopping"}
-          </Link>
+          {onDone ? (
+            <button type="button" onClick={onDone} className="btn btn-dark">
+              Back to My Orders
+            </button>
+          ) : (
+            <Link href={account ? "/account" : "/shop"} className="btn btn-dark">
+              {account ? "Back to My Account" : "Continue Shopping"}
+            </Link>
+          )}
           <button onClick={() => setReference(null)} className="btn btn-outline">
             New Request
           </button>
@@ -79,7 +106,7 @@ export function ReturnsForm() {
             },
           });
           setReference(ref);
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          if (!onDone) window.scrollTo({ top: 0, behavior: "smooth" });
         } catch (err) {
           setError((err as Error).message);
         } finally {
@@ -87,7 +114,7 @@ export function ReturnsForm() {
         }
       }}
     >
-      <h2 className="display text-2xl font-normal">Start a request</h2>
+      {!onDone && <h2 className="display text-2xl font-normal">Start a request</h2>}
 
       <fieldset>
         <legend className="mb-2 text-sm text-muted">I&apos;d like to</legend>
@@ -109,17 +136,17 @@ export function ReturnsForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">
           <span className="mb-1.5 block text-muted">Order ID</span>
-          <input required name="order" defaultValue={params.get("order") ?? ""} placeholder="e.g. TTV-104829" className="field" />
+          <input required name="order" defaultValue={order} placeholder="e.g. TTV-104829" className="field" />
         </label>
         <label className="text-sm">
           <span className="mb-1.5 block text-muted">Email used for the order</span>
-          <input required type="email" name="email" defaultValue={account?.email ?? ""} placeholder="you@example.com" className="field" />
+          <input required type="email" name="email" defaultValue={email ?? account?.email ?? ""} placeholder="you@example.com" className="field" />
         </label>
       </div>
 
       <label className="block text-sm">
         <span className="mb-1.5 block text-muted">Item(s)</span>
-        <input required name="items" defaultValue={params.get("item") ?? ""} placeholder="Which piece(s) are you returning or exchanging?" className="field" />
+        <input required name="items" defaultValue={items} placeholder="Which piece(s) are you returning or exchanging?" className="field" />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">

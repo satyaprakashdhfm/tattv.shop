@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CONTACT, RETURN_WINDOW_DAYS } from "@/lib/site";
-import { ReturnsForm } from "./returns-form";
+import { ReturnsFormFromLink } from "./returns-form";
 
 export const metadata: Metadata = {
   title: "Returns & Exchanges",
@@ -29,7 +29,7 @@ export default function ReturnsPage() {
       <div className="mx-auto mt-12 grid max-w-5xl gap-8 lg:grid-cols-[1.5fr_1fr]">
         <section className="rounded-3xl border border-line bg-white p-7 md:p-9">
           <Suspense fallback={<div className="min-h-[480px]" />}>
-            <ReturnsForm />
+            <ReturnsFormFromLink />
           </Suspense>
         </section>
 

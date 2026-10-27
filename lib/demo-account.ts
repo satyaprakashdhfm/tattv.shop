@@ -1,5 +1,6 @@
 // PREVIEW ONLY: a sample customer so the signed-in account area can be reviewed before real
-// authentication exists. Credentials are checked in the browser, so they are not secret;
+// authentication exists. Their orders are real orders in the database under this email (see
+// scripts/seed-demo.mjs). Credentials are checked in the browser, so they are not secret;
 // replace this module with a real auth provider before launch.
 
 export interface Account {
@@ -8,19 +9,6 @@ export interface Account {
   email: string;
   phone: string;
   memberSince: string;
-}
-
-export type OrderStatus = "Processing" | "Shipped" | "Delivered" | "Returned";
-
-export interface Order {
-  id: string;
-  date: string;
-  status: OrderStatus;
-  items: { slug: string; qty: number; size?: string }[];
-  shipping: number;
-  address: string;
-  /** Present once dispatched. */
-  tracking?: string;
 }
 
 export interface Address {
@@ -57,40 +45,6 @@ export const DEMO_ADDRESSES: Address[] = [
     name: "Arjun Mehta",
     lines: ["4th Floor, Sample Tower", "Business District", "Bengaluru, Karnataka 560001"],
     phone: "+91 00000 00000",
-  },
-];
-
-export const DEMO_ORDERS: Order[] = [
-  {
-    id: "TTV-104829",
-    date: "18 Oct 2026",
-    status: "Shipped",
-    items: [
-      { slug: "onyx-signet-ring", qty: 1, size: "18" },
-      { slug: "layered-curb-chain", qty: 1, size: '20"' },
-    ],
-    shipping: 0,
-    address: "Home",
-    tracking: "DTDC · D88214093",
-  },
-  {
-    id: "TTV-103377",
-    date: "02 Sep 2026",
-    status: "Delivered",
-    items: [{ slug: "leather-card-wallet", qty: 1 }],
-    shipping: 149,
-    address: "Work",
-  },
-  {
-    id: "TTV-101902",
-    date: "14 Jul 2026",
-    status: "Delivered",
-    items: [
-      { slug: "mesh-inlay-bangle", qty: 1, size: 'M · 7.5"' },
-      { slug: "star-dog-tag-pendant", qty: 1, size: '22"' },
-    ],
-    shipping: 0,
-    address: "Home",
   },
 ];
 

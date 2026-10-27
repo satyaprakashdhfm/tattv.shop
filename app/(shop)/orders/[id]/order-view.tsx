@@ -19,6 +19,7 @@ interface OrderView {
   discount: number;
   discountCode: string | null;
   shipping: number;
+  gift: { fee: number; occasion: string; message: string } | null;
   total: number;
   payment: { method: string; status: PaymentStatus };
   tracking: { courier: string; number: string; url: string } | null;
@@ -169,12 +170,25 @@ export function OrderView({ id }: { id: string }) {
             <dt>Shipping</dt>
             <dd>{order.shipping ? formatPrice(order.shipping) : "Complimentary"}</dd>
           </div>
+          {order.gift && order.gift.fee > 0 && (
+            <div className="flex justify-between">
+              <dt>Gift packing{order.gift.occasion && ` · ${order.gift.occasion}`}</dt>
+              <dd>{formatPrice(order.gift.fee)}</dd>
+            </div>
+          )}
           <div className="flex justify-between border-t border-line pt-3 text-base font-medium">
             <dt>Total</dt>
             <dd>{formatPrice(order.total)}</dd>
           </div>
         </dl>
       </section>
+
+      {order.gift?.message && (
+        <section className="mt-5 rounded-3xl border border-[#e5d6bb] bg-[#fbf7f0] p-6 md:p-8">
+          <h2 className="eyebrow">Your Gift Card</h2>
+          <p className="mt-4 font-serif text-xl italic leading-relaxed">&ldquo;{order.gift.message}&rdquo;</p>
+        </section>
+      )}
 
       <section className="mt-5 rounded-3xl border border-line bg-white p-6 md:p-8">
         <h2 className="eyebrow">Delivery Address</h2>

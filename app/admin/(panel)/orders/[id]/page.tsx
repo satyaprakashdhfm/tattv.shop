@@ -94,12 +94,28 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
                 <dt>Shipping</dt>
                 <dd>{o.shipping ? formatPrice(o.shipping) : "Free"}</dd>
               </div>
+              {o.gift && o.gift.fee > 0 && (
+                <div className="flex justify-between">
+                  <dt>Gift packing</dt>
+                  <dd>{formatPrice(o.gift.fee)}</dd>
+                </div>
+              )}
               <div className="flex justify-between border-t border-line pt-3 text-base font-medium">
                 <dt>Total</dt>
                 <dd>{formatPrice(o.total)}</dd>
               </div>
             </dl>
           </section>
+
+          {o.gift && (
+            <section className="adm-card border-[#e5d6bb] bg-[#fbf7f0]">
+              <h2 className="adm-h2">🎁 Gift packing{o.gift.occasion && ` · ${o.gift.occasion}`}</h2>
+              <p className="text-sm text-ink/75">Pack in the TATTV gift box, no invoice inside. Write this on the message card:</p>
+              <blockquote className="mt-3 rounded-2xl bg-white px-5 py-4 font-serif text-lg italic leading-relaxed">
+                {o.gift.message ? `“${o.gift.message}”` : <span className="text-sm not-italic text-muted">No message: leave the card blank.</span>}
+              </blockquote>
+            </section>
+          )}
 
           <section className="adm-card space-y-4">
             <h2 className="adm-h2 !mb-0">Update status</h2>

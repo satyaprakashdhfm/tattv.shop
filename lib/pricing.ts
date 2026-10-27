@@ -2,7 +2,7 @@
 // server (enforced). The browser never decides prices: the server re-prices every order with this.
 import type { Product } from "./products";
 import { shippingFor } from "./format";
-import { MAX_QTY_PER_ITEM, type Coupon } from "./site";
+import { GIFT_WRAP, MAX_QTY_PER_ITEM, type Coupon } from "./site";
 
 export class OrderError extends Error {
   status: number;
@@ -33,6 +33,8 @@ export interface PricedOrder {
   discount: number;
   discountCode: string | null;
   shipping: number;
+  /** Gift packing charge; 0 when not asked for. */
+  giftWrap: number;
   total: number;
 }
 
@@ -42,6 +44,7 @@ export function priceOrder({
   coupons,
   couponCode,
   priorOrders = 0,
+  giftWrap = false,
 }: {
   items: OrderItemInput[];
   /** Active products only; `stock` null means not tracked. */
@@ -50,6 +53,7 @@ export function priceOrder({
   couponCode?: string | null;
   /** Earlier confirmed orders by this customer (for first-order-only codes). */
   priorOrders?: number;
+  giftWrap?: boolean;
 }): PricedOrder {
   if (!Array.isArray(items) || items.length === 0) throw new OrderError("Your bag is empty.");
   if (items.length > 50) throw new OrderError("Too many items in one order.");
@@ -91,12 +95,14 @@ export function priceOrder({
     const c = coupons[code];
     if (!c) throw new OrderError("That discount code is not valid.");
     if (c.firstOrderOnly && priorOrders > 0) throw new OrderError(`${code} is only for your first order.`);
+    if (c.minSubtotal && subtotal < c.minSubtotal) throw new OrderError(`${code} needs a bag of ₹${c.minSubtotal.toLocaleString("en-IN")} or more.`);
     discount = Math.round((subtotal * c.percent) / 100);
     discountCode = code;
   }
 
   const shipping = shippingFor(subtotal);
-  return { lines, subtotal, discount, discountCode, shipping, total: subtotal - discount + shipping };
+  const gift = giftWrap ? GIFT_WRAP.fee : 0;
+  return { lines, subtotal, discount, discountCode, shipping, giftWrap: gift, total: subtotal - discount + shipping + gift };
 }
 
 export interface CustomerInput {

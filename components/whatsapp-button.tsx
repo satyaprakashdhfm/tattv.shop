@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { whatsappLink } from "@/lib/site";
+import { WHATSAPP_HELLO } from "@/lib/site";
 import { WhatsAppIcon } from "./social-icons";
 import { useCheckoutBarShown } from "./checkout-bar";
 import { useStore } from "./store-provider";
@@ -20,7 +20,7 @@ export function WhatsAppButton() {
 
   return (
     <a
-      href={whatsappLink("Hi TATTV! I have a question.")}
+      href={WHATSAPP_HELLO}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"

@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import type { StoreSettings } from "@/lib/catalog";
-import { CONTACT } from "@/lib/site";
+import { CONTACT, WHATSAPP_HELLO } from "@/lib/site";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon, XIcon, YouTubeIcon } from "./social-icons";
 
 const COLUMNS = [
@@ -43,7 +43,7 @@ export function Footer({ settings }: { settings: StoreSettings }) {
     { label: "Instagram", href: settings.instagram, icon: InstagramIcon, external: true },
     { label: "Facebook", href: settings.facebook, icon: FacebookIcon, external: true },
     { label: "X (Twitter)", href: settings.twitter, icon: XIcon, external: true },
-    { label: "WhatsApp", href: `https://wa.me/${CONTACT.whatsapp}`, icon: WhatsAppIcon, external: true },
+    { label: "WhatsApp", href: WHATSAPP_HELLO, icon: WhatsAppIcon, external: true },
     { label: "Call us", href: `tel:${CONTACT.phone}`, icon: Phone, external: false },
     { label: "YouTube", href: CONTACT.youtube, icon: YouTubeIcon, external: true },
   ].filter((s) => s.href);

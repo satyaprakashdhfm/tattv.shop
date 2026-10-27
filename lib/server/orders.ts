@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
-import { COUPONS, ORDER_STATUSES, type OrderStatus, type PaymentStatus } from "@/lib/site";
+import { COUPONS, GIFT_WRAP, ORDER_STATUSES, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { OrderError, normalisePhone, priceOrder, validateCustomer, type CustomerInput, type OrderItemInput, type PricedLine } from "@/lib/pricing";
 import { type Db, pool, query, transaction } from "./db";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
@@ -24,6 +24,8 @@ export interface Order {
   discount: number;
   discountCode: string | null;
   shipping: number;
+  /** Gift packing: the fee charged (0 = not a gift), with the card's occasion and message. */
+  gift: { fee: number; occasion: string; message: string } | null;
   total: number;
   payment: { method: PaymentMethod; status: PaymentStatus; razorpayOrderId: string | null; paymentId: string | null; paidAt: string | null };
   tracking: { courier: string; number: string; url: string } | null;
@@ -65,6 +67,7 @@ const toOrder = (r: any): Order => ({
   discount: r.discount,
   discountCode: r.discount_code,
   shipping: r.shipping,
+  gift: r.gift_wrap > 0 || r.gift_message ? { fee: r.gift_wrap, occasion: r.gift_occasion ?? "", message: r.gift_message ?? "" } : null,
   total: r.total,
   payment: {
     method: r.payment_method,
@@ -118,8 +121,17 @@ async function confirm(db: PoolClient, o: Order, note: string) {
 }
 
 // ── Checkout ──
-export async function createOrder(input: { customer?: unknown; items?: OrderItemInput[]; discountCode?: string | null; paymentMethod?: string }) {
+export async function createOrder(input: {
+  customer?: unknown;
+  items?: OrderItemInput[];
+  discountCode?: string | null;
+  paymentMethod?: string;
+  gift?: { wrap?: unknown; occasion?: unknown; message?: unknown } | null;
+}) {
   const customer = validateCustomer(input.customer);
+  const giftWrap = input.gift?.wrap === true;
+  const giftOccasion = giftWrap && GIFT_WRAP.occasions.includes(String(input.gift?.occasion)) ? String(input.gift?.occasion) : "";
+  const giftMessage = giftWrap ? String(input.gift?.message ?? "").trim().slice(0, GIFT_WRAP.messageMax) : "";
   const cfg = paymentConfig();
   const method = input.paymentMethod;
   if (method === "cod" ? !cfg.cod : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
@@ -144,7 +156,7 @@ export async function createOrder(input: { customer?: unknown; items?: OrderItem
       "SELECT count(*)::int AS n FROM orders WHERE status NOT IN ('pending_payment', 'cancelled') AND (email = $1 OR phone = $2)",
       [customer.email, customer.phone],
     );
-    const priced = priceOrder({ items, getProduct, coupons: COUPONS, couponCode: input.discountCode, priorOrders: prior.rows[0].n });
+    const priced = priceOrder({ items, getProduct, coupons: COUPONS, couponCode: input.discountCode, priorOrders: prior.rows[0].n, giftWrap });
 
     const seq = await db.query<{ n: string }>("SELECT nextval('order_number_seq') AS n");
     const id = `TTV-${seq.rows[0].n}`;
@@ -153,10 +165,11 @@ export async function createOrder(input: { customer?: unknown; items?: OrderItem
     const c = customer;
     await db.query(
       `INSERT INTO orders (id, token, status, email, phone, first_name, last_name, address, apartment, city, state, pin,
-         subtotal, discount, discount_code, shipping, total, payment_method, payment_status)
-       VALUES ($1,$2,'pending_payment',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+         subtotal, discount, discount_code, shipping, total, payment_method, payment_status, gift_wrap, gift_occasion, gift_message)
+       VALUES ($1,$2,'pending_payment',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
       [id, token, c.email, c.phone, c.firstName, c.lastName, c.address, c.apartment, c.city, c.state, c.pin,
-        priced.subtotal, priced.discount, priced.discountCode, priced.shipping, priced.total, pay, pay === "cod" ? "cod_due" : "pending"],
+        priced.subtotal, priced.discount, priced.discountCode, priced.shipping, priced.total, pay, pay === "cod" ? "cod_due" : "pending",
+        priced.giftWrap, giftOccasion, giftMessage],
     );
     for (const [n, l] of priced.lines.entries()) {
       await db.query("INSERT INTO order_items (order_id, line_no, product_slug, name, size, price, qty, image) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", [
@@ -225,6 +238,24 @@ export async function findByRazorpayOrder(rzpOrderId: string) {
 export async function getOrderFor(id: string, token: string | null) {
   const o = await loadOrder(await pool(), id);
   return o && token && token === o.token ? o : null;
+}
+
+/**
+ * Orders for My Account: the ones this browser placed (each proven by its token) plus, for the
+ * preview account, every order under its email. Unpaid checkouts are left out.
+ */
+export async function accountOrders(refs: unknown, email: string | null) {
+  const db = await pool();
+  const found = new Map<string, Order>();
+  for (const r of (Array.isArray(refs) ? refs : []).slice(0, 30)) {
+    const o = await getOrderFor(String(r?.id ?? ""), r?.token ? String(r.token) : null);
+    if (o) found.set(o.id, o);
+  }
+  if (email) {
+    const r = await db.query(`${ORDER_SELECT} WHERE o.email = $1 ORDER BY o.created_at DESC LIMIT 30`, [email]);
+    for (const row of r.rows) found.set(row.id, toOrder(row));
+  }
+  return [...found.values()].filter((o) => o.status !== "pending_payment").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 /** Guests find an order with its number plus the email or phone used at checkout. */

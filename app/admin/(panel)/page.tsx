@@ -113,18 +113,22 @@ export default async function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <section className="adm-card">
           <h2 className="adm-h2">Sales, last 14 days</h2>
-          <div className="flex h-44 items-end gap-1.5" role="img" aria-label={`Daily sales for the last 14 days, highest ${formatPrice(peak)}`}>
+          {/* Daily sales as bars on a baseline; hover (or tab to) a day for its takings and order count. */}
+          <div className="mb-8 flex h-48 items-end gap-0.5 border-b border-line pt-2.5" role="img" aria-label={`Daily sales for the last 14 days, highest ${formatPrice(peak)}`}>
             {days.map((d) => {
               const label = new Date(d.start).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
               return (
-                <div key={d.start} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${label}: ${formatPrice(d.revenue)} · ${d.orders} ${d.orders === 1 ? "order" : "orders"}`}>
-                  <span className="w-full rounded-t-lg bg-ink transition-opacity group-hover:opacity-70" style={{ height: `${Math.max(d.revenue ? 3 : 1, (d.revenue / peak) * 100)}%`, opacity: d.revenue ? 1 : 0.15 }} />
-                  <span className="mt-1.5 text-[10px] text-muted">{new Date(d.start).getDate()}</span>
+                <div key={d.start} tabIndex={0} className="group relative flex h-full flex-1 flex-col items-center justify-end outline-none">
+                  <span className="pointer-events-none absolute bottom-[calc(100%+4px)] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus:opacity-100">
+                    {label}: {formatPrice(d.revenue)} · {d.orders} {d.orders === 1 ? "order" : "orders"}
+                  </span>
+                  <span className="min-h-0.5 w-full max-w-7 rounded-t bg-ink/80 transition-colors duration-150 group-hover:bg-ink group-focus:bg-ink" style={{ height: `${(d.revenue / peak) * 100}%` }} />
+                  <span className="absolute -bottom-[22px] text-[11px] text-muted">{new Date(d.start).getDate()}</span>
                 </div>
               );
             })}
           </div>
-          <p className="mt-4 text-xs text-muted">
+          <p className="text-xs text-muted">
             Highest day: {formatPrice(peak === 1 ? 0 : peak)}. Cancelled and unpaid orders are not counted.
             {unpaid > 0 && ` ${unpaid} unpaid checkout${unpaid === 1 ? "" : "s"} this week.`}
           </p>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice } from "@/lib/format";
-import { CONTACT } from "@/lib/site";
+import { CONTACT, WHATSAPP_HELLO } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Client Care",
@@ -111,7 +111,7 @@ export default function HelpPage() {
           <p>
             Email: <a href={`mailto:${CONTACT.email}`} className="text-ink underline underline-offset-4">{CONTACT.email}</a>
             <br />
-            WhatsApp / Call: <a href={`https://wa.me/${CONTACT.whatsapp}`} className="text-ink underline underline-offset-4">{CONTACT.phoneDisplay}</a>
+            WhatsApp / Call: <a href={WHATSAPP_HELLO} className="text-ink underline underline-offset-4">{CONTACT.phoneDisplay}</a>
           </p>
         </Section>
       </div>

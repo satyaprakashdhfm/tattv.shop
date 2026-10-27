@@ -152,6 +152,11 @@ CREATE TABLE IF NOT EXISTS messages (
   status     text NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'read', 'archived'))
 );
 
+-- Gift packing (added after launch of the schema, so existing databases get the columns too).
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_wrap integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_message text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_occasion text NOT NULL DEFAULT '';
+
 -- One-off data fix: categories seeded with the landscape photos switch to the arch photos the home page shows.
 UPDATE categories SET image = '/images/categories/arch/' || id || '.jpg' WHERE image = '/images/categories/' || id || '.jpg';
 `;

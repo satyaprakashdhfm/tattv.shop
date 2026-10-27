@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "prepare-logos": "node scripts/prepare-logos.mjs"
+    "prepare-logos": "node scripts/prepare-logos.mjs",
+    "seed-demo": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.61.0",
