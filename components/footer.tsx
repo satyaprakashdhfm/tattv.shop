@@ -43,7 +43,7 @@ export function Footer({ settings }: { settings: StoreSettings }) {
     { label: "Instagram", href: settings.instagram, icon: InstagramIcon, external: true },
     { label: "Facebook", href: settings.facebook, icon: FacebookIcon, external: true },
     { label: "X (Twitter)", href: settings.twitter, icon: XIcon, external: true },
-    { label: "WhatsApp", href: whatsappHello(settings.whatsapp), icon: WhatsAppIcon, external: true },
+    { label: "WhatsApp", href: whatsappHello(settings.phone), icon: WhatsAppIcon, external: true },
     { label: "Call us", href: telHref(settings.phone), icon: Phone, external: false },
     { label: "YouTube", href: settings.youtube, icon: YouTubeIcon, external: true },
   ].filter((s) => s.href);

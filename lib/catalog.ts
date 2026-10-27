@@ -8,12 +8,12 @@ export interface StoreSettings {
   facebook: string;
   twitter: string;
   youtube: string;
-  /** Shown first in the announcement ribbon when set. */
-  announcement: string;
+  /** Messages rotating in the top ribbon, in order. */
+  announcements: string[];
   /** Contact details shown across the store. */
   email: string;
+  /** One number for calls and WhatsApp. */
   phone: string;
-  whatsapp: string;
   hours: string;
   /** Studio address, one line per row. */
   address: string;

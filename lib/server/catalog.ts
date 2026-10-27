@@ -75,12 +75,12 @@ export async function loadCatalogData(): Promise<CatalogData> {
       SELECT p.*, COALESCE((SELECT array_agg(url ORDER BY position) FROM product_images i WHERE i.product_slug = p.slug), '{}') AS images
       FROM products p ORDER BY p.sort_order, p.created_at`),
     query<Category>("SELECT id, name, title, blurb, image FROM categories ORDER BY sort_order, created_at"),
-    query<{ value: Partial<StoreSettings> }>("SELECT value FROM settings WHERE key = 'store'"),
+    query<{ value: Partial<StoreSettings> & { announcement?: string; whatsapp?: string } }>("SELECT value FROM settings WHERE key = 'store'"),
   ]);
   const data: CatalogData = {
     products: products.rows.map(toProduct),
     categories: categories.rows,
-    settings: { ...DEFAULT_SETTINGS, ...settings.rows[0]?.value },
+    settings: withDefaults(settings.rows[0]?.value),
   };
   cache = { at: Date.now(), data };
   return data;
@@ -354,23 +354,31 @@ const url = (v: unknown) => {
   return /^https?:\/\//i.test(s) ? s : "https://" + s.replace(/^\/+/, "");
 };
 
+/**
+ * Stored settings over the defaults. Rows saved before the ribbon became a list hold a single
+ * optional `announcement`; it goes first, ahead of the standard messages, as it did then.
+ */
+function withDefaults(stored: (Partial<StoreSettings> & { announcement?: string; whatsapp?: string }) | undefined): StoreSettings {
+  // `whatsapp` was a second number before calls and WhatsApp shared one; it is no longer used.
+  const { announcement, whatsapp, ...rest } = stored ?? {};
+  const announcements = rest.announcements ?? (announcement ? [announcement, ...DEFAULT_SETTINGS.announcements] : DEFAULT_SETTINGS.announcements);
+  return { ...DEFAULT_SETTINGS, ...rest, announcements };
+}
+
 export async function saveSettings(input: Partial<Record<keyof StoreSettings, unknown>>) {
   const text = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
   const email = text(input.email).toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
-  for (const k of ["phone", "whatsapp"] as const) {
-    const digits = text(input[k]).replace(/\D/g, "");
-    if (digits && (digits.length < 10 || digits.length > 13)) throw new Error(`Enter a valid ${k === "phone" ? "phone" : "WhatsApp"} number.`);
-  }
+  const digits = text(input.phone).replace(/\D/g, "");
+  if (digits && (digits.length < 10 || digits.length > 13)) throw new Error("Enter a valid phone number.");
   const value: StoreSettings = {
     instagram: url(input.instagram),
     facebook: url(input.facebook),
     twitter: url(input.twitter),
     youtube: url(input.youtube),
-    announcement: text(input.announcement),
+    announcements: (Array.isArray(input.announcements) ? input.announcements : []).map((m) => text(m)).filter(Boolean).slice(0, 10),
     email: email || DEFAULT_SETTINGS.email,
     phone: text(input.phone, 30),
-    whatsapp: text(input.whatsapp, 30),
     hours: text(input.hours, 120),
     address: text(input.address, 400).replace(/\r/g, ""),
   };

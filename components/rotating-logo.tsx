@@ -17,7 +17,7 @@ const malayalam = Noto_Serif_Malayalam({ subsets: ["malayalam"], weight: "500", 
  * `size` (container-width units) and `drop` (em) optically balance scripts that sit high or small:
  * Devanagari hangs from its headline, so it reads smaller and higher than the others at the same size.
  */
-const NAMES: { text: string; lang: string; font: string; size?: number; drop?: number }[] = [
+export const NAMES: { text: string; lang: string; font: string; size?: number; drop?: number }[] = [
   { text: "తత్వ్", lang: "te", font: telugu.className },
   { text: "तत्व्", lang: "hi", font: devanagari.className, size: 22, drop: 0.12 },
   { text: "ತತ್ವ್", lang: "kn", font: kannada.className },

@@ -16,7 +16,7 @@ export default async function ContactPage() {
   const { settings: s } = await loadCatalogData();
   const CHANNELS = [
     { icon: Mail, title: "Email", value: s.email, href: `mailto:${s.email}`, note: "We reply within 24 hours" },
-    { icon: WhatsAppIcon, title: "WhatsApp", value: s.whatsapp, href: whatsappHello(s.whatsapp), note: "Message us anytime", external: true },
+    { icon: WhatsAppIcon, title: "WhatsApp", value: s.phone, href: whatsappHello(s.phone), note: "Message us anytime", external: true },
     { icon: Phone, title: "Phone", value: s.phone, href: telHref(s.phone), note: s.hours },
   ];
   return (

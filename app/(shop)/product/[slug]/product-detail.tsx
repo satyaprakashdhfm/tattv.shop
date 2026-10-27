@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck } from "lucide-react";
 import { MATERIALS, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
@@ -142,14 +142,16 @@ export function ProductDetail({ product }: { product: Product }) {
             ))}
           </div>
           <div className="relative aspect-square flex-1 overflow-hidden rounded-[2rem] border border-warm-line bg-white shadow-soft">
-            <ProductImage
-              key={viewIndex}
-              product={product}
-              index={view.index}
-              priority
-              sizes="(min-width: 1024px) 45vw, 100vw"
-              className={`animate-fade-in ${view.closeUp ? "scale-[1.9]" : ""}`}
-            />
+            <HoverZoom scale={view.closeUp ? 1.5 : 2}>
+              <ProductImage
+                key={viewIndex}
+                product={product}
+                index={view.index}
+                priority
+                sizes="(min-width: 1024px) 45vw, 100vw"
+                className={`animate-fade-in ${view.closeUp ? "scale-[1.9]" : ""}`}
+              />
+            </HoverZoom>
             {(product.soldOut || product.badge) && (
               <span className={`absolute left-4 top-4 rounded-full px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${product.soldOut ? "bg-espresso text-white" : "border border-gold/40 bg-bronze-soft text-espresso"}`}>
                 {product.soldOut ? "Sold Out" : product.badge}
@@ -327,5 +329,34 @@ function Points({ lines }: { lines: string[] }) {
         <li key={l}>{l}</li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Magnifies the photo under a mouse pointer, following it; the frame's overflow-hidden keeps the
+ * enlarged image inside the photo. Mouse only: touch keeps normal scrolling.
+ */
+function HoverZoom({ scale, children }: { scale: number; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const aim = (e: React.PointerEvent) => {
+    const el = ref.current;
+    if (!el || e.pointerType !== "mouse") return;
+    const r = el.getBoundingClientRect();
+    el.style.transformOrigin = `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
+    el.style.transform = `scale(${scale})`;
+  };
+  const reset = () => {
+    if (ref.current) ref.current.style.transform = "";
+  };
+  return (
+    <div
+      ref={ref}
+      onPointerEnter={aim}
+      onPointerMove={aim}
+      onPointerLeave={reset}
+      className="absolute inset-0 transition-transform duration-300 ease-out [@media(pointer:fine)]:cursor-zoom-in motion-reduce:transition-none"
+    >
+      {children}
+    </div>
   );
 }

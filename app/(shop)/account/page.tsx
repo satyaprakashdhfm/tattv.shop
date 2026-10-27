@@ -449,7 +449,7 @@ function HelpLink({ order, className = "" }: { order: AccountOrder; className?: 
   const { settings } = useCatalog();
   return (
     <a
-      href={whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.whatsapp)}
+      href={whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.phone)}
       target="_blank"
       rel="noopener noreferrer"
       className={`inline-flex items-center gap-1.5 text-xs text-muted underline-offset-4 hover:text-ink hover:underline ${className}`}
@@ -640,7 +640,7 @@ function Support() {
   const { settings: st } = useCatalog();
   const channels = [
     { icon: Mail, title: "Email", value: st.email, href: `mailto:${st.email}`, note: "We reply within 24 hours" },
-    { icon: WhatsAppIcon, title: "WhatsApp", value: st.whatsapp, href: whatsappHello(st.whatsapp), note: "Message us anytime", external: true },
+    { icon: WhatsAppIcon, title: "WhatsApp", value: st.phone, href: whatsappHello(st.phone), note: "Message us anytime", external: true },
     { icon: Phone, title: "Phone", value: st.phone, href: telHref(st.phone), note: st.hours },
   ];
   return (

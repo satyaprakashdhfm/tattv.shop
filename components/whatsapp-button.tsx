@@ -21,7 +21,7 @@ export function WhatsAppButton() {
 
   return (
     <a
-      href={whatsappHello(settings.whatsapp)}
+      href={whatsappHello(settings.phone)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"

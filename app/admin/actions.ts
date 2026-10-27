@@ -198,7 +198,10 @@ export async function moveCategoryAction(fd: FormData) {
 export async function saveSettingsAction(_prev: FormState, fd: FormData): Promise<FormState> {
   await requireAdmin();
   try {
-    await saveSettings(Object.fromEntries(["instagram", "facebook", "twitter", "youtube", "announcement", "email", "phone", "whatsapp", "hours", "address"].map((k) => [k, fd.get(k)])));
+    await saveSettings({
+      ...Object.fromEntries(["instagram", "facebook", "twitter", "youtube", "email", "phone", "hours", "address"].map((k) => [k, fd.get(k)])),
+      announcements: fd.getAll("announcements"),
+    });
   } catch (e) {
     return { error: (e as Error).message };
   }

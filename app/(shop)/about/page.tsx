@@ -6,6 +6,7 @@ import { getCatalog } from "@/lib/server/catalog";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 import { RETURN_WINDOW_DAYS } from "@/lib/site";
 import { Faq, type FaqGroup } from "./faq";
+import { RotatingName } from "@/components/rotating-name";
 
 export const metadata: Metadata = {
   title: "Our Story",
@@ -17,7 +18,7 @@ const FAQ: FaqGroup[] = [
     id: "general",
     label: "General",
     items: [
-      { q: "What does TATTV mean?", a: "Tattva means element: the essential nature of a thing. It is how we design, keeping only what matters in every piece." },
+      { q: "What does TATTV mean?", a: "Tattv means element: the essential nature of a thing. It is how we design, keeping only what matters in every piece." },
       { q: "Where are your pieces designed?", a: "Every piece is designed in our studio in India, then finished, checked and packed by hand in small batches." },
       { q: "Is TATTV jewellery only for men?", a: "Our designs are made with men in mind, but plenty of our customers wear them whoever they are. Wear what you like." },
     ],
@@ -86,10 +87,8 @@ export default async function AboutPage() {
 
         {/* The name, then the numbers. */}
         <p className="mx-auto mt-14 max-w-3xl text-lg leading-relaxed text-ink/75 md:text-xl">
-          <span className="font-serif text-2xl text-ink md:text-3xl" lang="te">
-            తత్వ
-          </span>{" "}
-          <em>(tattva)</em> is the <b className="font-semibold text-ink">element</b> at the core of something: what remains when everything unnecessary is taken away. We design the same way, keeping only{" "}
+          <RotatingName className="text-2xl text-ink md:text-3xl" />{" "}
+          <em>(tattv)</em> is the <b className="font-semibold text-ink">element</b> at the core of something: what remains when everything unnecessary is taken away. We design the same way, keeping only{" "}
           <b className="font-semibold text-ink">what matters</b>.
         </p>
         <dl className="mx-auto mt-10 grid max-w-4xl grid-cols-2 overflow-hidden rounded-3xl border border-line bg-white shadow-soft md:grid-cols-4 md:divide-x md:divide-line">

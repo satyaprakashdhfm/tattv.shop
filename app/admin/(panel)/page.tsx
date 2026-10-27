@@ -16,20 +16,48 @@ const startOfDay = (t: number) => {
   return d.getTime();
 };
 
-/** The dashboard's period filter (?range=…); 7 days by default. */
+/** The dashboard's period filter (?range=…); 7 days by default, or ?range=custom&from=…&to=… for any dates. */
 const RANGES = [
   { id: "today", days: 1, label: "Today" },
   { id: "7d", days: 7, label: "7 days" },
   { id: "30d", days: 30, label: "30 days" },
   { id: "90d", days: 90, label: "90 days" },
 ] as const;
+const MAX_CUSTOM_DAYS = 366;
 
-export default async function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  const { range: rangeId } = await searchParams;
-  const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[1];
+/** "2026-10-27" → that day's local midnight; anything else → null. */
+const parseDay = (v?: string) => {
+  const m = v?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const t = new Date(+m[1], +m[2] - 1, +m[3]).getTime();
+  return Number.isNaN(t) ? null : t;
+};
+const isoDay = (t: number) => {
+  const d = new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const shortDay = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string }> }) {
+  const params = await searchParams;
   const [orders, messages, { products }] = await Promise.all([listOrders(), listMessages(), loadCatalogData()]);
   const live = orders.filter(isLive);
   const today = startOfDay(Date.now());
+
+  // The period: a preset ending today, or custom dates (swapped if reversed, never past today, at most a year).
+  const custom = params.range === "custom";
+  let end = today;
+  let range: { id: string; days: number; label: string };
+  if (custom) {
+    let a = parseDay(params.from) ?? today - 29 * DAY;
+    let b = Math.min(parseDay(params.to) ?? today, today);
+    if (a > b) [a, b] = [b, a];
+    a = Math.max(a, b - (MAX_CUSTOM_DAYS - 1) * DAY);
+    end = b;
+    range = { id: "custom", days: Math.round((b - a) / DAY) + 1, label: a === b ? shortDay(b) : `${shortDay(a)} – ${shortDay(b)}` };
+  } else {
+    range = RANGES.find((r) => r.id === params.range) ?? RANGES[1];
+  }
   const between = (from: number, to: number) =>
     live.filter((o) => {
       const t = Date.parse(o.createdAt);
@@ -39,8 +67,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const itemsIn = (list: typeof live) => list.reduce((n, o) => n + o.lines.reduce((m, l) => m + l.qty, 0), 0);
 
   // The chosen period, and the one just before it for comparison.
-  const from = today - (range.days - 1) * DAY;
-  const current = between(from, today + DAY);
+  const from = end - (range.days - 1) * DAY;
+  const current = between(from, end + DAY);
   const previous = between(from - range.days * DAY, from);
   const stat = (now: number, before: number) => ({ now, change: before ? Math.round(((now - before) / before) * 100) : null });
   const avg = (list: typeof live) => (list.length ? Math.round(sum(list) / list.length) : 0);
@@ -60,10 +88,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   ];
   const unpaid = orders.filter((o) => o.status === "pending_payment" && Date.parse(o.createdAt) > Date.now() - 7 * DAY).length;
 
-  // Revenue per day across the chosen period (at least a week, so "Today" still has a shape).
+  // Revenue per day across the chosen period (at least a week, so a single day still has a shape).
   const chartDays = Math.max(7, range.days);
+  const chartFrom = end - (chartDays - 1) * DAY;
   const days = Array.from({ length: chartDays }, (_, i) => {
-    const start = today - (chartDays - 1 - i) * DAY;
+    const start = chartFrom + i * DAY;
     const list = live.filter((o) => {
       const t = Date.parse(o.createdAt);
       return t >= start && t < start + DAY;
@@ -104,19 +133,37 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <h2 className="adm-h2 !mb-0">Sales overview</h2>
           {/* Period filter: a quiet segmented control. */}
           <nav aria-label="Period" className="flex rounded-full bg-[#f1f1ef] p-1 text-xs">
-            {RANGES.map((r) => (
+            {[...RANGES, { id: "custom", label: "Custom" }].map((r) => (
               <Link
                 key={r.id}
                 href={r.id === "7d" ? "/admin" : `/admin?range=${r.id}`}
                 scroll={false}
                 aria-current={r.id === range.id ? "page" : undefined}
-                className={`rounded-full px-3.5 py-1.5 transition-colors ${r.id === range.id ? "bg-white font-medium text-ink shadow-soft" : "text-ink/55 hover:text-ink"}`}
+                className={`whitespace-nowrap rounded-full px-2.5 py-1.5 transition-colors sm:px-3.5 ${r.id === range.id ? "bg-white font-medium text-ink shadow-soft" : "text-ink/55 hover:text-ink"}`}
               >
                 {r.label}
               </Link>
             ))}
           </nav>
         </div>
+        {custom && (
+          // A plain GET form: two dates, and the dashboard reloads for them.
+          <form action="/admin" className="flex flex-wrap items-end gap-3 border-b border-line bg-[#fafaf9] px-6 py-4 text-xs">
+            <input type="hidden" name="range" value="custom" />
+            <label className="grid gap-1">
+              <span className="text-muted">From</span>
+              <input type="date" name="from" defaultValue={isoDay(from)} max={isoDay(today)} required className="adm-input !h-9 !w-auto !py-0" />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-muted">To</span>
+              <input type="date" name="to" defaultValue={isoDay(end)} max={isoDay(today)} required className="adm-input !h-9 !w-auto !py-0" />
+            </label>
+            <button className="btn btn-dark btn-sm">Apply</button>
+            <p className="basis-full text-muted sm:basis-auto">
+              Showing {range.label} ({range.days} {range.days === 1 ? "day" : "days"}). Up to a year at a time.
+            </p>
+          </form>
+        )}
         <dl className="grid grid-cols-2 divide-line md:grid-cols-4 md:divide-x">
           {kpis.map((k) => (
             <div key={k.label} className="px-6 py-5">
@@ -158,14 +205,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <section className="adm-card">
-          <h2 className="adm-h2">Sales, last {chartDays} days</h2>
+          <h2 className="adm-h2">Sales, {end === today ? `last ${chartDays} days` : `${shortDay(chartFrom)} – ${shortDay(end)}`}</h2>
           {/* Daily sales as bars on a baseline; hover (or tab to) a day for its takings and order count. */}
-          <div className="mb-8 flex h-48 items-end gap-0.5 border-b border-line pt-2.5" role="img" aria-label={`Daily sales for the last ${chartDays} days, highest ${formatPrice(peak)}`}>
+          <div className="mb-8 flex h-48 items-end gap-0.5 border-b border-line pt-2.5" role="img" aria-label={`Daily sales for ${chartDays} days, highest ${formatPrice(peak)}`}>
             {days.map((d, i) => {
-              const label = new Date(d.start).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+              const label = shortDay(d.start);
+              // Tooltips near the ends open inward so they never spill past the card (or a phone screen).
+              const edge = i < chartDays / 4 ? "left-0" : i >= (chartDays * 3) / 4 ? "right-0" : "left-1/2 -translate-x-1/2";
               return (
                 <div key={d.start} tabIndex={0} className="group relative flex h-full flex-1 flex-col items-center justify-end outline-none">
-                  <span className="pointer-events-none absolute bottom-[calc(100%+4px)] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus:opacity-100">
+                  <span className={`pointer-events-none absolute bottom-[calc(100%+4px)] z-10 whitespace-nowrap ${edge} rounded-lg bg-ink px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus:opacity-100`}>
                     {label}: {formatPrice(d.revenue)} · {d.orders} {d.orders === 1 ? "order" : "orders"}
                   </span>
                   <span
@@ -173,7 +222,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     style={{ height: `${(d.revenue / peak) * 100}%` }}
                   />
                   {/* Every day labelled up to two weeks; beyond that, every few days. */}
-                  {(chartDays <= 14 || i % Math.ceil(chartDays / 12) === 0 || d.start === today) && (
+                  {(chartDays <= 14 || i % Math.ceil(chartDays / 12) === 0 || d.start === end) && (
                     <span className="absolute -bottom-[22px] text-[11px] text-muted">{new Date(d.start).getDate()}</span>
                   )}
                 </div>
@@ -187,7 +236,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </section>
 
         <section className="adm-card">
-          <h2 className="adm-h2">Best sellers ({range.days === 1 ? "today" : `${range.days} days`})</h2>
+          <h2 className="adm-h2">Best sellers ({custom ? range.label : range.days === 1 ? "today" : `${range.days} days`})</h2>
           {best.length === 0 ? (
             <p className="text-sm text-muted">No sales yet.</p>
           ) : (

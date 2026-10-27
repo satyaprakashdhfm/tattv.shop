@@ -81,7 +81,7 @@ export function OrderView({ id }: { id: string }) {
   const awaiting = order.status === "pending_payment";
   const cancelled = order.status === "cancelled";
   const step = TRACKER_STEPS.indexOf(order.status);
-  const help = whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.whatsapp);
+  const help = whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.phone);
 
   return (
     <div className="container-x max-w-3xl py-12 md:py-16">

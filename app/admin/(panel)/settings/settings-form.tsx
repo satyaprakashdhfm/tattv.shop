@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { StoreSettings } from "@/lib/catalog";
 import { saveSettingsAction } from "../../actions";
+import { AnnouncementsField } from "./announcements-field";
 
 function Field({ id, label, hint, ...rest }: { id: string; label: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -24,20 +25,41 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       <section className="adm-card space-y-4">
         <div>
           <h2 className="adm-h2 !mb-1">Contact details</h2>
-          <p className="text-xs text-muted">Shown in the footer, Contact Us, Help, My Account and the WhatsApp button. Messages from the contact form are emailed to this address.</p>
+          <p className="text-xs text-muted">How customers reach TATTV. Under each field: where it appears on the site.</p>
         </div>
-        <Field id="s-email" name="email" type="email" label="Email" defaultValue={settings.email} placeholder="care@tattv.shop" required />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="s-phone" name="phone" type="tel" label="Phone (for calls)" defaultValue={settings.phone} placeholder="+91 98765 43210" />
-          <Field id="s-wa" name="whatsapp" type="tel" label="WhatsApp number" defaultValue={settings.whatsapp} placeholder="+91 98765 43210" />
-        </div>
-        <Field id="s-hours" name="hours" label="Support hours" defaultValue={settings.hours} placeholder="Mon–Sat, 10am–7pm IST" />
+        <Field
+          id="s-email"
+          name="email"
+          type="email"
+          label="Email"
+          defaultValue={settings.email}
+          placeholder="care@tattv.shop"
+          required
+          hint="Shown on: footer, Contact Us, Help, Returns, My Account → Contact & Support, packing slips. Contact-form and return messages are emailed here."
+        />
+        <Field
+          id="s-phone"
+          name="phone"
+          type="tel"
+          label="Phone & WhatsApp number"
+          defaultValue={settings.phone}
+          placeholder="+91 98765 43210"
+          hint="One number for calls and WhatsApp. Shown on: the green WhatsApp button, footer, Contact Us, Help, My Account → Contact & Support and “Help with this order”, the order confirmation page, packing slips."
+        />
+        <Field
+          id="s-hours"
+          name="hours"
+          label="Support hours"
+          defaultValue={settings.hours}
+          placeholder="Mon–Sat, 10am–7pm IST"
+          hint="Shown on: Contact Us (under Phone and in Support Hours), Help, My Account → Contact & Support."
+        />
         <div>
           <label htmlFor="s-address" className="adm-label">
             Studio address
           </label>
           <textarea id="s-address" name="address" rows={3} defaultValue={settings.address} placeholder={"TATTV Studio, Street\nCity, State PIN, India"} className="adm-input h-auto py-2.5" />
-          <p className="mt-1 text-xs text-muted">One line per row, as it should appear on the Contact page.</p>
+          <p className="mt-1 text-xs text-muted">One line per row. Shown on: Contact Us, under “Studio”.</p>
         </div>
       </section>
 
@@ -45,7 +67,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         <section className="adm-card space-y-4">
           <div>
             <h2 className="adm-h2 !mb-1">Social media</h2>
-            <p className="text-xs text-muted">Icons in the top ribbon and footer. Leave a link empty to hide its icon.</p>
+            <p className="text-xs text-muted">Shown on: the top ribbon (Instagram, Facebook, X) and the footer (all four). Instagram also links the reels section on the home page. Leave a link empty to hide its icon.</p>
           </div>
           <Field id="s-ig" name="instagram" label="Instagram link" defaultValue={settings.instagram} placeholder="https://www.instagram.com/tattv.shop/" />
           <Field id="s-fb" name="facebook" label="Facebook link" defaultValue={settings.facebook} placeholder="https://www.facebook.com/yourpage" />
@@ -55,13 +77,10 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
 
         <section className="adm-card space-y-4">
           <div>
-            <h2 className="adm-h2 !mb-1">Announcement</h2>
-            <p className="text-xs text-muted">Shown first in the ribbon at the very top of every page, before the standard shipping and returns messages. Leave empty for just those.</p>
+            <h2 className="adm-h2 !mb-1">Announcement ribbon</h2>
+            <p className="text-xs text-muted">The black strip at the very top of every page. These messages rotate in this order; edit, reorder or remove any of them.</p>
           </div>
-          <label htmlFor="s-ann" className="sr-only">
-            Announcement
-          </label>
-          <input id="s-ann" name="announcement" defaultValue={settings.announcement} maxLength={200} placeholder="e.g. Festive edit: 10% off with WELCOME10" className="adm-input" />
+          <AnnouncementsField initial={settings.announcements} />
         </section>
       </div>
 

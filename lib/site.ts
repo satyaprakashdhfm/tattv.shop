@@ -1,6 +1,8 @@
 // Store-wide settings. Safe to import from browser and server code: nothing secret lives here
 // (secrets come from environment variables).
 
+import { FREE_SHIPPING_THRESHOLD, formatPrice } from "./format";
+
 // Starting contact details. The live values are edited in Admin → Site Settings (see StoreSettings);
 // these are only the defaults for a new store. Placeholders: replace in the admin with TATTV's real details.
 export const CONTACT = {
@@ -27,10 +29,14 @@ export const DEFAULT_SETTINGS = {
   facebook: "https://www.facebook.com/",
   twitter: "https://x.com/",
   youtube: CONTACT.youtube,
-  announcement: "",
+  /** Messages rotating in the top ribbon, in order. An empty list hides the ribbon's messages. */
+  announcements: [
+    `Complimentary shipping across India on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}`,
+    "Easy 15-day returns & exchanges",
+    "Every order arrives in a signature TATTV pouch",
+  ],
   email: CONTACT.email,
   phone: CONTACT.phoneDisplay,
-  whatsapp: CONTACT.phoneDisplay,
   hours: CONTACT.hours,
   address: CONTACT.address.join("\n"),
 };

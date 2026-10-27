@@ -113,7 +113,7 @@ export default async function HelpPage() {
           <p>
             Email: <a href={`mailto:${s.email}`} className="text-ink underline underline-offset-4">{s.email}</a>
             <br />
-            WhatsApp / Call: <a href={whatsappHello(s.whatsapp)} className="text-ink underline underline-offset-4">{s.whatsapp}</a>
+            WhatsApp / Call: <a href={whatsappHello(s.phone)} className="text-ink underline underline-offset-4">{s.phone}</a>
           </p>
         </Section>
       </div>
