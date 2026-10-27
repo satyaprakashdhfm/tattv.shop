@@ -1,0 +1,260 @@
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { formatPrice } from "@/lib/format";
+import { ORDER_STATUSES, PAYMENT_LABELS, SITE_URL, type OrderStatus } from "@/lib/site";
+import { getOrder, type Order } from "@/lib/server/orders";
+import { addNote, saveTracking, setPayment, updateStatus } from "../../../actions";
+import { PageHead, StatusPill, when } from "../../ui";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  return { title: `Order ${(await params).id}` };
+}
+
+// The usual next step for each status, offered as a one-click button.
+const NEXT: Partial<Record<OrderStatus, OrderStatus>> = { confirmed: "packed", packed: "shipped", shipped: "out_for_delivery", out_for_delivery: "delivered" };
+
+function whatsappMessage(o: Order) {
+  const name = o.customer.firstName;
+  const link = `${SITE_URL}/orders/${o.id}?t=${o.token}`;
+  const t = o.tracking;
+  const msgs: Record<OrderStatus, string> = {
+    confirmed: `Hi ${name}! Thank you for your TATTV order ${o.id}. We're preparing it now and will share tracking once it ships. ${link}`,
+    packed: `Hi ${name}! Your TATTV order ${o.id} is packed and will be shipped soon. ${link}`,
+    shipped: `Hi ${name}! Your TATTV order ${o.id} is on its way${t ? ` with ${t.courier}${t.number ? `, tracking no. ${t.number}` : ""}` : ""}. ${t?.url || link}`,
+    out_for_delivery: `Hi ${name}! Your TATTV order ${o.id} is out for delivery today.${o.payment.status === "cod_due" ? ` Please keep ${formatPrice(o.total)} ready.` : ""}`,
+    delivered: `Hi ${name}! Your TATTV order ${o.id} has been delivered. We hope you enjoy wearing it.`,
+    pending_payment: `Hi ${name}! We noticed your TATTV order ${o.id} wasn't paid. Can we help you complete it?`,
+    cancelled: `Hi ${name}, your TATTV order ${o.id} has been cancelled. Please reply if you have any questions.`,
+  };
+  return `https://wa.me/91${o.customer.phone}?text=${encodeURIComponent(msgs[o.status] || "")}`;
+}
+
+export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const o = await getOrder(id);
+  if (!o) notFound();
+  const c = o.customer;
+  const next = NEXT[o.status];
+  const address = [`${c.firstName} ${c.lastName}`, c.address, c.apartment, `${c.city}, ${c.state} ${c.pin}`, `Phone: ${c.phone}`].filter(Boolean).join("\n");
+
+  return (
+    <>
+      <PageHead
+        back={{ href: "/admin/orders", label: "Orders" }}
+        title={
+          <>
+            Order {o.id} <StatusPill status={o.status} />
+          </>
+        }
+        sub={`Placed ${when(o.createdAt)}`}
+      >
+        <a href={whatsappMessage(o)} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">
+          WhatsApp Customer
+        </a>
+        <a href={`/admin/slip/${o.id}`} target="_blank" className="btn btn-outline btn-sm">
+          Packing Slip
+        </a>
+      </PageHead>
+
+      <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <div className="space-y-6">
+          <section className="adm-card">
+            <h2 className="adm-h2">Items</h2>
+            <ul className="divide-y divide-line">
+              {o.lines.map((l) => (
+                <li key={`${l.slug}|${l.size}`} className="flex items-center gap-4 py-3">
+                  <span className="relative size-14 shrink-0 rounded-xl bg-sand [&_img]:rounded-xl">
+                    {l.image && <Image src={l.image} alt="" fill sizes="56px" className="object-cover" />}
+                    <span className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-ink text-[10px] text-white">{l.qty}</span>
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm">
+                    <span className="font-medium">{l.name}</span>
+                    <span className="block text-xs text-muted">
+                      {formatPrice(l.price)} × {l.qty}
+                      {l.size && ` · Size ${l.size}`}
+                    </span>
+                  </span>
+                  <b className="text-sm font-medium">{formatPrice(l.price * l.qty)}</b>
+                </li>
+              ))}
+            </ul>
+            <dl className="mt-2 space-y-2 border-t border-line pt-4 text-sm">
+              <div className="flex justify-between">
+                <dt>Subtotal</dt>
+                <dd>{formatPrice(o.subtotal)}</dd>
+              </div>
+              {o.discount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <dt>Discount ({o.discountCode})</dt>
+                  <dd>−{formatPrice(o.discount)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt>Shipping</dt>
+                <dd>{o.shipping ? formatPrice(o.shipping) : "Free"}</dd>
+              </div>
+              <div className="flex justify-between border-t border-line pt-3 text-base font-medium">
+                <dt>Total</dt>
+                <dd>{formatPrice(o.total)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="adm-card space-y-4">
+            <h2 className="adm-h2 !mb-0">Update status</h2>
+            {next && (
+              <form action={updateStatus}>
+                <input type="hidden" name="id" value={o.id} />
+                <input type="hidden" name="status" value={next} />
+                <button className="btn btn-dark btn-sm">Mark as {ORDER_STATUSES[next].label.toLowerCase()}</button>
+              </form>
+            )}
+            <form key={o.status} action={updateStatus} className="flex flex-wrap gap-2">
+              <input type="hidden" name="id" value={o.id} />
+              <label className="sr-only" htmlFor="st">
+                Status
+              </label>
+              <select id="st" name="status" defaultValue={o.status} className="adm-input w-auto">
+                {Object.entries(ORDER_STATUSES).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+              <input name="statusNote" placeholder="Note for the timeline (optional)" aria-label="Status note" className="adm-input min-w-48 flex-1" />
+              <button className="btn btn-outline btn-sm">Save</button>
+            </form>
+            <p className="text-xs text-muted">Cancelling an order puts its items back into stock.</p>
+          </section>
+
+          <section className="adm-card">
+            <h2 className="adm-h2">Shipping &amp; tracking</h2>
+            <form action={saveTracking} className="grid gap-4 sm:grid-cols-2">
+              <input type="hidden" name="id" value={o.id} />
+              <div>
+                <label htmlFor="tc" className="adm-label">
+                  Courier
+                </label>
+                <input id="tc" name="courier" defaultValue={o.tracking?.courier} placeholder="e.g. Delhivery, DTDC" className="adm-input" />
+              </div>
+              <div>
+                <label htmlFor="tn" className="adm-label">
+                  Tracking number
+                </label>
+                <input id="tn" name="number" defaultValue={o.tracking?.number} className="adm-input" />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="tu" className="adm-label">
+                  Tracking link (optional)
+                </label>
+                <input id="tu" name="url" type="url" defaultValue={o.tracking?.url} placeholder="https://" className="adm-input" />
+              </div>
+              {["confirmed", "packed"].includes(o.status) && (
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <input type="checkbox" name="markShipped" defaultChecked className="size-4 accent-ink" /> Also mark the order as shipped
+                </label>
+              )}
+              <div className="sm:col-span-2">
+                <button className="btn btn-outline btn-sm">Save Tracking</button>
+                <p className="mt-2 text-xs text-muted">The customer sees this on their order page.</p>
+              </div>
+            </form>
+          </section>
+
+          <section className="adm-card">
+            <h2 className="adm-h2">Timeline</h2>
+            <ol className="space-y-3 border-l border-line pl-5 text-sm">
+              {[...o.history].reverse().map((h, i) => (
+                <li key={i} className="relative">
+                  <span className="absolute -left-[25px] top-1.5 size-2 rounded-full bg-ink" />
+                  <b className="font-medium">{ORDER_STATUSES[h.status]?.label}</b>
+                  {h.note ? ` · ${h.note}` : ""}
+                  <span className="block text-xs text-muted">
+                    {when(h.at)}
+                    {h.byAdmin ? " · by admin" : ""}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+
+        <div className="space-y-6">
+          <section className="adm-card">
+            <h2 className="adm-h2">Customer</h2>
+            <p className="text-sm leading-relaxed">
+              <b className="font-medium">
+                {c.firstName} {c.lastName}
+              </b>
+              <br />
+              <a href={`mailto:${c.email}`} className="underline-offset-2 hover:underline">
+                {c.email}
+              </a>
+              <br />
+              <a href={`tel:+91${c.phone}`} className="underline-offset-2 hover:underline">
+                +91 {c.phone}
+              </a>
+            </p>
+            <h3 className="adm-label mt-5">Ship to</h3>
+            <pre className="whitespace-pre-wrap rounded-2xl bg-sand p-4 font-sans text-sm leading-relaxed">{address}</pre>
+            <Link href={`/admin/orders?status=all&q=${encodeURIComponent(c.email)}`} className="mt-3 inline-block text-xs uppercase tracking-[0.14em] text-muted underline underline-offset-4 hover:text-ink">
+              Other orders from this customer
+            </Link>
+          </section>
+
+          <section className="adm-card">
+            <h2 className="adm-h2">Payment</h2>
+            <p className="text-sm leading-relaxed">
+              {o.payment.method === "cod" ? "Cash on delivery" : o.payment.method === "demo" ? "Online (demo, not real money)" : "Online via Razorpay"}
+              <br />
+              <b className="font-medium">{PAYMENT_LABELS[o.payment.status]}</b>
+              {o.payment.paymentId && <span className="block text-xs text-muted">Payment ID: {o.payment.paymentId}</span>}
+              {o.payment.razorpayOrderId && <span className="block text-xs text-muted">Razorpay order: {o.payment.razorpayOrderId}</span>}
+            </p>
+            <form action={setPayment} className="mt-4 flex gap-2">
+              <input type="hidden" name="id" value={o.id} />
+              {o.payment.status === "cod_due" && (
+                <button name="paymentStatus" value="paid" className="btn btn-dark btn-sm">
+                  Cash Collected
+                </button>
+              )}
+              {o.payment.status === "paid" && (
+                <button name="paymentStatus" value="refunded" className="btn btn-outline btn-sm">
+                  Mark Refunded
+                </button>
+              )}
+            </form>
+            {o.payment.method === "razorpay" && o.payment.status === "paid" && (
+              <p className="mt-2 text-xs text-muted">Refunds are made in the Razorpay dashboard; mark the order refunded here afterwards.</p>
+            )}
+          </section>
+
+          <section className="adm-card">
+            <h2 className="adm-h2">Internal notes</h2>
+            {o.notes.length === 0 ? (
+              <p className="text-xs text-muted">Only the team can see these.</p>
+            ) : (
+              <ul className="space-y-3 text-sm">
+                {o.notes.map((n, i) => (
+                  <li key={i}>
+                    {n.text}
+                    <span className="block text-xs text-muted">{when(n.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form action={addNote} className="mt-4 space-y-2">
+              <input type="hidden" name="id" value={o.id} />
+              <label htmlFor="nt" className="sr-only">
+                Note
+              </label>
+              <textarea id="nt" name="note" rows={2} placeholder="e.g. Gift wrap requested" className="adm-input" />
+              <button className="btn btn-outline btn-sm">Add Note</button>
+            </form>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}

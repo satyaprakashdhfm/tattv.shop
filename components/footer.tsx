@@ -1,8 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
+import type { StoreSettings } from "@/lib/catalog";
 import { CONTACT } from "@/lib/site";
-import { InstagramIcon, WhatsAppIcon, YouTubeIcon } from "./social-icons";
+import { FacebookIcon, InstagramIcon, WhatsAppIcon, XIcon, YouTubeIcon } from "./social-icons";
 
 const COLUMNS = [
   {
@@ -18,6 +19,7 @@ const COLUMNS = [
   {
     title: "Client Care",
     links: [
+      { label: "Track Your Order", href: "/orders/track" },
       { label: "Shipping", href: "/help#shipping" },
       { label: "Returns & Exchanges", href: "/returns" },
       { label: "Size Guide", href: "/help#size-guide" },
@@ -36,21 +38,23 @@ const COLUMNS = [
   },
 ];
 
-const SOCIAL = [
-  { label: "Instagram", href: CONTACT.instagram, icon: InstagramIcon, external: true },
-  { label: "WhatsApp", href: `https://wa.me/${CONTACT.whatsapp}`, icon: WhatsAppIcon, external: true },
-  { label: "Call us", href: `tel:${CONTACT.phone}`, icon: Phone, external: false },
-  { label: "YouTube", href: CONTACT.youtube, icon: YouTubeIcon, external: true },
-];
+export function Footer({ settings }: { settings: StoreSettings }) {
+  const SOCIAL = [
+    { label: "Instagram", href: settings.instagram, icon: InstagramIcon, external: true },
+    { label: "Facebook", href: settings.facebook, icon: FacebookIcon, external: true },
+    { label: "X (Twitter)", href: settings.twitter, icon: XIcon, external: true },
+    { label: "WhatsApp", href: `https://wa.me/${CONTACT.whatsapp}`, icon: WhatsAppIcon, external: true },
+    { label: "Call us", href: `tel:${CONTACT.phone}`, icon: Phone, external: false },
+    { label: "YouTube", href: CONTACT.youtube, icon: YouTubeIcon, external: true },
+  ].filter((s) => s.href);
 
-export function Footer() {
   return (
     <footer className="bg-ink text-white">
       <div className="container-x grid gap-12 py-16 lg:grid-cols-12 lg:py-20">
         <div className="lg:col-span-4">
           <Image src="/brand/logo-white.png" alt="TATTV" width={1147} height={294} className="h-auto w-[180px]" />
           <p className="mt-6 max-w-xs text-sm leading-relaxed text-white/60">Modern and classic jewellery for men, made to be worn every day.</p>
-          <ul className="mt-6 flex items-center gap-3">
+          <ul className="mt-6 flex flex-wrap items-center gap-3">
             {SOCIAL.map(({ label, href, icon: Icon, external }) => (
               <li key={label}>
                 <a

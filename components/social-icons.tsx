@@ -30,3 +30,20 @@ export function YouTubeIcon({ size = 20, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function FacebookIcon({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...base(size)} fill="currentColor" {...props}>
+      <path d="M13.5 21v-7.6h2.6l.4-3h-3V8.5c0-.87.25-1.46 1.5-1.46h1.6V4.36c-.28-.04-1.23-.12-2.33-.12-2.3 0-3.88 1.4-3.88 3.98v2.2H7.8v3h2.6V21h3.1Z" />
+    </svg>
+  );
+}
+
+/** X (formerly Twitter). */
+export function XIcon({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...base(size)} fill="currentColor" {...props}>
+      <path d="M17.53 3.5h2.9l-6.34 7.25L21.5 20.5h-5.84l-4.57-5.98-5.24 5.98H2.95l6.78-7.75L2.6 3.5h5.98l4.13 5.46L17.53 3.5Zm-1.02 15.28h1.61L7.74 5.13H6.01l10.5 13.65Z" />
+    </svg>
+  );
+}

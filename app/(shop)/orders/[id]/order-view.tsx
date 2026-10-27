@@ -1,0 +1,205 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Check, Package } from "lucide-react";
+import { formatPrice } from "@/lib/format";
+import { ORDER_STATUSES, PAYMENT_LABELS, TRACKER_STEPS, whatsappLink, type OrderStatus, type PaymentStatus } from "@/lib/site";
+import { api, orderToken, rememberOrder } from "@/lib/client-api";
+
+interface OrderView {
+  id: string;
+  createdAt: string;
+  status: OrderStatus;
+  customer: { firstName: string; lastName: string; email: string; phone: string; address: string; apartment: string; city: string; state: string; pin: string };
+  lines: { slug: string; name: string; size: string | null; price: number; qty: number; image: string }[];
+  subtotal: number;
+  discount: number;
+  discountCode: string | null;
+  shipping: number;
+  total: number;
+  payment: { method: string; status: PaymentStatus };
+  tracking: { courier: string; number: string; url: string } | null;
+}
+
+const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
+export function OrderView({ id }: { id: string }) {
+  const params = useSearchParams();
+  const [order, setOrder] = useState<OrderView | null | undefined>(undefined);
+
+  useEffect(() => {
+    const t = params.get("t");
+    if (t) rememberOrder(id, t);
+    const token = t || orderToken(id);
+    const load = () =>
+      api<{ order: OrderView }>(`/api/orders/${id}${token ? `?t=${token}` : ""}`)
+        .then((d) => setOrder(d.order))
+        .catch(() => setOrder((o) => o ?? null));
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
+  }, [id, params]);
+
+  if (order === undefined) return <div className="min-h-[60vh]" />;
+  if (order === null) {
+    return (
+      <div className="container-x flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
+        <h1 className="title text-xl md:text-2xl">Order not found</h1>
+        <p className="mt-3 text-muted">We couldn&apos;t open order {id}. Find it with your email or mobile number instead.</p>
+        <Link href={`/orders/track?id=${id}`} className="btn btn-dark mt-10">
+          Track an Order
+        </Link>
+      </div>
+    );
+  }
+
+  const c = order.customer;
+  const awaiting = order.status === "pending_payment";
+  const cancelled = order.status === "cancelled";
+  const step = TRACKER_STEPS.indexOf(order.status);
+  const help = whatsappLink(`Hi TATTV! A question about my order ${order.id}`);
+
+  return (
+    <div className="container-x max-w-3xl py-12 md:py-16">
+      <section className="rounded-3xl border border-line bg-white p-6 text-center md:p-10">
+        {!awaiting && !cancelled && (
+          <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-ink text-white">
+            <Check size={26} />
+          </span>
+        )}
+        <p className="eyebrow mt-6 text-muted">Order {order.id}</p>
+        <h1 className="title mt-3 text-xl md:text-2xl">
+          {awaiting ? (order.payment.status === "failed" ? "Payment didn’t go through" : "Waiting for payment") : cancelled ? "This order was cancelled" : `Thank you${c.firstName ? `, ${c.firstName}` : ""}`}
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted">
+          {awaiting ? (
+            <>
+              No money has been taken for this order. Go back to <Link href="/checkout" className="underline underline-offset-2">checkout</Link> to try again, or choose cash on delivery.
+            </>
+          ) : cancelled ? (
+            <>
+              Questions?{" "}
+              <a href={help} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                Message us on WhatsApp
+              </a>
+              .
+            </>
+          ) : (
+            <>Your order is confirmed. We dispatch within 24 hours and share tracking details as soon as it ships. Bookmark this page to follow it.</>
+          )}
+        </p>
+
+        <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-line bg-line text-left text-sm md:grid-cols-4">
+          {[
+            ["Status", ORDER_STATUSES[order.status]?.customer],
+            ["Payment", order.payment.method === "cod" ? "Cash on delivery" : PAYMENT_LABELS[order.payment.status]],
+            ["Placed", when(order.createdAt)],
+            ["Total", formatPrice(order.total)],
+          ].map(([k, v]) => (
+            <div key={k} className="bg-white p-4">
+              <dt className="text-[10px] uppercase tracking-[0.18em] text-muted">{k}</dt>
+              <dd className="mt-1 font-medium">{v}</dd>
+            </div>
+          ))}
+        </dl>
+
+        {step >= 0 && (
+          <ol className="mt-8 grid grid-cols-5 gap-2 text-[10px] uppercase tracking-[0.12em]" aria-label="Delivery progress">
+            {TRACKER_STEPS.map((s, i) => (
+              <li key={s} aria-current={i === step ? "step" : undefined} className={i <= step ? "text-ink" : "text-muted"}>
+                <span className={`mb-2 block h-1 rounded-full ${i <= step ? "bg-ink" : "bg-line"}`} />
+                {ORDER_STATUSES[s].customer}
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {order.tracking && (
+          <p className="mt-6 flex items-center justify-center gap-2 rounded-full bg-sand px-4 py-3 text-sm">
+            <Package size={16} strokeWidth={1.5} /> Shipped with <b className="font-medium">{order.tracking.courier || "our courier"}</b>
+            {order.tracking.number && <> · {order.tracking.number}</>}
+            {order.tracking.url && (
+              <>
+                {" · "}
+                <a href={order.tracking.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  Track parcel
+                </a>
+              </>
+            )}
+          </p>
+        )}
+      </section>
+
+      <section className="mt-5 rounded-3xl border border-line bg-white p-6 md:p-8">
+        <h2 className="eyebrow">Items</h2>
+        <ul className="mt-4 divide-y divide-line">
+          {order.lines.map((l) => (
+            <li key={`${l.slug}|${l.size}`} className="flex items-center gap-4 py-4">
+              <span className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-sand">
+                {l.image && <Image src={l.image} alt="" fill sizes="64px" className="object-cover" />}
+                <span className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-ink text-[10px] text-white">{l.qty}</span>
+              </span>
+              <span className="min-w-0 flex-1 text-sm">
+                <Link href={`/product/${l.slug}`} className="font-medium hover:underline">
+                  {l.name}
+                </Link>
+                <span className="block text-xs text-muted">
+                  {formatPrice(l.price)} each{l.size && ` · ${l.size}`}
+                </span>
+              </span>
+              <span className="text-sm">{formatPrice(l.price * l.qty)}</span>
+            </li>
+          ))}
+        </ul>
+        <dl className="mt-2 space-y-2 border-t border-line pt-4 text-sm">
+          <div className="flex justify-between">
+            <dt>Subtotal</dt>
+            <dd>{formatPrice(order.subtotal)}</dd>
+          </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-emerald-700">
+              <dt>Discount ({order.discountCode})</dt>
+              <dd>−{formatPrice(order.discount)}</dd>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <dt>Shipping</dt>
+            <dd>{order.shipping ? formatPrice(order.shipping) : "Complimentary"}</dd>
+          </div>
+          <div className="flex justify-between border-t border-line pt-3 text-base font-medium">
+            <dt>Total</dt>
+            <dd>{formatPrice(order.total)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="mt-5 rounded-3xl border border-line bg-white p-6 md:p-8">
+        <h2 className="eyebrow">Delivery Address</h2>
+        <address className="mt-4 text-sm not-italic leading-relaxed text-ink/80">
+          {c.firstName} {c.lastName}
+          <br />
+          {c.address}
+          {c.apartment ? `, ${c.apartment}` : ""}
+          <br />
+          {c.city}, {c.state} {c.pin}
+          <br />
+          {c.phone} · {c.email}
+        </address>
+      </section>
+
+      <p className="mt-8 text-center text-sm text-muted">
+        Need help?{" "}
+        <a href={help} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+          WhatsApp us
+        </a>{" "}
+        with your order number ·{" "}
+        <Link href="/shop" className="underline underline-offset-2">
+          Continue shopping
+        </Link>
+      </p>
+    </div>
+  );
+}

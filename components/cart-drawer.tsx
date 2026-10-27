@@ -6,6 +6,7 @@ import { ShoppingBag, X } from "lucide-react";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
 import { CartLineItem } from "./cart-line-item";
+import { QuickAddList } from "./quick-add-list";
 
 export function CartDrawer() {
   const { cart, cartCount, subtotal, cartOpen, setCartOpen } = useStore();
@@ -29,7 +30,7 @@ export function CartDrawer() {
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Shopping bag">
       <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={() => setCartOpen(false)} />
-      <aside className="absolute inset-y-0 right-0 flex w-full max-w-md animate-slide-in-right flex-col bg-white">
+      <aside className="absolute inset-y-0 right-0 flex w-full max-w-md animate-slide-in-right flex-col overflow-hidden bg-white sm:rounded-l-[2rem]">
         <div className="flex h-16 items-center justify-between border-b border-line px-6">
           <p className="eyebrow">Your Bag ({cartCount})</p>
           <button aria-label="Close bag" onClick={() => setCartOpen(false)}>
@@ -59,13 +60,18 @@ export function CartDrawer() {
                 )}
               </p>
               <div className="mt-2 h-0.5 w-full bg-line">
-                <div className="h-full bg-ink transition-all" style={{ width: `${progress}%` }} />
+                <div className="h-full rounded-full bg-ink transition-all" style={{ width: `${progress}%` }} />
               </div>
             </div>
-            <div className="flex-1 divide-y divide-line overflow-y-auto px-6">
-              {cart.map((line) => (
-                <CartLineItem key={line.key} line={line} compact />
-              ))}
+            <div className="flex-1 overflow-y-auto px-6">
+              <div className="divide-y divide-line">
+                {cart.map((line) => (
+                  <CartLineItem key={line.key} line={line} compact />
+                ))}
+              </div>
+              <div className="border-t border-line pb-2 pt-5">
+                <QuickAddList />
+              </div>
             </div>
             <div className="space-y-4 border-t border-line p-6">
               <div className="flex justify-between text-sm">

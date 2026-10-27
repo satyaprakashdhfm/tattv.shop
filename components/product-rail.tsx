@@ -33,7 +33,7 @@ export function ProductRail({ products, cta }: { products: Product[]; cta?: "car
     return () => clearInterval(t);
   }, [paused, step]);
 
-  const arrow = "absolute top-[38%] z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ink shadow-[0_4px_16px_rgba(0,0,0,0.15)] transition hover:bg-ink hover:text-white md:flex";
+  const arrow = "absolute top-[38%] z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ink shadow-lift transition duration-300 hover:scale-105 hover:bg-ink hover:text-white md:flex";
 
   return (
     <div
@@ -47,7 +47,7 @@ export function ProductRail({ products, cta }: { products: Product[]; cta?: "car
       <button aria-label="Previous products" onClick={() => step(-1)} className={`${arrow} left-0 -translate-x-1/2`}>
         <ChevronLeft size={20} strokeWidth={1.5} />
       </button>
-      <div ref={ref} className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-5 px-5 md:mx-0 md:scroll-px-0 md:px-0">
+      <div ref={ref} className="no-scrollbar -mx-5 -my-4 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-5 px-5 py-4 md:mx-0 md:scroll-px-0 md:px-0">
         {products.map((p) => (
           <div key={p.slug} className="w-[72%] shrink-0 snap-start sm:w-[42%] lg:w-[calc(25%-15px)]">
             <ProductCard product={p} cta={cta} />

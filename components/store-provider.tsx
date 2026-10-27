@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getProduct } from "@/lib/products";
+import { makeCatalog, type Catalog, type CatalogData } from "@/lib/catalog";
+import { MAX_QTY_PER_ITEM } from "@/lib/site";
 import { checkDemoCredentials, type Account } from "@/lib/demo-account";
 
 export interface CartLine {
@@ -12,10 +13,15 @@ export interface CartLine {
 }
 
 interface StoreValue {
+  /** Products, categories and settings from the database (edited in the admin). */
+  catalog: Catalog;
   cart: CartLine[];
   cartCount: number;
   subtotal: number;
-  addToCart: (line: Omit<CartLine, "key" | "qty">, qty?: number) => void;
+  /** Adds to the bag and opens the bag drawer (pass `{ open: false }` to stay put, e.g. on checkout). */
+  addToCart: (line: Omit<CartLine, "key" | "qty">, qty?: number, opts?: { open?: boolean }) => void;
+  /** Most a line for this piece can hold: the per-item cap or what's left in stock. */
+  limitFor: (slug: string) => number;
   updateQty: (key: string, qty: number) => void;
   removeLine: (key: string) => void;
   clearCart: () => void;
@@ -25,6 +31,8 @@ interface StoreValue {
   setCartOpen: (open: boolean) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  /** False until the saved bag has been read from this device. */
+  cartReady: boolean;
   /** Signed-in customer (demo only until real authentication exists). */
   account: Account | null;
   /** False until the saved session has been read, so pages don't flash the signed-out view. */
@@ -56,7 +64,9 @@ function readStorage<T>(key: string, fallback: T): T {
   }
 }
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({ catalogData, children }: { catalogData: CatalogData; children: ReactNode }) {
+  const catalog = useMemo(() => makeCatalog(catalogData), [catalogData]);
+  const { getProduct } = catalog;
   const [cart, setCart] = useState<CartLine[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -69,7 +79,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWishlist(readStorage<string[]>(WISHLIST_KEY, []).filter((s) => getProduct(s)));
     setAccount(readStorage<Account | null>(SESSION_KEY, null));
     setHydrated(true);
-  }, []);
+  }, [getProduct]);
 
   const signIn = useCallback((email: string, password: string) => {
     const found = checkDemoCredentials(email, password);
@@ -97,19 +107,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (hydrated) writeStorage(WISHLIST_KEY, wishlist);
   }, [wishlist, hydrated]);
 
-  const addToCart = useCallback((line: Omit<CartLine, "key" | "qty">, qty = 1) => {
-    const key = [line.slug, line.size ?? ""].join("|");
-    setCart((prev) => {
-      const existing = prev.find((l) => l.key === key);
-      if (existing) return prev.map((l) => (l.key === key ? { ...l, qty: Math.min(10, l.qty + qty) } : l));
-      return [...prev, { ...line, key, qty }];
-    });
-    setCartOpen(true);
-  }, []);
+  const limitFor = useCallback(
+    (slug: string) => {
+      const left = getProduct(slug)?.stock;
+      return left == null ? MAX_QTY_PER_ITEM : Math.min(MAX_QTY_PER_ITEM, left);
+    },
+    [getProduct],
+  );
 
-  const updateQty = useCallback((key: string, qty: number) => {
-    setCart((prev) => (qty <= 0 ? prev.filter((l) => l.key !== key) : prev.map((l) => (l.key === key ? { ...l, qty: Math.min(10, qty) } : l))));
-  }, []);
+  // Stock is counted per piece across sizes, so a line can only grow into what the other sizes leave.
+  const room = (lines: CartLine[], slug: string, exceptKey?: string) =>
+    limitFor(slug) - lines.filter((l) => l.slug === slug && l.key !== exceptKey).reduce((n, l) => n + l.qty, 0);
+
+  const addToCart = useCallback(
+    (line: Omit<CartLine, "key" | "qty">, qty = 1, opts?: { open?: boolean }) => {
+      const key = [line.slug, line.size ?? ""].join("|");
+      setCart((prev) => {
+        const existing = prev.find((l) => l.key === key);
+        const next = Math.min((existing?.qty ?? 0) + qty, room(prev, line.slug, key));
+        if (next <= 0) return prev;
+        if (existing) return prev.map((l) => (l.key === key ? { ...l, qty: next } : l));
+        return [...prev, { ...line, key, qty: next }];
+      });
+      if (opts?.open !== false) setCartOpen(true);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- room only reads limitFor
+    [limitFor],
+  );
+
+  const updateQty = useCallback(
+    (key: string, qty: number) => {
+      setCart((prev) => {
+        if (qty <= 0) return prev.filter((l) => l.key !== key);
+        return prev.map((l) => (l.key === key ? { ...l, qty: Math.max(1, Math.min(qty, room(prev, l.slug, key))) } : l));
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- room only reads limitFor
+    [limitFor],
+  );
 
   const removeLine = useCallback((key: string) => setCart((prev) => prev.filter((l) => l.key !== key)), []);
   const clearCart = useCallback(() => setCart([]), []);
@@ -125,10 +160,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return product ? sum + product.price * l.qty : sum;
     }, 0);
     return {
+      catalog,
       cart,
       cartCount,
       subtotal,
       addToCart,
+      limitFor,
       updateQty,
       removeLine,
       clearCart,
@@ -138,14 +175,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCartOpen,
       searchOpen,
       setSearchOpen,
+      cartReady: hydrated,
       account,
       sessionReady: hydrated,
       signIn,
       signOut,
     };
-  }, [cart, wishlist, cartOpen, searchOpen, account, hydrated, addToCart, updateQty, removeLine, clearCart, toggleWishlist, signIn, signOut]);
+  }, [catalog, getProduct, cart, wishlist, cartOpen, searchOpen, account, hydrated, addToCart, limitFor, updateQty, removeLine, clearCart, toggleWishlist, signIn, signOut]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+export function useCatalog() {
+  return useStore().catalog;
 }
 
 export function useStore() {

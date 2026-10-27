@@ -34,14 +34,14 @@ function Panel({ panel }: { panel: TrendPanel }) {
   const [p1, p2] = connector(focus, insetBox);
 
   return (
-    <article className="min-w-0 overflow-hidden rounded-xl bg-ink">
+    <article className="min-w-0 overflow-hidden rounded-[1.75rem] bg-ink shadow-soft">
       <h3 className="bg-(--tp-tab) px-4 py-3 text-center text-lg font-medium text-(--tp-tab-text) md:text-xl">{panel.title}</h3>
       <div className="relative aspect-[3/4]">
         {/* Photo in black & white; only the two boxes show the piece in colour. */}
         <Image src={panel.image} alt="" fill sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" className="object-cover grayscale contrast-[1.08]" />
 
         {/* inner frame */}
-        <div className="pointer-events-none absolute inset-3 border border-white/60" />
+        <div className="pointer-events-none absolute inset-3 rounded-[1.25rem] border border-white/60" />
 
         {/* connector line between the item and its thumbnail */}
         <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
@@ -49,16 +49,16 @@ function Panel({ panel }: { panel: TrendPanel }) {
         </svg>
 
         {/* box around the item being worn: the colour photo shown through at 1:1 */}
-        <div className="pointer-events-none absolute border border-white" style={{ ...boxStyle(focus), ...cropOf(panel.image, focus) }} />
+        <div className="pointer-events-none absolute rounded-lg border border-white" style={{ ...boxStyle(focus), ...cropOf(panel.image, focus) }} />
 
         {/* thumbnail: the same region in colour, scaled to this box */}
-        <div className="pointer-events-none absolute border border-white" style={{ ...boxStyle(insetBox), ...cropOf(panel.image, focus) }}>
-          <span className="absolute -top-px left-0 -translate-y-full bg-white px-1.5 py-0.5 text-[9px] font-medium leading-tight text-ink">{panel.label}</span>
+        <div className="pointer-events-none absolute rounded-lg border border-white" style={{ ...boxStyle(insetBox), ...cropOf(panel.image, focus) }}>
+          <span className="absolute -top-px left-0 -translate-y-[calc(100%+3px)] rounded-full bg-white px-2 py-0.5 text-[9px] font-medium leading-tight text-ink">{panel.label}</span>
         </div>
 
         <Link
           href={panel.href}
-          className="group/cta absolute bottom-6 right-6 inline-flex h-10 items-center gap-2.5 border border-(--tp-btn-border) bg-(--tp-btn) px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-(--tp-btn-text) transition-colors duration-300 hover:bg-(--tp-btn-hover) hover:text-(--tp-btn-hover-text)"
+          className="group/cta absolute bottom-6 right-6 inline-flex h-10 items-center gap-2.5 rounded-full border border-(--tp-btn-border) bg-(--tp-btn) px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-(--tp-btn-text) transition-colors duration-300 hover:bg-(--tp-btn-hover) hover:text-(--tp-btn-hover-text)"
         >
           {panel.cta} <ArrowRight size={14} strokeWidth={1.5} className="transition-transform duration-300 group-hover/cta:translate-x-1" />
         </Link>

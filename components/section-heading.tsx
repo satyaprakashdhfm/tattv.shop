@@ -20,9 +20,9 @@ export function SectionHeading({ title, href, cta = "Shop All" }: { title: strin
       {href && (
         <Link
           href={href}
-          className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-muted hover:text-ink md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2"
+          className="flex h-10 items-center gap-2 rounded-full border border-line bg-white px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-ink/80 transition duration-300 hover:border-ink hover:text-ink md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2"
         >
-          <span className="underline-reveal">{cta}</span> <ArrowRight size={13} />
+          <span>{cta}</span> <ArrowRight size={13} />
         </Link>
       )}
     </div>

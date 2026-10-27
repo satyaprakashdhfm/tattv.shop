@@ -1,6 +1,9 @@
+// Product and category types, plus the starting catalogue. The live catalogue is in the database
+// (seeded from SEED_PRODUCTS / SEED_CATEGORIES on first run) and is edited in the admin portal.
 import { PREVIEW_PRODUCTS, SHOW_PREVIEW_PRODUCTS } from "./preview-products";
 
-export type CategoryId = "earrings" | "chains" | "rings" | "bracelets" | "wallets";
+/** Category ids are slugs ("chains", "rings"…); new ones can be added in the admin. */
+export type CategoryId = string;
 export type CollectionId = "modern" | "classic";
 export type Finish = "silver" | "gold" | "black" | "two-tone" | "leather";
 
@@ -19,23 +22,33 @@ export interface Product {
   badge?: "New" | "Bestseller" | "Limited Edition";
   isNew?: boolean;
   bestseller?: boolean;
-  /** Out of stock: still listed, but can't be added to the bag. */
+  /** Units left; null when stock isn't tracked (always available). */
+  stock?: number | null;
+  /** Out of stock (stock is 0): still listed, but can't be added to the bag. */
   soldOut?: boolean;
+  /** False when hidden from the store in the admin. */
+  active?: boolean;
   short: string;
   description: string;
   details: string[];
 }
 
 /** `name` is the plain label (menus, filters, breadcrumbs); `title` is the editorial name shown on tiles and page headers. */
-export const CATEGORIES: { id: CategoryId; name: string; title: string; blurb: string; image: string }[] = [
-  { id: "earrings", name: "Earrings", title: "On the Ear", blurb: "Studs, hoops and huggies, small details that sharpen the whole look.", image: "/images/categories/earrings.jpg" },
-  { id: "chains", name: "Chains", title: "Chain Reaction", blurb: "Chains and pendants, layered or worn alone.", image: "/images/categories/chains.jpg" },
-  { id: "bracelets", name: "Bracelets", title: "Around the Wrist", blurb: "Cuffs, bangles and leather with a quiet, confident weight.", image: "/images/categories/bracelets.jpg" },
-  { id: "rings", name: "Rings", title: "Ring Theory", blurb: "Bands and sculpted forms made for everyday wear.", image: "/images/categories/rings.jpg" },
-  { id: "wallets", name: "Daily Objects", title: "Daily Objects", blurb: "Wallets, bags and everyday carry in genuine leather, built to age well.", image: "/images/categories/wallets.jpg" },
-];
+export interface Category {
+  id: CategoryId;
+  name: string;
+  title: string;
+  blurb: string;
+  image: string;
+}
 
-export const categoryTitle = (id: CategoryId) => CATEGORIES.find((c) => c.id === id)?.title ?? id;
+export const SEED_CATEGORIES: Category[] = [
+  { id: "earrings", name: "Earrings", title: "On the Ear", blurb: "Studs, hoops and huggies, small details that sharpen the whole look.", image: "/images/categories/arch/earrings.jpg" },
+  { id: "chains", name: "Chains", title: "Chain Reaction", blurb: "Chains and pendants, layered or worn alone.", image: "/images/categories/arch/chains.jpg" },
+  { id: "bracelets", name: "Bracelets", title: "Around the Wrist", blurb: "Cuffs, bangles and leather with a quiet, confident weight.", image: "/images/categories/arch/bracelets.jpg" },
+  { id: "rings", name: "Rings", title: "Ring Theory", blurb: "Bands and sculpted forms made for everyday wear.", image: "/images/categories/arch/rings.jpg" },
+  { id: "wallets", name: "Daily Objects", title: "Daily Objects", blurb: "Wallets, bags and everyday carry in genuine leather, built to age well.", image: "/images/categories/arch/wallets.jpg" },
+];
 
 export const COLLECTIONS: { id: CollectionId; name: string; tagline: string; blurb: string }[] = [
   {
@@ -66,7 +79,7 @@ const WRIST_SIZES = { label: "Wrist Size", values: ['S · 7"', 'M · 7.5"', 'L �
 
 const img = (...names: string[]) => names.map((n) => `/images/products/${n}.jpg`);
 
-export const PRODUCTS: Product[] = [
+export const SEED_PRODUCTS: Product[] = [
   // ——— Chains ———
   {
     slug: "star-dog-tag-pendant",
@@ -170,21 +183,3 @@ export const PRODUCTS: Product[] = [
   // Sample pieces appended after the real catalogue (see lib/preview-products.ts).
   ...(SHOW_PREVIEW_PRODUCTS ? PREVIEW_PRODUCTS : []),
 ];
-
-export const getProduct = (slug: string) => PRODUCTS.find((p) => p.slug === slug);
-
-export const categoryName = (id: CategoryId) => CATEGORIES.find((c) => c.id === id)?.name ?? id;
-
-export const relatedProducts = (product: Product, count = 4) => {
-  const sameCategory = PRODUCTS.filter((p) => p.slug !== product.slug && p.category === product.category);
-  const others = PRODUCTS.filter((p) => p.category !== product.category && p.collection === product.collection);
-  return [...sameCategory, ...others].slice(0, count);
-};
-
-export function searchProducts(query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return PRODUCTS.filter((p) =>
-    [p.name, p.short, categoryName(p.category), p.collection, p.material].join(" ").toLowerCase().includes(q),
-  );
-}

@@ -22,9 +22,9 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
 
   return (
     <article
-      className={`group flex h-full flex-col bg-white ${cta === "discover" ? "border border-transparent transition-colors duration-300 hover:border-line focus-within:border-line" : ""}`}
+      className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-soft transition-[box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:shadow-lift focus-within:shadow-lift"
     >
-      <div className="relative aspect-square overflow-hidden bg-sand">
+      <div className="relative aspect-square overflow-hidden rounded-[1.75rem] bg-sand">
         <Link href={href} aria-label={product.name} className="absolute inset-0">
           <ProductImage
             product={product}
@@ -34,7 +34,7 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
         </Link>
         {(product.soldOut || product.badge) && (
           <span
-            className={`pointer-events-none absolute left-3 top-3 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${product.soldOut ? "bg-ink text-white" : "bg-white"}`}
+            className={`pointer-events-none absolute left-4 top-4 rounded-full px-3.5 py-1.5 text-[10px] shadow-sm font-medium uppercase tracking-[0.14em] ${product.soldOut ? "bg-ink text-white" : "bg-white"}`}
           >
             {product.soldOut ? "Sold Out" : product.badge}
           </span>
@@ -43,13 +43,13 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
           aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={saved}
           onClick={() => toggleWishlist(product.slug)}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center text-white transition-transform hover:scale-110"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-white transition-transform hover:scale-110"
         >
           <Heart size={17} strokeWidth={1.6} className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)] ${saved ? "fill-white" : ""}`} />
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
         <Link href={href} className="text-[15px] font-medium leading-snug hover:underline hover:underline-offset-4">
           {product.name}
         </Link>
@@ -84,7 +84,7 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {product.sizes.values.map((s) => (
-                    <button key={s} onClick={() => add(s)} className="h-9 min-w-10 border border-line px-2 text-xs transition hover:border-ink hover:bg-ink hover:text-white">
+                    <button key={s} onClick={() => add(s)} className="h-9 min-w-10 rounded-full border border-line px-3 text-xs transition hover:border-ink hover:bg-ink hover:text-white">
                       {s}
                     </button>
                   ))}

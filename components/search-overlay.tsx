@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
-import { searchProducts } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
-import { useStore } from "./store-provider";
+import { useCatalog, useStore } from "./store-provider";
 import { ProductImage } from "./product-image";
 
 const POPULAR = ["Pendant", "Bangle", "Ring", "Wallet", "Leather", "Steel"];
@@ -16,7 +15,8 @@ export function SearchOverlay() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const results = useMemo(() => searchProducts(query), [query]);
+  const catalog = useCatalog();
+  const results = useMemo(() => catalog.search(query), [catalog, query]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -37,7 +37,7 @@ export function SearchOverlay() {
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Search">
       <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={close} />
-      <div className="relative max-h-[90vh] animate-slide-down overflow-y-auto bg-white">
+      <div className="relative max-h-[90vh] animate-slide-down overflow-y-auto rounded-b-[2rem] bg-white shadow-lift">
         <div className="container-x py-6 md:py-10">
           <form
             onSubmit={(e) => {
@@ -67,7 +67,7 @@ export function SearchOverlay() {
               <p className="eyebrow mb-4 text-muted">Popular Searches</p>
               <div className="flex flex-wrap gap-2">
                 {POPULAR.map((term) => (
-                  <button key={term} onClick={() => setQuery(term)} className="border border-line px-4 py-2 text-sm hover:border-ink">
+                  <button key={term} onClick={() => setQuery(term)} className="rounded-full border border-line px-4 py-2 text-sm transition-colors hover:border-ink">
                     {term}
                   </button>
                 ))}
@@ -91,7 +91,7 @@ export function SearchOverlay() {
                 <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
                   {results.slice(0, 6).map((p) => (
                     <Link key={p.slug} href={`/product/${p.slug}`} onClick={close} className="group">
-                      <div className="relative aspect-square overflow-hidden bg-sand">
+                      <div className="relative aspect-square overflow-hidden rounded-2xl bg-sand">
                         <ProductImage product={p} sizes="(min-width: 1024px) 16vw, 50vw" />
                       </div>
                       <p className="mt-2 text-sm font-medium leading-tight group-hover:underline">{p.name}</p>

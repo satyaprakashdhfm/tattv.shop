@@ -13,7 +13,8 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import { CATEGORIES, PRODUCTS, type CategoryId } from "@/lib/products";
+import type { Category, CategoryId } from "@/lib/products";
+import { useCatalog } from "./store-provider";
 import { formatPrice } from "@/lib/format";
 import { ProductImage } from "./product-image";
 
@@ -57,7 +58,11 @@ export const LOOKS: Look[] = [
   { id: "bracelets", fx: 0.622, fy: 0.647, zoom: 2.3, side: "right" },
 ];
 
-const categoryOf = (look: Look) => CATEGORIES.find((c) => c.id === look.id)!;
+/** Looks are tied to category ids; if a category is renamed away in the admin, fall back to its id. */
+function useCategoryOf() {
+  const { categories } = useCatalog();
+  return (look: Look): Category => categories.find((c) => c.id === look.id) ?? { id: look.id, name: look.id, title: look.id, blurb: "", image: "" };
+}
 
 /** `focus` 0 frames the whole look; 1 frames a piece beside its card. */
 type Shot = { s: number; fx: number; fy: number; focus: number };
@@ -113,6 +118,7 @@ function camera(t: number, W: number, H: number) {
 }
 
 export function JewelleryLookZoom() {
+  const categoryOf = useCategoryOf();
   const ref = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -448,8 +454,8 @@ export function JewelleryLookZoom() {
 
 /** The card for the piece in focus: what it is, and its products to swipe. */
 function LookCard({ look, index }: { look: Look; index: number }) {
-  const category = categoryOf(look);
-  const inCategory = PRODUCTS.filter((p) => p.category === look.id);
+  const category = useCategoryOf()(look);
+  const inCategory = useCatalog().products.filter((p) => p.category === look.id);
   const products = inCategory.slice(0, 4);
   const categoryCount = inCategory.length;
   const rowRef = useRef<HTMLDivElement>(null);
@@ -632,7 +638,7 @@ function Hotspot({
     const c = camera(p.get(), w.get(), h.get());
     return c.y + c.s * look.fy * c.bh;
   });
-  const label = categoryOf(look).title;
+  const label = useCategoryOf()(look).title;
   return (
     <motion.div
       className="absolute top-0 left-0"

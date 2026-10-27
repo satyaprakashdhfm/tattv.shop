@@ -6,7 +6,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { ChevronDown, Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { NAV } from "@/lib/navigation";
-import { getProduct } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
 import { ProductImage } from "./product-image";
@@ -29,7 +28,8 @@ function CloseOnNavigate({ onNavigate }: { onNavigate: () => void }) {
 }
 
 export function Header() {
-  const { cartCount, wishlist, setCartOpen, setSearchOpen, account } = useStore();
+  const { cartCount, wishlist, setCartOpen, setSearchOpen, account, catalog } = useStore();
+  const { getProduct } = catalog;
   const [active, setActive] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -83,10 +83,10 @@ export function Header() {
         <CloseOnNavigate onNavigate={closeAll} />
       </Suspense>
 
-      {/* Equal side columns keep the nav at the true centre of the bar. */}
-      <div className="container-x grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 md:h-20">
-        <div className="flex items-center gap-4">
-          <button aria-label="Open menu" className="-ml-1 p-1 xl:hidden" onClick={() => setMobileOpen(true)}>
+      {/* From xl, equal side columns keep the nav at the true centre of the bar; below that the nav simply fills the middle. */}
+      <div className="container-x flex h-16 items-center gap-4 md:h-20 xl:grid xl:grid-cols-[1fr_auto_1fr]">
+        <div className="flex shrink-0 items-center gap-4">
+          <button aria-label="Open menu" className="-ml-1 p-1 lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu size={22} strokeWidth={1.5} />
           </button>
 
@@ -96,13 +96,13 @@ export function Header() {
         </div>
 
         {/* Desktop navigation */}
-        <nav className="hidden h-full xl:block" aria-label="Main">
-          <ul className="flex h-full items-center justify-center gap-7 2xl:gap-10">
+        <nav className="hidden h-full lg:block lg:flex-1 xl:flex-none" aria-label="Main">
+          <ul className="flex h-full items-center justify-center gap-4 xl:gap-7 2xl:gap-10">
             {NAV.map((item, i) => (
               <li key={item.label} className="flex h-full items-center" onMouseEnter={() => setActive(item.columns ? i : null)}>
                 <Link
                   href={item.href}
-                  className={`relative whitespace-nowrap py-2 text-[12.5px] font-medium uppercase tracking-[0.15em] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-ink after:transition-transform ${
+                  className={`relative whitespace-nowrap py-2 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors xl:text-[12.5px] xl:tracking-[0.15em] after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-ink after:transition-transform ${
                     active === i ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100"
                   }`}
                 >
@@ -113,7 +113,7 @@ export function Header() {
           </ul>
         </nav>
 
-        <div className="col-start-3 flex items-center justify-end gap-5" onMouseEnter={() => setActive(null)}>
+        <div className="col-start-3 ml-auto flex shrink-0 items-center justify-end gap-5 xl:ml-0" onMouseEnter={() => setActive(null)}>
           <button aria-label="Search" onClick={() => setSearchOpen(true)} className="hover:opacity-60">
             <Search size={20} strokeWidth={1.5} />
           </button>
@@ -134,7 +134,7 @@ export function Header() {
 
       {/* Mega menu */}
       {panel?.columns && (
-        <div className="absolute inset-x-0 top-full hidden animate-slide-down border-t border-line bg-white shadow-[0_24px_40px_-24px_rgba(0,0,0,.25)] xl:block">
+        <div className="absolute inset-x-0 top-full hidden animate-slide-down overflow-hidden rounded-b-[2rem] border-t border-line bg-white shadow-[0_24px_40px_-24px_rgba(0,0,0,.25)] lg:block">
           <div className="container-x grid grid-cols-12 gap-10 py-10">
             {panel.columns.map((col) => (
               <div key={col.title} className="col-span-2">
@@ -156,7 +156,7 @@ export function Header() {
                 if (!p) return null;
                 return (
                   <Link key={slug} href={`/product/${p.slug}`} className="group">
-                    <div className="relative aspect-[4/3] overflow-hidden bg-sand">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-sand">
                       <ProductImage product={p} sizes="25vw" className="transition-transform duration-700 group-hover:scale-105" />
                     </div>
                     <p className="mt-3 text-[15px] font-medium">{p.name}</p>
@@ -171,9 +171,9 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={() => setMobileOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm animate-slide-in-left flex-col bg-white">
+          <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm animate-slide-in-left flex-col overflow-hidden rounded-r-[2rem] bg-white">
             <div className="flex h-16 items-center justify-between border-b border-line px-5">
               <Image src="/brand/logo-black.png" alt="TATTV" width={1147} height={294} className="h-auto w-[120px]" />
               <button aria-label="Close menu" onClick={() => setMobileOpen(false)}>
