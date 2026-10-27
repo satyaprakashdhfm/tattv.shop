@@ -55,6 +55,10 @@ In code: discount codes → `COUPONS` in `lib/site.ts`; reviews → `lib/reviews
 3. Confirming an order reduces stock; cancelling it in the admin puts the stock back.
 4. In the admin the order moves through *New → Packed → Shipped → Out for delivery → Delivered*, with courier tracking and a WhatsApp message to the customer. The customer's order page updates to match.
 
+## Hosting (Railway)
+
+Railway project **tattv.shop**: the `tattv-develop` service builds the `develop` branch (https://tattv-develop-production.up.railway.app) and uses the project's `Postgres` service through `DATABASE_URL=${{Postgres.DATABASE_URL}}`. The tables and starting catalogue are created on first start. Uploaded photos are stored in the database (`media` table), so no volume is needed. The `tattv.shop` service builds `main` (coming-soon page).
+
 ## Not yet connected
 
 Customer sign-in on `/account` is still the browser-only demo (`lib/demo-account.ts`); guests find orders through `/orders/track`.

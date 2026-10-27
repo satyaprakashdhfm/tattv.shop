@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   AnimatePresence,
@@ -117,6 +117,14 @@ function camera(t: number, W: number, H: number) {
   return { x, y, s, bw, bh, fx: c.fx, fy: c.fy };
 }
 
+/**
+ * The camera walk plays once per page load. After it has run (scrolled past its closing shot, or
+ * left upward part way) the section folds down to a single still screen of the closing shot, so
+ * coming back up, or returning to the home page later, never replays it. Kept in memory, not in
+ * storage: only a full reload (hard refresh) plays it again.
+ */
+let played = false;
+
 export function JewelleryLookZoom() {
   const categoryOf = useCategoryOf();
   const ref = useRef<HTMLElement>(null);
@@ -125,11 +133,52 @@ export function JewelleryLookZoom() {
     target: ref,
     offset: ["start start", "end end"],
   });
-  const p = useSpring(scrollYProgress, {
+  const spring = useSpring(scrollYProgress, {
     stiffness: 70,
     damping: 17,
     mass: 1,
   });
+  // The camera's progress: follows the scroll while the walk is playing, then stays on the closing shot.
+  const [done, setDone] = useState(played);
+  const doneRef = useRef(done);
+  const p = useMotionValue(done ? 1 : 0);
+  useMotionValueEvent(spring, "change", (t) => {
+    if (!doneRef.current) p.set(t);
+  });
+  /** Where to scroll once the section has folded down, given the height removed. */
+  const pendingScroll = useRef<((removed: number) => number) | null>(null);
+  const heightBefore = useRef(0);
+  const finish = useRef<(scrollTo: (removed: number) => number) => void>(() => {});
+  useEffect(() => {
+    finish.current = (scrollTo) => {
+      if (doneRef.current) return;
+      played = true;
+      doneRef.current = true;
+      heightBefore.current = ref.current?.offsetHeight ?? 0;
+      pendingScroll.current = scrollTo;
+      p.jump(1);
+      setDone(true);
+    };
+  }, [p]);
+  // A reload plays the walk again from the start: don't let the browser restore the old scroll position mid-walk.
+  useEffect(() => {
+    if (played) return;
+    const before = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" });
+    return () => {
+      history.scrollRestoration = before;
+    };
+  }, []);
+  // Folding 600vh down to one screen moves everything below; scroll by the same amount so nothing jumps.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const apply = pendingScroll.current;
+    if (!done || !el || !apply) return;
+    pendingScroll.current = null;
+    const removed = Math.max(0, heightBefore.current - el.offsetHeight);
+    window.scrollTo({ top: Math.max(0, apply(removed)), behavior: "instant" });
+  }, [done]);
 
   /*
    * One gesture, one stop. While the section is pinned, the page never
@@ -171,7 +220,9 @@ export function JewelleryLookZoom() {
       return (y / range) * LAST;
     };
     /** Where a step in `dir` goes; from above the section, down goes straight to the first piece. */
-    const target = (k: number, dir: number) => (k < 0 ? (dir > 0 ? 1 : -1) : Math.round(k) + dir);
+    // Reverse playback (stepping the camera back up through the pieces) is switched off:
+    // const target = (k: number, dir: number) => (k < 0 ? (dir > 0 ? 1 : -1) : Math.round(k) + dir);
+    const target = (k: number, dir: number) => (dir < 0 ? -1 : k < 0 ? 1 : Math.round(k) + dir);
     const jump = (n: number) => {
       const { top, range } = bounds();
       window.scrollTo({ top: top + (n / LAST) * range, behavior: "instant" });
@@ -204,11 +255,34 @@ export function JewelleryLookZoom() {
       return true;
     };
 
+    /** Scrolled on past the closing shot (wheel, keys or scrollbar): the walk is complete. */
+    const finishIfPast = () => {
+      const { top, range } = bounds();
+      if (window.scrollY - top <= range + 2) return false;
+      finish.current((removed) => window.scrollY - removed);
+      return true;
+    };
+    /**
+     * Reverse playback is switched off: going back up part way through ends the walk, and the
+     * page returns to the top with the hero as a still. True when it did.
+     */
+    const finishIfGoingBack = () => {
+      const { top } = bounds();
+      if (window.scrollY - top <= 2) return false;
+      finish.current(() => 0);
+      return true;
+    };
+
     const onWheel = (e: WheelEvent) => {
+      if (doneRef.current) return;
       // Sideways swipes belong to the product rows.
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.ctrlKey) return;
       const dir = Math.sign(e.deltaY);
       if (!dir || position() === null) return;
+      if (dir < 0 && finishIfGoingBack()) {
+        e.preventDefault();
+        return;
+      }
       // When the event was created, not handled: if the page stalls mid-flick (decoding the
       // zoomed photo), the queued events keep their real spacing and stay one gesture.
       const now = e.timeStamp;
@@ -232,7 +306,7 @@ export function JewelleryLookZoom() {
       touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (!touch) return;
+      if (!touch || doneRef.current) return;
       const dx = touch.x - e.touches[0].clientX;
       const dy = touch.y - e.touches[0].clientY;
       if (Math.abs(dx) > Math.abs(dy)) return;
@@ -243,12 +317,13 @@ export function JewelleryLookZoom() {
       const dx = touch.x - e.changedTouches[0].clientX;
       const dy = touch.y - e.changedTouches[0].clientY;
       touch = null;
-      if (Math.abs(dy) < 30 || Math.abs(dx) > Math.abs(dy)) return;
+      if (doneRef.current || Math.abs(dy) < 30 || Math.abs(dx) > Math.abs(dy)) return;
+      if (dy < 0 && position() !== null && finishIfGoingBack()) return;
       request(Math.sign(dy));
     };
 
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest("input, textarea, select")) return;
+      if (doneRef.current || (e.target as HTMLElement).closest("input, textarea, select")) return;
       const dir =
         e.key === "ArrowDown" || e.key === "PageDown"
           ? 1
@@ -259,12 +334,18 @@ export function JewelleryLookZoom() {
                 ? -1
                 : 1
               : 0;
+      if (dir < 0 && position() !== null && finishIfGoingBack()) {
+        e.preventDefault();
+        return;
+      }
       if (dir && request(dir)) e.preventDefault();
     };
 
     // A dragged scrollbar can stop anywhere: settle on the nearest stop.
     const onScroll = () => {
+      if (doneRef.current) return;
       window.clearTimeout(settle);
+      if (finishIfPast()) return;
       settle = window.setTimeout(() => {
         const k = position();
         if (k !== null && k >= 0 && Math.abs(k - Math.round(k)) > 0.01) {
@@ -335,21 +416,27 @@ export function JewelleryLookZoom() {
   const look = stop > 0 && stop < LAST ? LOOKS[phase] : null;
   const finale = stop === LAST;
 
-  /** Jumps back to a piece's stop; the camera glides there. */
-  function goTo(index: number) {
-    const el = ref.current;
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY;
-    const range = el.offsetHeight - window.innerHeight;
-    window.scrollTo({
-      top: top + ((index + 1) / LAST) * range,
-      behavior: "instant",
-    });
-  }
+  // Reverse playback is switched off: the photo labels link to the category instead of jumping back.
+  // /** Jumps back to a piece's stop; the camera glides there. */
+  // function goTo(index: number) {
+  //   const el = ref.current;
+  //   if (!el) return;
+  //   const top = el.getBoundingClientRect().top + window.scrollY;
+  //   const range = el.offsetHeight - window.innerHeight;
+  //   window.scrollTo({
+  //     top: top + ((index + 1) / LAST) * range,
+  //     behavior: "instant",
+  //   });
+  // }
 
   return (
-    <section ref={ref} className="@container relative h-[600vh] bg-[#16100c]">
-      <div ref={stageRef} className="sticky top-0 h-screen overflow-clip text-white">
+    <section
+      ref={ref}
+      className={`@container relative bg-[#16100c] ${done ? "" : "h-[600vh]"}`}
+      // Once played, a still that fits the first screen under the ribbon and header.
+      style={done ? { height: `calc(100svh - ${lift}px)` } : undefined}
+    >
+      <div ref={stageRef} className={`sticky top-0 overflow-clip text-white ${done ? "h-full" : "h-screen"}`}>
         <motion.div
           className="absolute top-0 left-0 origin-top-left will-change-transform"
           style={{ width: photoW, height: photoH, transform }}
@@ -419,7 +506,7 @@ export function JewelleryLookZoom() {
 
         <AnimatePresence>
           {finale &&
-            LOOKS.map((l, i) => <Hotspot key={l.id} look={l} index={i} p={p} w={w} h={h} onSelect={() => goTo(i)} />)}
+            LOOKS.map((l, i) => <Hotspot key={l.id} look={l} index={i} p={p} w={w} h={h} />)}
         </AnimatePresence>
 
         <AnimatePresence>
@@ -614,21 +701,19 @@ export function Crop({ look, zoom, className }: { look: Look; zoom: number; clas
   );
 }
 
-/** A marked piece in the closing wide shot; clicking it jumps back to it. */
+/** A marked piece in the closing wide shot; its label opens that category. */
 function Hotspot({
   look,
   index,
   p,
   w,
   h,
-  onSelect,
 }: {
   look: Look;
   index: number;
   p: MotionValue<number>;
   w: MotionValue<number>;
   h: MotionValue<number>;
-  onSelect: () => void;
 }) {
   const x = useTransform(() => {
     const c = camera(p.get(), w.get(), h.get());
@@ -653,16 +738,15 @@ function Hotspot({
         className={`pointer-events-none absolute top-0 hidden h-px w-7 @3xl:block ${look.side === "right" ? "left-2" : "right-2"}`}
         style={{ backgroundColor: ACCENT }}
       />
-      <button
-        type="button"
-        onClick={onSelect}
+      <Link
+        href={`/shop?category=${look.id}`}
         aria-label={label}
         className={`absolute top-0 hidden -translate-y-1/2 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] tracking-[0.25em] whitespace-nowrap uppercase backdrop-blur-md transition hover:border-white/60 @3xl:block ${
           look.side === "right" ? "left-9" : "right-9"
         }`}
       >
         {label}
-      </button>
+      </Link>
     </motion.div>
   );
 }
