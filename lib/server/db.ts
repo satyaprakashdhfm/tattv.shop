@@ -1,6 +1,6 @@
 import "server-only";
 import pg from "pg";
-import { SEED_CATEGORIES, SEED_PRODUCTS } from "@/lib/products";
+import { SEED_CATEGORIES, SEED_PRODUCTS, type Product } from "@/lib/products";
 import { DEFAULT_SOCIAL } from "@/lib/site";
 
 // Postgres access. DATABASE_URL is required (locally: ../tattv-local-env, see README).
@@ -207,6 +207,40 @@ export async function transaction<T>(fn: (db: pg.PoolClient) => Promise<T>): Pro
   }
 }
 
+async function insertProduct(client: pg.PoolClient, x: Product, sortOrder: number) {
+  await client.query(
+    `INSERT INTO products (slug, name, category_id, collection, price, compare_at, material, finish, size_label, size_values,
+       badge, is_new, bestseller, short, description, details, stock, active, sort_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,true,$18) ON CONFLICT DO NOTHING`,
+    [x.slug, x.name, x.category, x.collection, x.price, x.compareAt ?? null, x.material, x.finish, x.sizes?.label ?? null, x.sizes?.values ?? null,
+      x.badge ?? null, !!x.isNew, !!x.bestseller, x.short, x.description, x.details, x.soldOut ? 0 : null, sortOrder],
+  );
+  for (const [pos, url] of x.images.entries()) {
+    await client.query("INSERT INTO product_images (product_slug, position, url) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", [x.slug, pos, url]);
+  }
+}
+
+/**
+ * Pieces added to the starting catalogue after a store's database was first filled. Each batch is
+ * copied in once, at the end of the shop order; deleting one in the admin later does not bring it back.
+ */
+const LATER_PRODUCTS: Record<string, string[]> = {
+  "office-bags": ["tan-leather-office-messenger", "classic-leather-satchel", "black-leather-laptop-bag", "vintage-buckle-messenger"],
+};
+
+async function addLaterProducts(client: pg.PoolClient) {
+  for (const [batch, slugs] of Object.entries(LATER_PRODUCTS)) {
+    const added = await client.query("INSERT INTO app_meta (key, value) VALUES ($1, 'true') ON CONFLICT DO NOTHING", [`added:${batch}`]);
+    if (!added.rowCount) continue;
+    const { rows } = await client.query<{ n: number }>("SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM products");
+    let n = rows[0].n;
+    for (const slug of slugs) {
+      const x = SEED_PRODUCTS.find((p) => p.slug === slug);
+      if (x) await insertProduct(client, x, n++);
+    }
+  }
+}
+
 // First run only: copy the starting catalogue and default settings in. After that the admin owns them.
 async function seed(p: pg.Pool) {
   const client = await p.connect();
@@ -215,6 +249,7 @@ async function seed(p: pg.Pool) {
     await client.query("SELECT pg_advisory_xact_lock(4231)");
     const done = await client.query("SELECT 1 FROM app_meta WHERE key = 'seeded'");
     if (done.rowCount) {
+      await addLaterProducts(client);
       await client.query("COMMIT");
       return;
     }
@@ -223,22 +258,13 @@ async function seed(p: pg.Pool) {
         c.id, c.name, c.title, c.blurb, c.image, i,
       ]);
     }
-    for (const [i, x] of SEED_PRODUCTS.entries()) {
-      await client.query(
-        `INSERT INTO products (slug, name, category_id, collection, price, compare_at, material, finish, size_label, size_values,
-           badge, is_new, bestseller, short, description, details, stock, active, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,true,$18) ON CONFLICT DO NOTHING`,
-        [x.slug, x.name, x.category, x.collection, x.price, x.compareAt ?? null, x.material, x.finish, x.sizes?.label ?? null, x.sizes?.values ?? null,
-          x.badge ?? null, !!x.isNew, !!x.bestseller, x.short, x.description, x.details, x.soldOut ? 0 : null, i],
-      );
-      for (const [pos, url] of x.images.entries()) {
-        await client.query("INSERT INTO product_images (product_slug, position, url) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", [x.slug, pos, url]);
-      }
-    }
+    for (const [i, x] of SEED_PRODUCTS.entries()) await insertProduct(client, x, i);
     await client.query("INSERT INTO settings (key, value) VALUES ('store', $1) ON CONFLICT DO NOTHING", [
       JSON.stringify({ ...DEFAULT_SOCIAL, announcement: "" }),
     ]);
     await client.query("INSERT INTO app_meta (key, value) VALUES ('seeded', $1)", [JSON.stringify(new Date().toISOString())]);
+    // A fresh database already has every batch below.
+    for (const batch of Object.keys(LATER_PRODUCTS)) await client.query("INSERT INTO app_meta (key, value) VALUES ($1, 'true') ON CONFLICT DO NOTHING", [`added:${batch}`]);
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK").catch(() => {});
