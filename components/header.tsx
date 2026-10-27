@@ -120,6 +120,12 @@ export function Header() {
           <Link href="/account" aria-label={account ? `My account (${account.firstName})` : "Sign in"} className="relative hidden hover:opacity-60 sm:block">
             <User size={20} strokeWidth={1.5} />
             {account && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white" />}
+            {/* Signed in: a greeting under the icon, so it's clear who is signed in. */}
+            {account && (
+              <span className="absolute left-1/2 top-full mt-1 max-w-24 -translate-x-1/2 truncate whitespace-nowrap text-[10px] leading-none tracking-[0.04em] text-ink/70">
+                Hi, {account.firstName}
+              </span>
+            )}
           </Link>
           <Link href="/wishlist" aria-label="Wishlist" className="relative hover:opacity-60">
             <Heart size={20} strokeWidth={1.5} />
@@ -222,7 +228,7 @@ export function Header() {
             </ul>
             <div className="space-y-3 border-t border-line p-5 text-sm">
               <Link href="/account" className="flex items-center gap-3">
-                <User size={18} strokeWidth={1.5} /> Sign in / Register
+                <User size={18} strokeWidth={1.5} /> {account ? `Hi, ${account.firstName} · My account` : "Sign in / Register"}
               </Link>
               <Link href="/wishlist" className="flex items-center gap-3">
                 <Heart size={18} strokeWidth={1.5} /> Wishlist ({wishlist.length})
