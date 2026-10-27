@@ -10,7 +10,7 @@ import { QuickAddList } from "@/components/quick-add-list";
 import { DemoPayment } from "@/components/demo-payment";
 import { COUPONS, GIFT_WRAP, couponBlocker } from "@/lib/site";
 import { CUSTOMER_RULES, type CustomerInput } from "@/lib/pricing";
-import { FREE_SHIPPING_THRESHOLD, formatPrice, shippingFor } from "@/lib/format";
+import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice, shippingFor } from "@/lib/format";
 import { api, rememberOrder } from "@/lib/client-api";
 
 const STATES = ["Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"];
@@ -552,6 +552,22 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
               </Panel>
 
               <Panel title="Order Summary" className="order-8 lg:order-none">
+                {/* The free-shipping rule, with progress until it's reached (as in the bag). */}
+                <div className="mb-5 rounded-2xl bg-sand/70 px-4 py-3">
+                  <p className="text-xs text-ink/75">
+                    {shipping ? (
+                      <>
+                        You&apos;re <b className="font-medium text-ink">{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}</b> away from complimentary shipping
+                      </>
+                    ) : (
+                      <>You&apos;ve unlocked complimentary shipping</>
+                    )}
+                    <span className="text-muted"> · free on orders above {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
+                  </p>
+                  <div className="mt-2 h-0.5 w-full rounded-full bg-line">
+                    <div className="h-full rounded-full bg-ink transition-all" style={{ width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%` }} />
+                  </div>
+                </div>
                 <dl className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <dt>
@@ -568,8 +584,19 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <dt>Shipping</dt>
-                    <dd>{shipping ? formatPrice(shipping) : "Complimentary"}</dd>
+                    <dt>
+                      Shipping <span className="text-xs text-muted">(free above {formatPrice(FREE_SHIPPING_THRESHOLD)})</span>
+                    </dt>
+                    <dd>
+                      {shipping ? (
+                        formatPrice(shipping)
+                      ) : (
+                        <>
+                          <s className="mr-1.5 text-muted">{formatPrice(SHIPPING_FEE)}</s>
+                          <span className="font-medium text-emerald-700">Free</span>
+                        </>
+                      )}
+                    </dd>
                   </div>
                   {gift && (
                     <div className="flex justify-between">
