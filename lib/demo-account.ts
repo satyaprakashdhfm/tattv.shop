@@ -20,6 +20,9 @@ export interface Address {
   isDefault?: boolean;
 }
 
+/** Pieces already in the preview account's wishlist. */
+export const DEMO_WISHLIST = ["twin-cable-bangle", "curb-link-ring", "tan-leather-office-messenger"];
+
 export const DEMO_CREDENTIALS = { email: "demo@tattv.shop", password: "tattv123" };
 
 export const DEMO_ACCOUNT: Account = {

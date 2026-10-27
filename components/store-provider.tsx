@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { makeCatalog, type Catalog, type CatalogData } from "@/lib/catalog";
 import { MAX_QTY_PER_ITEM } from "@/lib/site";
-import { checkDemoCredentials, type Account } from "@/lib/demo-account";
+import { DEMO_CREDENTIALS, DEMO_WISHLIST, checkDemoCredentials, type Account } from "@/lib/demo-account";
 
 export interface CartLine {
   key: string;
@@ -76,8 +76,11 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
 
   useEffect(() => {
     setCart(readStorage<CartLine[]>(CART_KEY, []).filter((l) => getProduct(l.slug)));
-    setWishlist(readStorage<string[]>(WISHLIST_KEY, []).filter((s) => getProduct(s)));
-    setAccount(readStorage<Account | null>(SESSION_KEY, null));
+    const saved = readStorage<Account | null>(SESSION_KEY, null);
+    // The preview account starts with a few saved pieces, until the visitor changes the wishlist.
+    const previewDefault = saved?.email === DEMO_CREDENTIALS.email ? DEMO_WISHLIST : [];
+    setWishlist(readStorage<string[] | null>(WISHLIST_KEY, null) ?? previewDefault.filter((s) => getProduct(s)));
+    setAccount(saved);
     setHydrated(true);
   }, [getProduct]);
 
@@ -86,9 +89,10 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
     if (found) {
       setAccount(found);
       writeStorage(SESSION_KEY, found);
+      setWishlist((w) => (w.length ? w : DEMO_WISHLIST.filter((s) => getProduct(s))));
     }
     return !!found;
-  }, []);
+  }, [getProduct]);
 
   const signOut = useCallback(() => {
     setAccount(null);

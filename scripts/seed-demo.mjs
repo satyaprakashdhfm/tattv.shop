@@ -7,7 +7,7 @@
 // A hosted store with no public database address can run it on start-up instead: set
 // SEED_DEMO_DATA=true on the service (lib/server/db.ts calls seedDemo), then remove it.
 //
-// Runs once per database (marked in app_meta as 'demo-data'). Sample orders don't change stock.
+// Run it from the project folder. Runs once per database (marked in app_meta as 'demo-data'). Sample orders don't change stock.
 // Remove them before launch: DELETE FROM orders WHERE email LIKE '%@example.com' OR email = 'demo@tattv.shop';
 // DELETE FROM messages WHERE email LIKE '%@example.com'; DELETE FROM app_meta WHERE key = 'demo-data';
 import crypto from "node:crypto";
@@ -175,6 +175,11 @@ export async function seedDemo(db) {
         id, i, l.slug, l.name, l.size, l.price, l.qty, l.image,
       ]);
     }
+    // A few internal notes, as the team would leave them.
+    if (rand() < 0.2 || plan.gift !== undefined) {
+      const note = gift ? `Gift order: no invoice in the box, card written by hand.` : pick(["Customer asked for delivery after 6 pm.", "Called to confirm the address, all good.", "Double-checked ring size with the customer on WhatsApp.", "Repeat customer: add a thank-you note."]);
+      await db.query("INSERT INTO order_notes (order_id, at, text) VALUES ($1,$2,$3)", [id, new Date(Math.min(now, created + 3 * HOUR)), note]);
+    }
     for (const [s, after, note] of steps) {
       const label = s === "confirmed" ? (cod ? "Cash on delivery order placed" : "Payment received") : note;
       await db.query("INSERT INTO order_events (order_id, at, status, note, by_admin) VALUES ($1,$2,$3,$4,$5)", [id, new Date(created + after), s, label, !["pending_payment", "confirmed"].includes(s)]);
@@ -202,7 +207,7 @@ export async function seedDemo(db) {
 // Run from the command line.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { default: pg } = await import("pg");
-  const url = process.argv[2] || fs.readFileSync(new URL("../.env.local", import.meta.url), "utf8").match(/^DATABASE_URL=(.*)$/m)?.[1]?.trim();
+  const url = process.argv[2] || fs.readFileSync(`${process.cwd()}/.env.local`, "utf8").match(/^DATABASE_URL=(.*)$/m)?.[1]?.trim();
   if (!url) throw new Error("No database URL: pass one, or set DATABASE_URL in .env.local");
   const local = /localhost|127\.0\.0\.1/.test(url);
   const db = new pg.Client({ connectionString: url, ssl: local ? false : { rejectUnauthorized: false } });
