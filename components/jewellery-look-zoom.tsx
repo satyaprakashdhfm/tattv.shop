@@ -416,6 +416,20 @@ export function JewelleryLookZoom() {
   const look = stop > 0 && stop < LAST ? LOOKS[phase] : null;
   const finale = stop === LAST;
 
+  // On the closing shot, hovering a piece's label pops up its card (with a line to the piece), as during
+  // the walk; moving away closes it. The short delay lets the pointer travel from the label to the card.
+  const [peek, setPeek] = useState<number | null>(null);
+  const peekTimer = useRef<number | undefined>(undefined);
+  const openPeek = (i: number) => {
+    window.clearTimeout(peekTimer.current);
+    setPeek(i);
+  };
+  const closePeek = () => {
+    window.clearTimeout(peekTimer.current);
+    peekTimer.current = window.setTimeout(() => setPeek(null), 220);
+  };
+  const peekLook = finale && peek !== null ? LOOKS[peek] : null;
+
   // Reverse playback is switched off: the photo labels link to the category instead of jumping back.
   // /** Jumps back to a piece's stop; the camera glides there. */
   // function goTo(index: number) {
@@ -504,9 +518,30 @@ export function JewelleryLookZoom() {
           )}
         </AnimatePresence>
 
+        {peekLook && <PeekLine look={peekLook} p={p} w={w} h={h} />}
+
         <AnimatePresence>
           {finale &&
-            LOOKS.map((l, i) => <Hotspot key={l.id} look={l} index={i} p={p} w={w} h={h} />)}
+            LOOKS.map((l, i) => (
+              <Hotspot key={l.id} look={l} index={i} p={p} w={w} h={h} active={peek === i} onEnter={() => openPeek(i)} onLeave={closePeek} />
+            ))}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {peekLook && (
+            <motion.div
+              key={`peek-${peekLook.id}`}
+              className={`absolute top-1/2 z-10 hidden w-[min(25rem,36%)] -translate-y-1/2 @3xl:block ${peekLook.side === "left" ? "left-[2.5%]" : "right-[2.5%]"}`}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onMouseEnter={() => openPeek(peek!)}
+              onMouseLeave={closePeek}
+            >
+              <LookCard look={peekLook} index={peek!} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         <AnimatePresence>
@@ -520,7 +555,7 @@ export function JewelleryLookZoom() {
             >
               <h2 className="text-2xl font-light tracking-tight @3xl:text-4xl">Shop the whole look</h2>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {/* Each opens that category's shop page (the labels on the photo still jump back to the piece). */}
+                {/* Each opens that category's shop page (hovering the labels on the photo shows the piece's card). */}
                 {LOOKS.map((l) => (
                   <Link
                     key={l.id}
@@ -701,19 +736,57 @@ export function Crop({ look, zoom, className }: { look: Look; zoom: number; clas
   );
 }
 
-/** A marked piece in the closing wide shot; its label opens that category. */
+/** On the closing shot, the pulsing dot on a hovered piece and the line from it to its card. */
+function PeekLine({ look, p, w, h }: { look: Look; p: MotionValue<number>; w: MotionValue<number>; h: MotionValue<number> }) {
+  const W = w.get();
+  const H = h.get();
+  const c = camera(p.get(), W, H);
+  const x1 = c.x + c.s * look.fx * c.bw;
+  const y1 = c.y + c.s * look.fy * c.bh;
+  // The card is min(25rem, 36%) wide, 2.5% in from the edge on the piece's label side, centred vertically.
+  const cardW = Math.min(400, W * 0.36);
+  const x2 = look.side === "left" ? W * 0.025 + cardW : W - W * 0.025 - cardW;
+  const y2 = H / 2;
+  return (
+    <div className="pointer-events-none absolute inset-0 hidden @3xl:block">
+      <svg className="absolute inset-0 h-full w-full" aria-hidden>
+        <motion.line
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={ACCENT}
+          strokeWidth={1}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        />
+      </svg>
+      <span className="absolute size-6 animate-ping rounded-full border opacity-60" style={{ left: x1 - 12, top: y1 - 12, borderColor: ACCENT }} />
+      <span className="absolute size-4 rounded-full border-2 bg-black/30" style={{ left: x1 - 8, top: y1 - 8, borderColor: ACCENT }} />
+    </div>
+  );
+}
+
+/** A marked piece in the closing wide shot; hovering its label shows the piece's card, clicking opens the category. */
 function Hotspot({
   look,
   index,
   p,
   w,
   h,
+  active,
+  onEnter,
+  onLeave,
 }: {
   look: Look;
   index: number;
   p: MotionValue<number>;
   w: MotionValue<number>;
   h: MotionValue<number>;
+  active: boolean;
+  onEnter: () => void;
+  onLeave: () => void;
 }) {
   const x = useTransform(() => {
     const c = camera(p.get(), w.get(), h.get());
@@ -741,7 +814,13 @@ function Hotspot({
       <Link
         href={`/shop?category=${look.id}`}
         aria-label={label}
-        className={`absolute top-0 hidden -translate-y-1/2 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] tracking-[0.25em] whitespace-nowrap uppercase backdrop-blur-md transition hover:border-white/60 @3xl:block ${
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        onFocus={onEnter}
+        onBlur={onLeave}
+        className={`absolute top-0 hidden -translate-y-1/2 rounded-full border px-3 py-1.5 text-[10px] tracking-[0.25em] whitespace-nowrap uppercase backdrop-blur-md transition hover:border-white/60 @3xl:block ${
+          active ? "border-white/60 bg-black/70" : "border-white/20 bg-black/50"
+        } ${
           look.side === "right" ? "left-9" : "right-9"
         }`}
       >
