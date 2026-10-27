@@ -4,21 +4,19 @@
 //   node scripts/seed-demo.mjs                      uses DATABASE_URL from .env.local
 //   node scripts/seed-demo.mjs "postgres://…"       any other database (e.g. Railway's public URL)
 //
+// A hosted store with no public database address can run it on start-up instead: set
+// SEED_DEMO_DATA=true on the service (lib/server/db.ts calls seedDemo), then remove it.
+//
 // Runs once per database (marked in app_meta as 'demo-data'). Sample orders don't change stock.
 // Remove them before launch: DELETE FROM orders WHERE email LIKE '%@example.com' OR email = 'demo@tattv.shop';
 // DELETE FROM messages WHERE email LIKE '%@example.com'; DELETE FROM app_meta WHERE key = 'demo-data';
 import crypto from "node:crypto";
 import fs from "node:fs";
-import pg from "pg";
-
-const url = process.argv[2] || fs.readFileSync(new URL("../.env.local", import.meta.url), "utf8").match(/^DATABASE_URL=(.*)$/m)?.[1]?.trim();
-if (!url) throw new Error("No database URL: pass one, or set DATABASE_URL in .env.local");
-const local = /localhost|127\.0\.0\.1/.test(url);
-const db = new pg.Client({ connectionString: url, ssl: local ? false : { rejectUnauthorized: false } });
+import { pathToFileURL } from "node:url";
 
 const DAY = 86400_000;
 const HOUR = 3600_000;
-const now = Date.now();
+let now = Date.now();
 
 // A repeatable "random" sequence, so every database gets the same sample data.
 let seed = 20261027;
@@ -93,13 +91,12 @@ function finalFor(ageDays) {
   return rand() < 0.07 ? "cancelled" : "delivered";
 }
 
-await db.connect();
-try {
+/** Adds the sample data to a database (a pg Client or Pool), once. Returns what it did. */
+export async function seedDemo(db) {
+  now = Date.now();
+  seed = 20261027;
   const done = await db.query("SELECT 1 FROM app_meta WHERE key = 'demo-data'");
-  if (done.rowCount) {
-    console.log("Sample data is already in this database.");
-    process.exit(0);
-  }
+  if (done.rowCount) return "Sample data is already in this database.";
   await db.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_wrap integer NOT NULL DEFAULT 0");
   await db.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_message text NOT NULL DEFAULT ''");
   await db.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_occasion text NOT NULL DEFAULT ''");
@@ -199,7 +196,20 @@ try {
   }
 
   await db.query("INSERT INTO app_meta (key, value) VALUES ('demo-data', $1)", [JSON.stringify(new Date().toISOString())]);
-  console.log(`Added ${n} sample orders and ${messages.length} messages.`);
-} finally {
-  await db.end();
+  return `Added ${n} sample orders and ${messages.length} messages.`;
+}
+
+// Run from the command line.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { default: pg } = await import("pg");
+  const url = process.argv[2] || fs.readFileSync(new URL("../.env.local", import.meta.url), "utf8").match(/^DATABASE_URL=(.*)$/m)?.[1]?.trim();
+  if (!url) throw new Error("No database URL: pass one, or set DATABASE_URL in .env.local");
+  const local = /localhost|127\.0\.0\.1/.test(url);
+  const db = new pg.Client({ connectionString: url, ssl: local ? false : { rejectUnauthorized: false } });
+  await db.connect();
+  try {
+    console.log(await seedDemo(db));
+  } finally {
+    await db.end();
+  }
 }

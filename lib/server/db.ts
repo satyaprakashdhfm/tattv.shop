@@ -182,6 +182,11 @@ export function pool(): Promise<pg.Pool> {
     try {
       await p.query(SCHEMA);
       await seed(p);
+      // Sample orders for a demo, on hosts where the seed script can't reach the database (see scripts/seed-demo.mjs).
+      if (process.env.SEED_DEMO_DATA === "true") {
+        const { seedDemo } = await import("../../scripts/seed-demo.mjs");
+        console.log(await seedDemo(p));
+      }
     } catch (e) {
       poolPromise = null;
       await p.end().catch(() => {});
