@@ -24,7 +24,7 @@ export default async function HomePage() {
       <section className="pt-14 md:pt-20">
         <div className="container-x">
           <SectionHeading title="New Arrivals" href="/shop?tag=new" />
-          <ProductRail products={newArrivals} cta="discover" />
+          <ProductRail products={newArrivals} />
         </div>
       </section>
 
@@ -39,7 +39,7 @@ export default async function HomePage() {
         href="/shop"
       />
 
-      {/* Shop by category: arch-topped photos with the name and an arrow beneath */}
+      {/* Shop by category: arch-topped photos with the name and a Shop Now pill beneath */}
       <section className="container-x pt-14 md:pt-20">
         <div className="mb-8 md:mb-10">
           <HeadingRule title="Shop by Category" />
@@ -59,9 +59,8 @@ export default async function HomePage() {
                 )}
               </span>
               <span className="title mt-4 block text-[13px] md:text-sm">{c.title}</span>
-              <span className="mx-auto mt-2 flex w-14 items-center text-ink/60 transition-all duration-300 group-hover:w-20 group-hover:text-ink">
-                <span className="h-px flex-1 bg-current" />
-                <ChevronRight size={12} strokeWidth={1.5} className="-ml-1.5" />
+              <span className="mt-3 inline-flex h-8 items-center gap-1 rounded-full border border-ink/25 px-4 text-[10px] font-medium uppercase tracking-[0.18em] text-ink/75 transition-colors duration-300 group-hover:border-ink group-hover:bg-ink group-hover:text-white">
+                Shop Now <ChevronRight size={12} strokeWidth={1.8} />
               </span>
             </Link>
           ))}

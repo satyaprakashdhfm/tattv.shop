@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { ProductImage } from "./product-image";
 import { useStore } from "./store-provider";
 
-export function ProductCard({ product, cta = "cart" }: { product: Product; cta?: "cart" | "discover" }) {
+export function ProductCard({ product }: { product: Product }) {
   const { wishlist, toggleWishlist, addToCart } = useStore();
   const [picking, setPicking] = useState(false);
   const saved = wishlist.includes(product.slug);
@@ -58,18 +58,7 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
           {product.compareAt && <span className="ml-2 text-sm font-normal text-muted line-through">{formatPrice(product.compareAt)}</span>}
         </p>
 
-        {cta === "discover" && (
-          // Directly under the price; fades in on hover/focus (always shown on touch screens).
-          <Link
-            href={href}
-            className="btn btn-dark mt-3 h-10 w-full px-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
-          >
-            Discover
-          </Link>
-        )}
-
-        {cta === "cart" && (
-          <div className="mt-auto pt-4">
+        <div className="mt-auto pt-4">
             {product.soldOut ? (
               <button disabled className="btn h-11 w-full border border-line bg-sand px-4 text-muted">
                 Sold Out
@@ -95,8 +84,7 @@ export function ProductCard({ product, cta = "cart" }: { product: Product; cta?:
                 Add to Cart
               </button>
             )}
-          </div>
-        )}
+        </div>
       </div>
     </article>
   );

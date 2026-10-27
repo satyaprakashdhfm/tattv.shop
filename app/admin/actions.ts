@@ -195,7 +195,11 @@ export async function moveCategoryAction(fd: FormData) {
 
 export async function saveSettingsAction(_prev: FormState, fd: FormData): Promise<FormState> {
   await requireAdmin();
-  await saveSettings({ instagram: fd.get("instagram"), facebook: fd.get("facebook"), twitter: fd.get("twitter"), announcement: fd.get("announcement") });
+  try {
+    await saveSettings(Object.fromEntries(["instagram", "facebook", "twitter", "youtube", "announcement", "email", "phone", "whatsapp", "hours", "address"].map((k) => [k, fd.get(k)])));
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   refreshStore();
   return { ok: "Saved. Changes are live on the store." };
 }

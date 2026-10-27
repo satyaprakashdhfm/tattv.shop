@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
+  ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Clock,
@@ -22,17 +23,15 @@ import {
   RotateCcw,
   Truck,
   User,
-  X,
 } from "lucide-react";
 import { useCatalog, useStore } from "@/components/store-provider";
 import { ProductCard } from "@/components/product-card";
 import { WhatsAppIcon } from "@/components/social-icons";
 import { formatPrice } from "@/lib/format";
 import { api, myOrders } from "@/lib/client-api";
-import { CONTACT, ORDER_STATUSES, RETURN_WINDOW_DAYS, TRACKER_STEPS, WHATSAPP_HELLO, whatsappLink, type OrderStatus } from "@/lib/site";
+import { ORDER_STATUSES, PAYMENT_LABELS, RETURN_WINDOW_DAYS, TRACKER_STEPS, telHref, whatsappHello, whatsappLink, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { DEMO_ADDRESSES, DEMO_CREDENTIALS, type Account } from "@/lib/demo-account";
 import { ContactForm } from "../contact/contact-form";
-import { ReturnsForm } from "../returns/returns-form";
 
 const SECTIONS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
@@ -51,9 +50,15 @@ interface AccountOrder {
   token: string;
   createdAt: string;
   status: OrderStatus;
-  customer: { firstName: string; lastName: string; email: string; address: string; apartment: string; city: string; state: string; pin: string };
+  customer: { firstName: string; lastName: string; email: string; phone: string; address: string; apartment: string; city: string; state: string; pin: string };
   lines: { slug: string; name: string; size: string | null; price: number; qty: number; image: string }[];
+  subtotal: number;
+  discount: number;
+  discountCode: string | null;
+  shipping: number;
+  gift: { fee: number; occasion: string; message: string } | null;
   total: number;
+  payment: { method: string; status: PaymentStatus };
   tracking: { courier: string; number: string; url: string } | null;
   history: { at: string; status: OrderStatus; note: string }[];
 }
@@ -76,12 +81,6 @@ const orderLink = (o: AccountOrder) => `/orders/${o.id}?t=${o.token}`;
 
 /** When each tracker step was reached (the latest event for that status). */
 const reachedAt = (o: AccountOrder, s: OrderStatus) => [...o.history].reverse().find((e) => e.status === s)?.at;
-
-/** Returns and exchanges are open for RETURN_WINDOW_DAYS after delivery. */
-function canReturn(o: AccountOrder) {
-  const delivered = reachedAt(o, "delivered");
-  return o.status === "delivered" && !!delivered && Date.now() - Date.parse(delivered) < RETURN_WINDOW_DAYS * 86400_000;
-}
 
 /** Orders placed in this browser, plus the preview customer's orders when that account is signed in. */
 function useAccountOrders(account: Account) {
@@ -194,9 +193,16 @@ function Dashboard({ account }: { account: Account }) {
   const { signOut } = useStore();
   const [section, setSection] = useState<SectionId>("overview");
   const orders = useAccountOrders(account);
-  const [returning, setReturning] = useState<AccountOrder | null>(null);
+  // The order whose details are open (inside the Orders tab), if any.
+  const [viewing, setViewing] = useState<AccountOrder | null>(null);
   const go = (s: SectionId) => {
     setSection(s);
+    setViewing(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const open = (o: AccountOrder) => {
+    setSection("orders");
+    setViewing(o);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -232,8 +238,8 @@ function Dashboard({ account }: { account: Account }) {
           </nav>
 
           <div className="min-w-0">
-            {section === "overview" && <Overview account={account} orders={orders} go={go} onReturn={setReturning} />}
-            {section === "orders" && <Orders orders={orders} onReturn={setReturning} />}
+            {section === "overview" && <Overview account={account} orders={orders} go={go} onOpen={open} />}
+            {section === "orders" && (viewing ? <OrderDetail order={viewing} onBack={() => setViewing(null)} /> : <Orders orders={orders} onOpen={open} />)}
             {section === "addresses" && <Addresses />}
             {section === "wishlist" && <Wishlist />}
             {section === "details" && <Details account={account} />}
@@ -242,7 +248,6 @@ function Dashboard({ account }: { account: Account }) {
         </div>
       </div>
 
-      {returning && <ReturnModal order={returning} email={account.email} onClose={() => setReturning(null)} />}
     </div>
   );
 }
@@ -258,7 +263,7 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
 
 const card = "rounded-3xl bg-white shadow-soft";
 
-function Overview({ account, orders, go, onReturn }: { account: Account; orders: AccountOrder[] | null; go: (s: SectionId) => void; onReturn: (o: AccountOrder) => void }) {
+function Overview({ account, orders, go, onOpen }: { account: Account; orders: AccountOrder[] | null; go: (s: SectionId) => void; onOpen: (o: AccountOrder) => void }) {
   const { wishlist } = useStore();
   const latest = orders?.[0];
   const stats = [
@@ -297,7 +302,7 @@ function Overview({ account, orders, go, onReturn }: { account: Account; orders:
         >
           Latest Order
         </SectionTitle>
-        {orders === null ? <div className={`${card} h-64 animate-pulse`} /> : latest ? <OrderCard order={latest} onReturn={onReturn} /> : <NoOrders />}
+        {orders === null ? <div className={`${card} h-64 animate-pulse`} /> : latest ? <OrderCard order={latest} onOpen={onOpen} /> : <NoOrders />}
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
@@ -332,7 +337,7 @@ function Overview({ account, orders, go, onReturn }: { account: Account; orders:
         </span>
         <span className="flex-1">
           <span className="block text-sm font-medium">Need help?</span>
-          <span className="block text-xs text-muted">Email, WhatsApp or call us. For a return or exchange, use the button on the order.</span>
+          <span className="block text-xs text-muted">Email, WhatsApp or call us about an order, sizing, returns or anything else.</span>
         </span>
         <ChevronRight size={16} className="text-muted transition-transform group-hover:translate-x-0.5" />
       </button>
@@ -377,15 +382,13 @@ function Tracker({ order }: { order: AccountOrder }) {
   );
 }
 
-function OrderCard({ order, onReturn }: { order: AccountOrder; onReturn: (o: AccountOrder) => void }) {
-  const { getProduct } = useCatalog();
-  const { addToCart } = useStore();
-  const delivered = order.status === "delivered";
-  const inTransit = order.status === "shipped" || order.status === "out_for_delivery";
-
+/** One order in a list: what it is and where it is, with a link to its full details. */
+function OrderCard({ order, onOpen }: { order: AccountOrder; onOpen: (o: AccountOrder) => void }) {
+  const items = order.lines.reduce((n, l) => n + l.qty, 0);
+  const last = order.history.at(-1);
   return (
-    <article className={`${card} overflow-hidden`}>
-      <header className="flex flex-wrap items-center justify-between gap-3 px-5 pb-4 pt-5 md:px-6">
+    <article className={`${card} p-5 md:p-6`}>
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <p>
             <span className="text-muted">Order</span> <span className="font-medium">{order.id}</span>
@@ -400,96 +403,232 @@ function OrderCard({ order, onReturn }: { order: AccountOrder; onReturn: (o: Acc
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[order.status]}`}>{ORDER_STATUSES[order.status].customer}</span>
       </header>
 
-      <div className="mx-5 rounded-2xl bg-sand/60 px-3 py-5 md:mx-6 md:px-5">
-        {order.status === "cancelled" ? (
-          <p className="text-center text-sm text-muted">This order was cancelled. Any payment made is refunded to the original method.</p>
-        ) : (
-          <>
-            <Tracker order={order} />
-            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm">
-              <Truck size={17} strokeWidth={1.5} className="shrink-0" />
-              {order.tracking ? (
-                <>
-                  <span className="min-w-0 flex-1">
-                    {delivered ? "Delivered by" : "Shipped with"} <b className="font-medium">{order.tracking.courier || "our courier"}</b>
-                    {order.tracking.number && <span className="text-muted"> · AWB {order.tracking.number}</span>}
-                  </span>
-                  {order.tracking.url && (
-                    <a href={order.tracking.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85">
-                      Track Parcel <ArrowUpRight size={13} />
-                    </a>
-                  )}
-                </>
-              ) : (
-                <span className="flex-1 text-muted">{inTransit || delivered ? "On its way with our courier." : "We dispatch within 24 hours. The courier tracking link appears here as soon as it ships."}</span>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      <button type="button" onClick={() => onOpen(order)} className="mt-4 flex w-full items-center gap-4 rounded-2xl bg-sand/60 p-3 text-left transition-colors hover:bg-sand">
+        <span className="flex shrink-0 -space-x-3">
+          {order.lines.slice(0, 3).map((l) => (
+            <span key={`${l.slug}|${l.size}`} className="relative size-14 overflow-hidden rounded-xl border-2 border-white bg-sand">
+              {l.image && <Image src={l.image} alt="" fill sizes="56px" className="object-cover" />}
+            </span>
+          ))}
+        </span>
+        <span className="min-w-0 flex-1 text-sm">
+          <span className="block truncate font-medium">{order.lines.map((l) => l.name).join(", ")}</span>
+          <span className="block text-xs text-muted">
+            {items} {items === 1 ? "item" : "items"}
+            {last && ` · ${last.note || ORDER_STATUSES[last.status].customer} on ${day(last.at)}`}
+          </span>
+        </span>
+        <ChevronRight size={16} className="shrink-0 text-muted" />
+      </button>
 
-      <ul className="divide-y divide-line px-5 md:px-6">
-        {order.lines.map((l) => {
-          const product = getProduct(l.slug);
-          return (
-            <li key={`${l.slug}|${l.size}`} className="flex items-center gap-4 py-4">
-              <Link href={`/product/${l.slug}`} className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-sand">
-                {l.image && <Image src={l.image} alt="" fill sizes="64px" className="object-cover" />}
-              </Link>
-              <div className="min-w-0 flex-1">
-                <Link href={`/product/${l.slug}`} className="text-sm font-medium hover:underline">
-                  {l.name}
-                </Link>
-                <p className="text-xs text-muted">
-                  Qty {l.qty}
-                  {l.size && ` · ${product?.sizes?.label ?? "Size"} ${l.size}`}
-                </p>
-              </div>
-              <p className="hidden text-sm sm:block">{formatPrice(l.price * l.qty)}</p>
-              {delivered && product && !product.soldOut && (
-                <button onClick={() => addToCart({ slug: l.slug, size: l.size ?? undefined })} className="shrink-0 rounded-full border border-ink px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] hover:bg-ink hover:text-white">
-                  Buy Again
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-
-      <footer className="flex flex-wrap items-center gap-2 border-t border-line px-5 py-4 md:px-6">
-        <Link href={orderLink(order)} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink px-4 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors hover:bg-ink hover:text-white">
-          Order Details <ChevronRight size={13} />
-        </Link>
-        {canReturn(order) && (
-          <button type="button" onClick={() => onReturn(order)} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-4 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors hover:border-ink">
-            <RotateCcw size={13} strokeWidth={1.6} /> Return / Exchange
-          </button>
-        )}
-        <a
-          href={whatsappLink(`Hi TATTV! A question about my order ${order.id}`)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted underline-offset-4 hover:text-ink hover:underline"
+      <footer className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onOpen(order)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-ink px-4 text-[11px] font-medium uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85"
         >
-          <WhatsAppIcon size={14} /> Help with this order
-        </a>
+          Order Details <ChevronRight size={13} />
+        </button>
+        {order.tracking?.url && (
+          <a
+            href={order.tracking.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink px-4 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors hover:bg-ink hover:text-white"
+          >
+            Track Parcel <ArrowUpRight size={13} />
+          </a>
+        )}
+        <HelpLink order={order} className="ml-auto" />
       </footer>
     </article>
   );
 }
 
-function Orders({ orders, onReturn }: { orders: AccountOrder[] | null; onReturn: (o: AccountOrder) => void }) {
+function HelpLink({ order, className = "" }: { order: AccountOrder; className?: string }) {
+  const { settings } = useCatalog();
+  return (
+    <a
+      href={whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.whatsapp)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex items-center gap-1.5 text-xs text-muted underline-offset-4 hover:text-ink hover:underline ${className}`}
+    >
+      <WhatsAppIcon size={14} /> Help with this order
+    </a>
+  );
+}
+
+/** Everything about one order: tracking, items, prices, gift card and delivery address. */
+function OrderDetail({ order, onBack }: { order: AccountOrder; onBack: () => void }) {
+  const { getProduct } = useCatalog();
+  const { addToCart } = useStore();
+  const delivered = order.status === "delivered";
+  const inTransit = order.status === "shipped" || order.status === "out_for_delivery";
+  const c = order.customer;
+
+  return (
+    <section className="space-y-5">
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.14em] text-muted hover:text-ink">
+        <ChevronLeft size={14} /> All orders
+      </button>
+
+      <div className={`${card} p-5 md:p-6`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow text-muted">Order Details</p>
+            <h2 className="title mt-2 text-lg md:text-xl">{order.id}</h2>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[order.status]}`}>{ORDER_STATUSES[order.status].customer}</span>
+        </div>
+        <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line text-sm md:grid-cols-4">
+          {[
+            ["Placed", date(order.createdAt)],
+            ["Payment", order.payment.method === "cod" ? "Cash on delivery" : PAYMENT_LABELS[order.payment.status]],
+            ["Items", String(order.lines.reduce((n, l) => n + l.qty, 0))],
+            ["Total", formatPrice(order.total)],
+          ].map(([k, v]) => (
+            <div key={k} className="bg-white p-4">
+              <dt className="text-[10px] uppercase tracking-[0.18em] text-muted">{k}</dt>
+              <dd className="mt-1 font-medium">{v}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="mt-5 rounded-2xl bg-sand/60 px-3 py-5 md:px-5">
+          {order.status === "cancelled" ? (
+            <p className="text-center text-sm text-muted">This order was cancelled. Any payment made is refunded to the original method.</p>
+          ) : (
+            <>
+              <Tracker order={order} />
+              <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm">
+                <Truck size={17} strokeWidth={1.5} className="shrink-0" />
+                {order.tracking ? (
+                  <>
+                    <span className="min-w-0 flex-1">
+                      {delivered ? "Delivered by" : "Shipped with"} <b className="font-medium">{order.tracking.courier || "our courier"}</b>
+                      {order.tracking.number && <span className="text-muted"> · AWB {order.tracking.number}</span>}
+                    </span>
+                    {order.tracking.url && (
+                      <a href={order.tracking.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-85">
+                        Track Parcel <ArrowUpRight size={13} />
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span className="flex-1 text-muted">{inTransit || delivered ? "On its way with our courier." : "We dispatch within 24 hours. The courier tracking link appears here as soon as it ships."}</span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className={`${card} p-5 md:p-6`}>
+        <h3 className="eyebrow">Items</h3>
+        <ul className="mt-2 divide-y divide-line">
+          {order.lines.map((l) => {
+            const product = getProduct(l.slug);
+            return (
+              <li key={`${l.slug}|${l.size}`} className="flex items-center gap-4 py-4">
+                <Link href={`/product/${l.slug}`} className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-sand">
+                  {l.image && <Image src={l.image} alt="" fill sizes="64px" className="object-cover" />}
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <Link href={`/product/${l.slug}`} className="text-sm font-medium hover:underline">
+                    {l.name}
+                  </Link>
+                  <p className="text-xs text-muted">
+                    {formatPrice(l.price)} × {l.qty}
+                    {l.size && ` · ${product?.sizes?.label ?? "Size"} ${l.size}`}
+                  </p>
+                </div>
+                <p className="hidden text-sm sm:block">{formatPrice(l.price * l.qty)}</p>
+                {delivered && product && !product.soldOut && (
+                  <button onClick={() => addToCart({ slug: l.slug, size: l.size ?? undefined })} className="shrink-0 rounded-full border border-ink px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] hover:bg-ink hover:text-white">
+                    Buy Again
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <dl className="space-y-2 border-t border-line pt-4 text-sm">
+          <div className="flex justify-between">
+            <dt>Subtotal</dt>
+            <dd>{formatPrice(order.subtotal)}</dd>
+          </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-emerald-700">
+              <dt>Coupon {order.discountCode}</dt>
+              <dd>−{formatPrice(order.discount)}</dd>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <dt>Shipping</dt>
+            <dd>{order.shipping ? formatPrice(order.shipping) : "Complimentary"}</dd>
+          </div>
+          {order.gift && order.gift.fee > 0 && (
+            <div className="flex justify-between">
+              <dt>Gift packing{order.gift.occasion && ` · ${order.gift.occasion}`}</dt>
+              <dd>{formatPrice(order.gift.fee)}</dd>
+            </div>
+          )}
+          <div className="flex justify-between border-t border-line pt-3 text-base font-medium">
+            <dt>Total</dt>
+            <dd>{formatPrice(order.total)}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className={`${card} p-5 md:p-6`}>
+          <h3 className="eyebrow">Delivery Address</h3>
+          <address className="mt-3 text-sm not-italic leading-relaxed text-ink/80">
+            {c.firstName} {c.lastName}
+            <br />
+            {c.address}
+            {c.apartment ? `, ${c.apartment}` : ""}
+            <br />
+            {c.city}, {c.state} {c.pin}
+            <br />
+            {c.phone}
+          </address>
+        </div>
+        {order.gift?.message ? (
+          <div className="rounded-3xl border border-[#e5d6bb] bg-[#fbf7f0] p-5 md:p-6">
+            <h3 className="eyebrow">Gift Card</h3>
+            <p className="mt-3 font-serif text-lg italic leading-relaxed">&ldquo;{order.gift.message}&rdquo;</p>
+          </div>
+        ) : (
+          <div className={`${card} p-5 md:p-6`}>
+            <h3 className="eyebrow">Need Help?</h3>
+            <p className="mt-3 text-sm text-ink/75">Questions about this order, sizing or a return? Message us on WhatsApp and we&apos;ll sort it out.</p>
+            <HelpLink order={order} className="mt-3 !text-ink underline" />
+          </div>
+        )}
+      </div>
+      {order.gift?.message && (
+        <p className="text-center">
+          <HelpLink order={order} />
+        </p>
+      )}
+    </section>
+  );
+}
+
+function Orders({ orders, onOpen }: { orders: AccountOrder[] | null; onOpen: (o: AccountOrder) => void }) {
   return (
     <section>
-      <SectionTitle>Order History</SectionTitle>
+      <SectionTitle>My Orders</SectionTitle>
       {orders === null ? (
-        <div className={`${card} h-64 animate-pulse`} />
+        <div className={`${card} h-48 animate-pulse`} />
       ) : orders.length === 0 ? (
         <NoOrders />
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {orders.map((o) => (
-            <OrderCard key={o.id} order={o} onReturn={onReturn} />
+            <OrderCard key={o.id} order={o} onOpen={onOpen} />
           ))}
         </div>
       )}
@@ -497,53 +636,12 @@ function Orders({ orders, onReturn }: { orders: AccountOrder[] | null; onReturn:
   );
 }
 
-/** Return or exchange, in a pop-up over the orders. */
-function ReturnModal({ order, email, onClose }: { order: AccountOrder; email: string; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = overflow;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 p-0 backdrop-blur-[2px] md:items-center md:p-6" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="return-title"
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-[92svh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-6 shadow-lift md:rounded-3xl md:p-8"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="eyebrow text-muted">Order {order.id}</p>
-            <h2 id="return-title" className="display mt-2 text-2xl font-normal">
-              Return or exchange
-            </h2>
-            <p className="mt-2 text-sm text-muted">Unworn pieces, within {RETURN_WINDOW_DAYS} days of delivery. We arrange a free pickup.</p>
-          </div>
-          <button type="button" aria-label="Close" onClick={onClose} className="flex size-10 shrink-0 items-center justify-center rounded-full border border-line transition-colors hover:border-ink">
-            <X size={17} />
-          </button>
-        </div>
-        <div className="mt-6">
-          <ReturnsForm order={order.id} items={order.lines.map((l) => l.name + (l.size ? ` (${l.size})` : "")).join(", ")} email={email} onDone={onClose} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Support() {
+  const { settings: st } = useCatalog();
   const channels = [
-    { icon: Mail, title: "Email", value: CONTACT.email, href: `mailto:${CONTACT.email}`, note: "We reply within 24 hours" },
-    { icon: WhatsAppIcon, title: "WhatsApp", value: CONTACT.phoneDisplay, href: WHATSAPP_HELLO, note: "Message us anytime", external: true },
-    { icon: Phone, title: "Phone", value: CONTACT.phoneDisplay, href: `tel:${CONTACT.phone}`, note: CONTACT.hours },
+    { icon: Mail, title: "Email", value: st.email, href: `mailto:${st.email}`, note: "We reply within 24 hours" },
+    { icon: WhatsAppIcon, title: "WhatsApp", value: st.whatsapp, href: whatsappHello(st.whatsapp), note: "Message us anytime", external: true },
+    { icon: Phone, title: "Phone", value: st.phone, href: telHref(st.phone), note: st.hours },
   ];
   return (
     <section className="space-y-5">
@@ -569,7 +667,7 @@ function Support() {
           <div className="text-sm">
             <p className="font-medium">Returns &amp; exchanges</p>
             <p className="mt-1 text-xs leading-relaxed text-muted">
-              Open Orders and press <b className="font-medium text-ink">Return / Exchange</b> on a delivered order, within {RETURN_WINDOW_DAYS} days of delivery. We arrange a free pickup.
+              Within {RETURN_WINDOW_DAYS} days of delivery, message us on WhatsApp with your order number (use <b className="font-medium text-ink">Help with this order</b> on the order). We arrange a free pickup.
             </p>
           </div>
         </div>
@@ -579,7 +677,7 @@ function Support() {
           </span>
           <div className="text-sm">
             <p className="font-medium">Support hours</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{CONTACT.hours}. Messages sent outside these hours are answered the next working day.</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">{st.hours}. Messages sent outside these hours are answered the next working day.</p>
           </div>
         </div>
       </div>

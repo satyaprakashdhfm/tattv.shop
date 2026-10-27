@@ -1,7 +1,7 @@
 import "server-only";
 import pg from "pg";
 import { SEED_CATEGORIES, SEED_PRODUCTS, type Product } from "@/lib/products";
-import { DEFAULT_SOCIAL } from "@/lib/site";
+import { DEFAULT_SETTINGS } from "@/lib/site";
 
 // Postgres access. DATABASE_URL is required (locally: ../tattv-local-env, see README).
 //
@@ -270,7 +270,7 @@ async function seed(p: pg.Pool) {
     }
     for (const [i, x] of SEED_PRODUCTS.entries()) await insertProduct(client, x, i);
     await client.query("INSERT INTO settings (key, value) VALUES ('store', $1) ON CONFLICT DO NOTHING", [
-      JSON.stringify({ ...DEFAULT_SOCIAL, announcement: "" }),
+      JSON.stringify(DEFAULT_SETTINGS),
     ]);
     await client.query("INSERT INTO app_meta (key, value) VALUES ('seeded', $1)", [JSON.stringify(new Date().toISOString())]);
     // A fresh database already has every batch below.

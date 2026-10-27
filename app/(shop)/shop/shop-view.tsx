@@ -215,7 +215,8 @@ export function ShopView() {
 
       <div className="container-x py-10 md:py-14">
         <div className="grid items-start gap-10 lg:grid-cols-[230px_1fr] xl:gap-12">
-          <aside className="hidden lg:sticky lg:top-24 lg:block">{filters}</aside>
+          {/* Scrolls on its own (scrollbar hidden), so long filter lists can be browsed without moving the products. */}
+          <aside className="no-scrollbar hidden lg:sticky lg:top-24 lg:block lg:max-h-[calc(100svh-7rem)] lg:overflow-y-auto lg:pb-6">{filters}</aside>
           <div className="min-w-0">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2">

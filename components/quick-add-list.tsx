@@ -94,9 +94,10 @@ export function QuickAddList({ title = "Complete the Look", count = 3, openBag =
   const { catalog, cart, cartReady } = useStore();
   // Picked once, when the list first appears, so rows don't reshuffle or jump while the
   // customer adds them; added pieces stay in place marked "Added".
+  // A longer list is ranked up front, so a growing `count` (checkout fills its column) adds rows at the end.
   const [slugs, setSlugs] = useState<string[] | null>(null);
-  if (cartReady && slugs === null) setSlugs(catalog.recommend(cart.map((l) => l.slug), count).map((p) => p.slug));
-  const picks = (slugs ?? []).map(catalog.getProduct).filter((p): p is Product => !!p);
+  if (cartReady && slugs === null) setSlugs(catalog.recommend(cart.map((l) => l.slug), Math.max(count, 16)).map((p) => p.slug));
+  const picks = (slugs ?? []).slice(0, count).map(catalog.getProduct).filter((p): p is Product => !!p);
   if (!picks.length) return null;
   return (
     <section>

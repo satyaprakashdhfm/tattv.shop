@@ -71,14 +71,21 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                 </form>
               </div>
               <p className="mt-4 whitespace-pre-wrap bg-paper p-4 text-sm leading-relaxed">{m.body}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <a className="btn btn-dark btn-sm" href={`mailto:${m.email}?subject=${encodeURIComponent("Re: " + subject)}`}>
-                  Reply by Email
+              {/* Replies happen from the store inbox (each message is emailed there too); these are just the customer's contact details. */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                <span className="mr-1 font-medium uppercase tracking-[0.14em] text-muted">Contact</span>
+                <a className="adm-chip" href={`mailto:${m.email}?subject=${encodeURIComponent("Re: " + subject)}`}>
+                  {m.email}
                 </a>
                 {m.phone && (
-                  <a className="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${wa}`}>
-                    Reply on WhatsApp
-                  </a>
+                  <>
+                    <a className="adm-chip" href={`tel:${m.phone}`}>
+                      Call {m.phone}
+                    </a>
+                    <a className="adm-chip" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${wa}`}>
+                      WhatsApp
+                    </a>
+                  </>
                 )}
               </div>
             </li>

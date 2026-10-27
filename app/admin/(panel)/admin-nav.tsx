@@ -24,7 +24,7 @@ const GROUPS: [string, Item[]][] = [
       ["/admin/messages", "Messages", MessageSquare, "messages"],
     ],
   ],
-  ["Store", [["/admin/settings", "Settings", Settings, null]]],
+  ["Store", [["/admin/settings", "Site Settings", Settings, null]]],
 ];
 
 export function AdminNav({ counts }: { counts: { toPack: number; messages: number } }) {

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { CONTACT, RETURN_WINDOW_DAYS } from "@/lib/site";
+import { RETURN_WINDOW_DAYS } from "@/lib/site";
+import { loadCatalogData } from "@/lib/server/catalog";
 import { ReturnsFormFromLink } from "./returns-form";
 
 export const metadata: Metadata = {
@@ -15,7 +16,8 @@ const STEPS = [
   { n: "03", title: "Refund or exchange", text: "Once the piece is checked, we refund or dispatch your exchange." },
 ];
 
-export default function ReturnsPage() {
+export default async function ReturnsPage() {
+  const { settings } = await loadCatalogData();
   return (
     <div className="container-x py-14 md:py-20">
       <div className="mx-auto max-w-2xl text-center">
@@ -60,7 +62,7 @@ export default function ReturnsPage() {
               <Link href="/contact" className="underline underline-offset-4">
                 Contact us
               </Link>{" "}
-              or email {CONTACT.email}.
+              or email {settings.email}.
             </p>
           </div>
         </aside>

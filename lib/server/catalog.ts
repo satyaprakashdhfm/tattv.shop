@@ -5,7 +5,7 @@ import type { PoolClient } from "pg";
 import { makeCatalog, type CatalogData, type StoreSettings } from "@/lib/catalog";
 import type { Category, Finish, Product } from "@/lib/products";
 import { OrderError } from "@/lib/pricing";
-import { DEFAULT_SOCIAL } from "@/lib/site";
+import { DEFAULT_SETTINGS } from "@/lib/site";
 import { query, transaction } from "./db";
 
 // Catalogue storage: categories, products (+ product_images) and the store settings row.
@@ -75,7 +75,7 @@ export async function loadCatalogData(): Promise<CatalogData> {
   const data: CatalogData = {
     products: products.rows.map(toProduct),
     categories: categories.rows,
-    settings: { ...DEFAULT_SOCIAL, announcement: "", ...settings.rows[0]?.value },
+    settings: { ...DEFAULT_SETTINGS, ...settings.rows[0]?.value },
   };
   cache = { at: Date.now(), data };
   return data;
@@ -347,11 +347,24 @@ const url = (v: unknown) => {
 };
 
 export async function saveSettings(input: Partial<Record<keyof StoreSettings, unknown>>) {
+  const text = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
+  const email = text(input.email).toLowerCase();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
+  for (const k of ["phone", "whatsapp"] as const) {
+    const digits = text(input[k]).replace(/\D/g, "");
+    if (digits && (digits.length < 10 || digits.length > 13)) throw new Error(`Enter a valid ${k === "phone" ? "phone" : "WhatsApp"} number.`);
+  }
   const value: StoreSettings = {
     instagram: url(input.instagram),
     facebook: url(input.facebook),
     twitter: url(input.twitter),
-    announcement: String(input.announcement || "").trim().slice(0, 200),
+    youtube: url(input.youtube),
+    announcement: text(input.announcement),
+    email: email || DEFAULT_SETTINGS.email,
+    phone: text(input.phone, 30),
+    whatsapp: text(input.whatsapp, 30),
+    hours: text(input.hours, 120),
+    address: text(input.address, 400).replace(/\r/g, ""),
   };
   await query(
     "INSERT INTO settings (key, value) VALUES ('store', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",

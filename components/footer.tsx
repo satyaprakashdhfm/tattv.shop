@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import type { StoreSettings } from "@/lib/catalog";
-import { CONTACT, WHATSAPP_HELLO } from "@/lib/site";
+import { telHref, whatsappHello } from "@/lib/site";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon, XIcon, YouTubeIcon } from "./social-icons";
 
 const COLUMNS = [
@@ -43,9 +43,9 @@ export function Footer({ settings }: { settings: StoreSettings }) {
     { label: "Instagram", href: settings.instagram, icon: InstagramIcon, external: true },
     { label: "Facebook", href: settings.facebook, icon: FacebookIcon, external: true },
     { label: "X (Twitter)", href: settings.twitter, icon: XIcon, external: true },
-    { label: "WhatsApp", href: WHATSAPP_HELLO, icon: WhatsAppIcon, external: true },
-    { label: "Call us", href: `tel:${CONTACT.phone}`, icon: Phone, external: false },
-    { label: "YouTube", href: CONTACT.youtube, icon: YouTubeIcon, external: true },
+    { label: "WhatsApp", href: whatsappHello(settings.whatsapp), icon: WhatsAppIcon, external: true },
+    { label: "Call us", href: telHref(settings.phone), icon: Phone, external: false },
+    { label: "YouTube", href: settings.youtube, icon: YouTubeIcon, external: true },
   ].filter((s) => s.href);
 
   return (
@@ -71,15 +71,15 @@ export function Footer({ settings }: { settings: StoreSettings }) {
           </ul>
           <ul className="mt-6 space-y-2.5 text-sm text-white/80">
             <li>
-              <a href={`tel:${CONTACT.phone}`} className="inline-flex items-center gap-3 hover:text-white">
+              <a href={telHref(settings.phone)} className="inline-flex items-center gap-3 hover:text-white">
                 <Phone size={15} strokeWidth={1.5} className="text-white/50" />
-                <span className="link-underline">{CONTACT.phoneDisplay}</span>
+                <span className="link-underline">{settings.phone}</span>
               </a>
             </li>
             <li>
-              <a href={`mailto:${CONTACT.email}`} className="inline-flex items-center gap-3 hover:text-white">
+              <a href={`mailto:${settings.email}`} className="inline-flex items-center gap-3 hover:text-white">
                 <Mail size={15} strokeWidth={1.5} className="text-white/50" />
-                <span className="link-underline break-all">{CONTACT.email}</span>
+                <span className="link-underline break-all">{settings.email}</span>
               </a>
             </li>
           </ul>

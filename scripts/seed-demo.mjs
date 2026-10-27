@@ -10,6 +10,7 @@
 // Run it from the project folder. Runs once per database (marked in app_meta as 'demo-data'). Sample orders don't change stock.
 // Remove them before launch: DELETE FROM orders WHERE email LIKE '%@example.com' OR email = 'demo@tattv.shop';
 // DELETE FROM messages WHERE email LIKE '%@example.com'; DELETE FROM app_meta WHERE key = 'demo-data';
+// Sample stock levels (app_meta 'demo-stock') are ordinary stock numbers: correct them in Admin → Stock & Prices.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -91,12 +92,26 @@ function finalFor(ageDays) {
   return rand() < 0.07 ? "cancelled" : "delivered";
 }
 
+/**
+ * Sample stock levels for pieces that aren't tracked yet: mostly comfortable, a few running low, so
+ * Stock & Prices and the dashboard's stock alerts have something to show. Once per database.
+ */
+async function seedDemoStock(db) {
+  const first = await db.query("INSERT INTO app_meta (key, value) VALUES ('demo-stock', 'true') ON CONFLICT DO NOTHING");
+  if (!first.rowCount) return "";
+  const { rows } = await db.query("SELECT slug FROM products WHERE stock IS NULL ORDER BY sort_order");
+  const LEVELS = [24, 18, 3, 32, 12, 2, 27, 15, 40, 9, 21, 4, 16, 35, 11, 6, 28, 14, 19, 30, 1, 22, 13, 26, 8, 17, 25, 10];
+  for (const [i, r] of rows.entries()) await db.query("UPDATE products SET stock = $2 WHERE slug = $1", [r.slug, LEVELS[i % LEVELS.length]]);
+  return `Set sample stock on ${rows.length} pieces. `;
+}
+
 /** Adds the sample data to a database (a pg Client or Pool), once. Returns what it did. */
 export async function seedDemo(db) {
   now = Date.now();
   seed = 20261027;
+  const stock = await seedDemoStock(db);
   const done = await db.query("SELECT 1 FROM app_meta WHERE key = 'demo-data'");
-  if (done.rowCount) return "Sample data is already in this database.";
+  if (done.rowCount) return stock + "Sample orders are already in this database.";
   await db.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_wrap integer NOT NULL DEFAULT 0");
   await db.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_message text NOT NULL DEFAULT ''");
   await db.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_occasion text NOT NULL DEFAULT ''");
@@ -201,7 +216,7 @@ export async function seedDemo(db) {
   }
 
   await db.query("INSERT INTO app_meta (key, value) VALUES ('demo-data', $1)", [JSON.stringify(new Date().toISOString())]);
-  return `Added ${n} sample orders and ${messages.length} messages.`;
+  return stock + `Added ${n} sample orders and ${messages.length} messages.`;
 }
 
 // Run from the command line.

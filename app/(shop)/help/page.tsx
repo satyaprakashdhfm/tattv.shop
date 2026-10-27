@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice } from "@/lib/format";
-import { CONTACT, WHATSAPP_HELLO } from "@/lib/site";
+import { whatsappHello } from "@/lib/site";
+import { loadCatalogData } from "@/lib/server/catalog";
 
 export const metadata: Metadata = {
   title: "Client Care",
@@ -35,7 +36,8 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
-export default function HelpPage() {
+export default async function HelpPage() {
+  const { settings: s } = await loadCatalogData();
   return (
     <div className="container-x grid gap-12 py-16 lg:grid-cols-12">
       <aside className="lg:col-span-3">
@@ -107,11 +109,11 @@ export default function HelpPage() {
           <p>Something not looking its best? Get in touch and we will help you care for it.</p>
         </Section>
         <Section id="contact" title="Contact Us">
-          <p>Our client care team is available Monday to Saturday, 10am to 7pm IST.</p>
+          <p>Our client care team is available {s.hours}.</p>
           <p>
-            Email: <a href={`mailto:${CONTACT.email}`} className="text-ink underline underline-offset-4">{CONTACT.email}</a>
+            Email: <a href={`mailto:${s.email}`} className="text-ink underline underline-offset-4">{s.email}</a>
             <br />
-            WhatsApp / Call: <a href={WHATSAPP_HELLO} className="text-ink underline underline-offset-4">{CONTACT.phoneDisplay}</a>
+            WhatsApp / Call: <a href={whatsappHello(s.whatsapp)} className="text-ink underline underline-offset-4">{s.whatsapp}</a>
           </p>
         </Section>
       </div>

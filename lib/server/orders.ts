@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import { COUPONS, GIFT_WRAP, ORDER_STATUSES, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { OrderError, normalisePhone, priceOrder, validateCustomer, type CustomerInput, type OrderItemInput, type PricedLine } from "@/lib/pricing";
 import { type Db, pool, query, transaction } from "./db";
+import { sendMail, storeInbox } from "./mail";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
 import { createRazorpayOrder, razorpayEnabled, razorpayKeyId, verifyPaymentSignature, type RazorpayResponse } from "./razorpay";
 
@@ -375,6 +376,13 @@ export async function createMessage(input: Record<string, unknown>) {
   await query("INSERT INTO messages (id, kind, name, email, phone, subject, body) VALUES ($1,$2,$3,$4,$5,$6,$7)", [
     m.id, m.kind, m.name, m.email, m.phone, m.subject, m.body,
   ]);
+  // Also emailed to the store, so the team can reply straight from their inbox. Saved first, so a mail problem never loses a message.
+  await sendMail({
+    to: await storeInbox(),
+    replyTo: m.email,
+    subject: `${m.kind === "return" ? "Return request" : "New message"}: ${m.subject || "(no subject)"}`,
+    text: [`From: ${m.name || "(no name)"} <${m.email}>${m.phone ? ` · ${m.phone}` : ""}`, "", m.body].join("\n"),
+  }).catch((e) => console.error("Could not email the message", e));
 }
 
 export async function listMessages(): Promise<Message[]> {

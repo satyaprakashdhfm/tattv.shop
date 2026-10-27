@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { REVIEWS, REVIEWS_URL, SHOW_REVIEWS } from "@/lib/reviews";
 import { useMarquee } from "./use-marquee";
@@ -8,23 +8,41 @@ import { useMarquee } from "./use-marquee";
 const GOLD = "#c9a35c";
 const STAR = "#b8862b";
 
-/** Thin gold curves drawn at the section's corners. */
+/** Two thin gold curves sweeping along the bottom of the section. */
 function GoldLines() {
-  const stroke = { fill: "none", stroke: GOLD, strokeLinecap: "round" as const };
   return (
-    <svg className="pointer-events-none absolute inset-0 -z-10 h-full w-full" viewBox="0 0 1440 420" preserveAspectRatio="none" aria-hidden>
-      {/* top left */}
-      <path d="M0 40 C 90 30, 150 70, 140 140 S 60 230, 0 210" {...stroke} strokeWidth="1" opacity="0.45" />
-      <path d="M0 80 C 70 76, 110 110, 100 160" {...stroke} strokeWidth="0.8" opacity="0.35" />
-      {/* bottom left sweep */}
-      <path d="M0 300 C 160 280, 300 330, 420 420" {...stroke} strokeWidth="1.2" opacity="0.55" />
-      <path d="M0 335 C 140 320, 250 360, 330 420" {...stroke} strokeWidth="0.9" opacity="0.4" />
-      <path d="M40 420 C 120 370, 230 360, 300 300" {...stroke} strokeWidth="0.8" opacity="0.35" />
-      {/* right side */}
-      <path d="M1440 60 C 1380 120, 1400 220, 1330 300 S 1250 400, 1300 420" {...stroke} strokeWidth="1.2" opacity="0.5" />
-      <path d="M1440 150 C 1400 200, 1420 280, 1370 340 S 1330 410, 1360 420" {...stroke} strokeWidth="0.9" opacity="0.4" />
-      <path d="M1440 250 C 1390 300, 1300 330, 1240 420" {...stroke} strokeWidth="0.8" opacity="0.35" />
+    <svg className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 w-full" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden>
+      <path d="M0 120 C 360 40, 1080 40, 1440 120" fill="none" stroke={GOLD} strokeWidth="1" opacity="0.45" vectorEffect="non-scaling-stroke" />
+      <path d="M0 165 C 420 95, 1020 95, 1440 165" fill="none" stroke={GOLD} strokeWidth="1" opacity="0.3" vectorEffect="non-scaling-stroke" />
     </svg>
+  );
+}
+
+/** A quote clamped to three lines; "Read more" appears only when the text is actually cut off. */
+function ReviewQuote({ quote, open, onToggle, copy }: { quote: string; open: boolean; onToggle: () => void; copy: boolean }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && !open) setCut(el.scrollHeight > el.clientHeight + 1);
+  }, [quote, open]);
+  return (
+    <>
+      <p ref={ref} className={`mt-2 text-[12.5px] leading-relaxed text-ink/65 ${open ? "" : "line-clamp-3"}`}>
+        &ldquo;{quote}&rdquo;
+      </p>
+      {(cut || open) && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          tabIndex={copy ? -1 : undefined}
+          className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-ink underline underline-offset-4 hover:text-ink/70"
+        >
+          {open ? "Read less" : "Read more"}
+        </button>
+      )}
+    </>
   );
 }
 
@@ -35,6 +53,15 @@ function GoldLines() {
 export function ReviewsSection() {
   const track = useRef<HTMLUListElement>(null);
   const nudge = useMarquee(track, { speed: 0.5 });
+  // Reviews opened with "Read more" (by review, so both copies in the loop open together).
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggle = (n: number) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n);
+      else next.add(n);
+      return next;
+    });
 
   if (!SHOW_REVIEWS || REVIEWS.length === 0) return null;
 
@@ -58,8 +85,14 @@ export function ReviewsSection() {
           <button type="button" aria-label="Previous reviews" onClick={() => nudge(-1)} className={`${arrow} left-0`}>
             <ChevronLeft size={18} strokeWidth={1.6} />
           </button>
-          <ul ref={track} className="no-scrollbar -mx-5 flex gap-4 overflow-x-auto px-5 py-2 md:mx-0 md:px-0">
-            {[...REVIEWS, ...REVIEWS].map((r, i) => (
+          <ul
+            ref={track}
+            className="no-scrollbar -mx-5 flex items-start gap-4 overflow-x-auto px-5 py-2 md:mx-0 md:px-0 md:[mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]"
+          >
+            {[...REVIEWS, ...REVIEWS].map((r, i) => {
+              const n = i % REVIEWS.length;
+              const isOpen = open.has(n);
+              return (
               <li
                 key={i}
                 aria-hidden={i >= REVIEWS.length || undefined}
@@ -73,10 +106,11 @@ export function ReviewsSection() {
                   {r.verified && <span className="rounded-full bg-ink px-2 py-px text-[9px] font-medium uppercase tracking-[0.12em] text-white">Verified</span>}
                 </p>
                 <h3 className="mt-2 text-[13px] font-bold uppercase leading-snug tracking-[0.08em]">{r.title}</h3>
-                <p className="mt-2 line-clamp-3 text-[12.5px] leading-relaxed text-ink/65">&ldquo;{r.quote}&rdquo;</p>
+                <ReviewQuote quote={r.quote} open={isOpen} onToggle={() => toggle(n)} copy={i >= REVIEWS.length} />
                 <p className="mt-auto pt-2.5 text-[10.5px] font-medium uppercase tracking-[0.24em] text-ink/50">{r.city}</p>
               </li>
-            ))}
+              );
+            })}
           </ul>
           <button type="button" aria-label="Next reviews" onClick={() => nudge(1)} className={`${arrow} right-0`}>
             <ChevronRight size={18} strokeWidth={1.6} />
@@ -88,7 +122,7 @@ export function ReviewsSection() {
             href={REVIEWS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 items-center gap-3 rounded-full border border-ink bg-white/60 px-8 text-[11px] font-medium uppercase tracking-[0.24em] text-ink transition-colors duration-300 hover:bg-ink hover:text-white md:px-10"
+            className="inline-flex h-10 items-center gap-3 rounded-full bg-ink px-8 text-[11px] font-medium uppercase tracking-[0.24em] text-white transition-opacity duration-300 hover:opacity-85 md:px-10"
           >
             Read More Reviews <ArrowRight size={16} strokeWidth={1.5} />
           </a>

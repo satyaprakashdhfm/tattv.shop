@@ -100,8 +100,8 @@ const Panel = ({ title, step, icon, className = "", children }: { title: string;
 );
 
 /**
- * Checkout on one screen. Left: the bag (editable), gift packing, offers and "Complete the Look"
- * quick-adds. Right: contact, address, payment and the totals. Both columns stretch to the same
+ * Checkout on one screen. Left: the bag (editable), "Complete the Look" quick-adds and gift packing.
+ * Right: contact, address, payment, offers and the totals. Both columns stretch to the same
  * height, and the pay button floats centred at the bottom of the screen. Prices are shown here for
  * convenience; the server re-prices the order when it is placed.
  */
@@ -123,6 +123,11 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
   // An online order waiting for payment, reused if the customer retries without changing anything.
   const [pending, setPending] = useState<PlacedOrder | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const leftRef = useRef<HTMLDivElement>(null);
+  const rightRef = useRef<HTMLDivElement>(null);
+  const suggestBoxRef = useRef<HTMLDivElement>(null);
+  const suggestRef = useRef<HTMLDivElement>(null);
+  const [suggestCount, setSuggestCount] = useState(4);
 
   useEffect(() => {
     try {
@@ -140,6 +145,42 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
     }
   }, [form]);
   useEffect(() => setPending(null), [cart, applied, payMethod, gift, giftOccasion, giftMessage]);
+
+  // fitSuggestions: on desktop, add or remove suggestion rows until the left column's natural height
+  // just reaches the right column's, so neither side ends in empty space (the suggestions card then
+  // stretches over the last few pixels). Phones show four.
+  useEffect(() => {
+    const left = leftRef.current;
+    const right = rightRef.current;
+    const box = suggestBoxRef.current;
+    const inner = suggestRef.current;
+    if (!left || !right || !box || !inner) return;
+    const natural = (col: HTMLElement) => {
+      const kids = [...col.children] as HTMLElement[];
+      const gap = parseFloat(getComputedStyle(col).rowGap) || 0;
+      return kids.reduce((h, k) => {
+        if (k !== box) return h + k.offsetHeight;
+        const cs = getComputedStyle(box);
+        return h + inner.offsetHeight + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) * 2;
+      }, gap * (kids.length - 1));
+    };
+    const fit = () => {
+      if (window.innerWidth < 1024) return setSuggestCount(4);
+      const row = inner.querySelector("li");
+      const rowH = row ? row.getBoundingClientRect().height : 76;
+      const spare = natural(right) - natural(left);
+      const change = Math.floor(spare / rowH);
+      if (change) setSuggestCount((n) => Math.max(2, Math.min(16, n + change)));
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(right);
+    ro.observe(inner);
+    window.addEventListener("resize", fit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [cartReady, cart.length]);
 
   if (!cartReady) return <div className="min-h-[70vh]" />;
 
@@ -297,7 +338,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
         <form ref={formRef} onSubmit={placeOrder} noValidate className="mt-7">
           <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
             {/* Left: the bag, gift packing, offers and suggestions. On phones the two columns interleave (see `order-*`). */}
-            <div className="contents lg:flex lg:flex-col lg:gap-5">
+            <div ref={leftRef} className="contents lg:flex lg:flex-col lg:gap-5">
               <section className="order-1 rounded-3xl border border-line bg-white p-5 md:p-6 lg:order-none">
                 <div className="flex items-baseline justify-between">
                   <h2 className="eyebrow">Your Bag ({cartCount})</h2>
@@ -313,7 +354,14 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 {soldOutLine && <p className="mt-3 text-sm text-red-700">{catalog.getProduct(soldOutLine.slug)?.name} has just sold out. Please remove it to continue.</p>}
               </section>
 
-              <Panel title="Gift Packing" icon={<Gift size={13} strokeWidth={1.6} />} className="order-5 lg:order-none">
+              {/* Right under the bag, like ADC's "Goes great with": as many suggestions as fit beside the right-hand column (see fitSuggestions). */}
+              <div ref={suggestBoxRef} className="order-5 rounded-3xl border border-line bg-white p-5 md:p-6 lg:order-none lg:flex-1">
+                <div ref={suggestRef}>
+                  <QuickAddList count={suggestCount} />
+                </div>
+              </div>
+
+              <Panel title="Gift Packing" icon={<Gift size={13} strokeWidth={1.6} />} className="order-6 lg:order-none">
                 <div className="flex items-center gap-4">
                   <p className="flex-1 text-sm leading-relaxed text-ink/75">
                     <span className="block font-medium text-ink">Send it as a gift</span>
@@ -378,73 +426,10 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 </p>
               </Panel>
 
-              <Panel title="Offers & Coupons" icon={<TicketPercent size={13} strokeWidth={1.6} />} className="order-6 lg:order-none">
-                <div className="flex gap-2">
-                  <label htmlFor="co-code" className="sr-only">
-                    Coupon code
-                  </label>
-                  <input
-                    id="co-code"
-                    placeholder="Enter a coupon code"
-                    value={code}
-                    onChange={(e) => {
-                      setCode(e.target.value);
-                      setCodeMsg("");
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        applyCode();
-                      }
-                    }}
-                    className="field flex-1 uppercase placeholder:normal-case"
-                  />
-                  <button type="button" onClick={() => applyCode()} disabled={!code.trim()} className="btn btn-outline !px-5 disabled:opacity-40">
-                    Apply
-                  </button>
-                </div>
-                {codeMsg && <p className="mt-2 text-xs text-red-700">{codeMsg}</p>}
-                <ul className="mt-4 space-y-2.5">
-                  {Object.entries(COUPONS).map(([c, info]) => {
-                    const on = applied === c;
-                    const why = couponBlocker(c, subtotal);
-                    return (
-                      <li key={c} className={`flex items-center gap-3 rounded-2xl border border-dashed p-3 transition-colors ${on ? "border-ink bg-sand/60" : "border-ink/25"}`}>
-                        <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${on ? "bg-ink text-white" : "bg-sand text-ink"}`}>
-                          <Tag size={16} strokeWidth={1.5} />
-                        </span>
-                        <span className="min-w-0 flex-1 text-sm">
-                          <span className="block font-semibold tracking-[0.08em]">{c}</span>
-                          <span className="block text-xs text-muted">{why || info.label}</span>
-                        </span>
-                        {on ? (
-                          <button type="button" aria-label={`Remove ${c}`} onClick={() => setApplied(null)} className="flex items-center gap-1 rounded-full px-2 py-1 text-xs text-emerald-700 hover:text-ink">
-                            <Check size={14} /> Applied <X size={12} className="ml-1" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={!!why}
-                            onClick={() => applyCode(c)}
-                            className="rounded-full border border-ink px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors hover:bg-ink hover:text-white disabled:border-line disabled:text-muted disabled:hover:bg-transparent disabled:hover:text-muted"
-                          >
-                            Apply
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Panel>
-
-              {/* Grows to meet the bottom of the right-hand column, so neither side ends in empty space. */}
-              <div className="order-8 rounded-3xl border border-line bg-white p-5 md:p-6 lg:order-none lg:flex-1">
-                <QuickAddList count={4} />
-              </div>
             </div>
 
             {/* Right: details, payment and totals */}
-            <div className="contents lg:flex lg:flex-col lg:gap-5">
+            <div ref={rightRef} className="contents lg:flex lg:flex-col lg:gap-5">
               <Panel title="Contact" step={1} className="order-2 lg:order-none">
                 <div className="grid gap-4">
                   <Field name="email" label="Email" type="email" autoComplete="email" {...fieldProps} />
@@ -507,7 +492,66 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 )}
               </Panel>
 
-              <Panel title="Order Summary" className="order-7 lg:order-none lg:flex-1">
+              <Panel title="Offers & Coupons" icon={<TicketPercent size={13} strokeWidth={1.6} />} className="order-7 lg:order-none">
+                <div className="flex gap-2">
+                  <label htmlFor="co-code" className="sr-only">
+                    Coupon code
+                  </label>
+                  <input
+                    id="co-code"
+                    placeholder="Enter a coupon code"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value);
+                      setCodeMsg("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        applyCode();
+                      }
+                    }}
+                    className="field flex-1 uppercase placeholder:normal-case"
+                  />
+                  <button type="button" onClick={() => applyCode()} disabled={!code.trim()} className="btn btn-outline !px-5 disabled:opacity-40">
+                    Apply
+                  </button>
+                </div>
+                {codeMsg && <p className="mt-2 text-xs text-red-700">{codeMsg}</p>}
+                <ul className="mt-4 space-y-2.5">
+                  {Object.entries(COUPONS).map(([c, info]) => {
+                    const on = applied === c;
+                    const why = couponBlocker(c, subtotal);
+                    return (
+                      <li key={c} className={`flex items-center gap-3 rounded-2xl border border-dashed p-3 transition-colors ${on ? "border-ink bg-sand/60" : "border-ink/25"}`}>
+                        <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${on ? "bg-ink text-white" : "bg-sand text-ink"}`}>
+                          <Tag size={16} strokeWidth={1.5} />
+                        </span>
+                        <span className="min-w-0 flex-1 text-sm">
+                          <span className="block font-semibold tracking-[0.08em]">{c}</span>
+                          <span className="block text-xs text-muted">{why || info.label}</span>
+                        </span>
+                        {on ? (
+                          <button type="button" aria-label={`Remove ${c}`} onClick={() => setApplied(null)} className="flex items-center gap-1 rounded-full px-2 py-1 text-xs text-emerald-700 hover:text-ink">
+                            <Check size={14} /> Applied <X size={12} className="ml-1" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!!why}
+                            onClick={() => applyCode(c)}
+                            className="rounded-full border border-ink px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors hover:bg-ink hover:text-white disabled:border-line disabled:text-muted disabled:hover:bg-transparent disabled:hover:text-muted"
+                          >
+                            Apply
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Panel>
+
+              <Panel title="Order Summary" className="order-8 lg:order-none">
                 <dl className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <dt>

@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/server/auth";
 import { getOrder } from "@/lib/server/orders";
 import { formatPrice } from "@/lib/format";
-import { CONTACT, PAYMENT_LABELS } from "@/lib/site";
+import { PAYMENT_LABELS } from "@/lib/site";
+import { loadCatalogData } from "@/lib/server/catalog";
 import { PrintButton } from "./print-button";
 
 export const metadata = { title: "Packing slip" };
 
 /** A printable slip to tuck into the parcel (and to copy the address from). */
 export default async function Slip({ params }: { params: Promise<{ id: string }> }) {
+  const { settings } = await loadCatalogData();
   await requireAdmin();
   const { id } = await params;
   const o = await getOrder(id);
@@ -55,9 +57,9 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
           <p className="leading-relaxed">
             <b className="font-medium">TATTV</b>
             <br />
-            {CONTACT.email}
+            {settings.email}
             <br />
-            {CONTACT.phoneDisplay}
+            {settings.phone}
           </p>
           {cod ? <p className="mt-3 rounded-xl border-2 border-ink p-2 font-semibold">CASH ON DELIVERY: {formatPrice(o.total)}</p> : <p className="mt-3">Payment: {PAYMENT_LABELS[o.payment.status]}</p>}
         </div>

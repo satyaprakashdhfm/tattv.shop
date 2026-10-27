@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Clock, Mail, MapPin, Phone, RotateCcw } from "lucide-react";
 import { WhatsAppIcon } from "@/components/social-icons";
-import { CONTACT, WHATSAPP_HELLO } from "@/lib/site";
+import { telHref, whatsappHello } from "@/lib/site";
+import { loadCatalogData } from "@/lib/server/catalog";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
@@ -10,13 +11,14 @@ export const metadata: Metadata = {
   description: "Email, WhatsApp or call TATTV client care. We reply within 24 hours.",
 };
 
-const CHANNELS = [
-  { icon: Mail, title: "Email", value: CONTACT.email, href: `mailto:${CONTACT.email}`, note: "We reply within 24 hours" },
-  { icon: WhatsAppIcon, title: "WhatsApp", value: CONTACT.phoneDisplay, href: WHATSAPP_HELLO, note: "Message us anytime", external: true },
-  { icon: Phone, title: "Phone", value: CONTACT.phoneDisplay, href: `tel:${CONTACT.phone}`, note: CONTACT.hours },
-];
-
-export default function ContactPage() {
+export default async function ContactPage() {
+  // Contact details come from Admin → Site Settings.
+  const { settings: s } = await loadCatalogData();
+  const CHANNELS = [
+    { icon: Mail, title: "Email", value: s.email, href: `mailto:${s.email}`, note: "We reply within 24 hours" },
+    { icon: WhatsAppIcon, title: "WhatsApp", value: s.whatsapp, href: whatsappHello(s.whatsapp), note: "Message us anytime", external: true },
+    { icon: Phone, title: "Phone", value: s.phone, href: telHref(s.phone), note: s.hours },
+  ];
   return (
     <div className="container-x py-14 md:py-20">
       <div className="mx-auto max-w-2xl text-center">
@@ -51,7 +53,7 @@ export default function ContactPage() {
               </span>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">Studio</p>
-                {CONTACT.address.map((line) => (
+                {s.address.split("\n").map((line) => (
                   <p key={line} className="mt-1 text-ink/85">
                     {line}
                   </p>
@@ -65,7 +67,7 @@ export default function ContactPage() {
           <div className="rounded-3xl border border-line bg-white p-7">
             <Clock size={20} strokeWidth={1.3} />
             <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em]">Support Hours</p>
-            <p className="mt-2 text-sm text-ink/75">{CONTACT.hours}</p>
+            <p className="mt-2 text-sm text-ink/75">{s.hours}</p>
             <p className="mt-1 text-sm text-ink/75">Messages sent outside these hours are answered the next working day.</p>
           </div>
           <Link href="/returns" className="group block rounded-3xl border border-line bg-white p-7 transition-colors hover:border-ink">

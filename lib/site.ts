@@ -1,7 +1,8 @@
 // Store-wide settings. Safe to import from browser and server code: nothing secret lives here
 // (secrets come from environment variables).
 
-// Contact details. Placeholders: replace with TATTV's real numbers.
+// Starting contact details. The live values are edited in Admin → Site Settings (see StoreSettings);
+// these are only the defaults for a new store. Placeholders: replace in the admin with TATTV's real details.
 export const CONTACT = {
   email: "care@tattv.shop",
   phoneDisplay: "+91 00000 00000",
@@ -17,14 +18,29 @@ export const CONTACT = {
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://tattv.shop";
 
 /**
- * Default social links for the ribbon and footer. The live values are edited in Admin → Settings.
+ * Default site settings: social links for the ribbon and footer, and the contact details shown
+ * across the store. The live values are edited in Admin → Site Settings.
  * Facebook and X are placeholders until TATTV's real pages are added there.
  */
-export const DEFAULT_SOCIAL = {
+export const DEFAULT_SETTINGS = {
   instagram: CONTACT.instagram,
   facebook: "https://www.facebook.com/",
   twitter: "https://x.com/",
+  youtube: CONTACT.youtube,
+  announcement: "",
+  email: CONTACT.email,
+  phone: CONTACT.phoneDisplay,
+  whatsapp: CONTACT.phoneDisplay,
+  hours: CONTACT.hours,
+  address: CONTACT.address.join("\n"),
 };
+
+/** Digits for wa.me / tel: links; a 10-digit Indian number gets its 91 country code. */
+export const phoneDigits = (v: string) => {
+  const d = String(v || "").replace(/\D/g, "");
+  return d.length === 10 ? `91${d}` : d;
+};
+export const telHref = (phone: string) => `tel:+${phoneDigits(phone)}`;
 
 /** Return/exchange window in days, used in copy and the request form. */
 export const RETURN_WINDOW_DAYS = 15;
@@ -85,7 +101,8 @@ export const PAYMENT_LABELS = {
 
 export type PaymentStatus = keyof typeof PAYMENT_LABELS;
 
-export const whatsappLink = (text: string) => `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(text)}`;
+/** A WhatsApp chat with the store (number from Site Settings), with a message typed in. */
+export const whatsappLink = (text: string, number: string = CONTACT.whatsapp) => `https://wa.me/${phoneDigits(number)}?text=${encodeURIComponent(text)}`;
 
 /** The general "talk to us" WhatsApp link: the floating button, footer, contact and help pages. */
-export const WHATSAPP_HELLO = whatsappLink("Hi TATTV! I’d love to know more about your products");
+export const whatsappHello = (number: string) => whatsappLink("Hi TATTV! I’d love to know more about your products", number);

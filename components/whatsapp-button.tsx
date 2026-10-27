@@ -1,10 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { WHATSAPP_HELLO } from "@/lib/site";
+import { whatsappHello } from "@/lib/site";
 import { WhatsAppIcon } from "./social-icons";
 import { useCheckoutBarShown } from "./checkout-bar";
-import { useStore } from "./store-provider";
+import { useCatalog, useStore } from "./store-provider";
 
 /**
  * Floating WhatsApp chat button, bottom right on every storefront page. On phones it sits above
@@ -12,6 +12,7 @@ import { useStore } from "./store-provider";
  */
 export function WhatsAppButton() {
   const { cartOpen } = useStore();
+  const { settings } = useCatalog();
   const pathname = usePathname();
   const barShown = useCheckoutBarShown();
   if (cartOpen) return null;
@@ -20,7 +21,7 @@ export function WhatsAppButton() {
 
   return (
     <a
-      href={WHATSAPP_HELLO}
+      href={whatsappHello(settings.whatsapp)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"

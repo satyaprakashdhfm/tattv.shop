@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { CONTACT } from "@/lib/site";
+import { useCatalog } from "./store-provider";
 import { REELS, reelPoster, reelVideo } from "@/lib/reels";
 import { InstagramIcon } from "./social-icons";
 import { HeadingRule } from "./section-heading";
@@ -17,6 +18,9 @@ import { useMarquee } from "./use-marquee";
  * holds still so the clip being listened to doesn't slide away.
  */
 export function InstagramReels() {
+  const { settings } = useCatalog();
+  const instagram = settings.instagram || CONTACT.instagram;
+  const handle = "@" + (instagram.match(/instagram\.com\/([^/?#]+)/)?.[1] ?? "tattv.shop");
   const track = useRef<HTMLUListElement>(null);
   const videos = useRef<(HTMLVideoElement | null)[]>([]);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -106,8 +110,8 @@ export function InstagramReels() {
         <button type="button" aria-label="Previous reels" onClick={() => nudge(-1)} className={arrow}>
           <ChevronLeft size={18} strokeWidth={1.5} />
         </button>
-        <a href={CONTACT.instagram} target="_blank" rel="noopener noreferrer" className="btn btn-dark h-11 rounded-full px-6">
-          <InstagramIcon size={15} strokeWidth={1.5} /> Follow {CONTACT.instagramHandle}
+        <a href={instagram} target="_blank" rel="noopener noreferrer" className="btn btn-dark h-11 rounded-full px-6">
+          <InstagramIcon size={15} strokeWidth={1.5} /> Follow {handle}
         </a>
         <button type="button" aria-label="More reels" onClick={() => nudge(1)} className={arrow}>
           <ChevronRight size={18} strokeWidth={1.5} />

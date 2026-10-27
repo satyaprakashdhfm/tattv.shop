@@ -2,12 +2,21 @@
 // and is edited in the admin. Pure functions, used on the server and in the browser.
 import type { Category, CategoryId, Product } from "./products";
 
+/** Edited in Admin → Site Settings. */
 export interface StoreSettings {
   instagram: string;
   facebook: string;
   twitter: string;
+  youtube: string;
   /** Shown first in the announcement ribbon when set. */
   announcement: string;
+  /** Contact details shown across the store. */
+  email: string;
+  phone: string;
+  whatsapp: string;
+  hours: string;
+  /** Studio address, one line per row. */
+  address: string;
 }
 
 export interface CatalogData {

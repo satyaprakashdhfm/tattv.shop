@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Check, Package } from "lucide-react";
+import { motion } from "motion/react";
+import { ArrowRight, Check, Package, ShoppingBag } from "lucide-react";
+import { Confetti } from "@/components/confetti";
+import { useCatalog, useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUSES, PAYMENT_LABELS, TRACKER_STEPS, whatsappLink, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { api, orderToken, rememberOrder } from "@/lib/client-api";
@@ -30,6 +33,9 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { dateStyle:
 export function OrderView({ id }: { id: string }) {
   const params = useSearchParams();
   const [order, setOrder] = useState<OrderView | null | undefined>(undefined);
+  const [celebrate, setCelebrate] = useState(false);
+  const { account } = useStore();
+  const { settings } = useCatalog();
 
   useEffect(() => {
     const t = params.get("t");
@@ -43,6 +49,20 @@ export function OrderView({ id }: { id: string }) {
     const timer = setInterval(load, 60_000);
     return () => clearInterval(timer);
   }, [id, params]);
+
+  // Confetti the first time a confirmed order is opened on this device, not on later visits.
+  const live = !!order && order.status !== "pending_payment" && order.status !== "cancelled";
+  useEffect(() => {
+    if (!live) return;
+    const key = `tattv.celebrated.${id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+    } catch {
+      // Storage unavailable: celebrate anyway.
+    }
+    setCelebrate(true);
+  }, [live, id]);
 
   if (order === undefined) return <div className="min-h-[60vh]" />;
   if (order === null) {
@@ -61,15 +81,36 @@ export function OrderView({ id }: { id: string }) {
   const awaiting = order.status === "pending_payment";
   const cancelled = order.status === "cancelled";
   const step = TRACKER_STEPS.indexOf(order.status);
-  const help = whatsappLink(`Hi TATTV! A question about my order ${order.id}`);
+  const help = whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.whatsapp);
 
   return (
     <div className="container-x max-w-3xl py-12 md:py-16">
-      <section className="rounded-3xl border border-line bg-white p-6 text-center md:p-10">
+      <section className="relative rounded-3xl border border-line bg-white p-6 text-center md:p-10">
         {!awaiting && !cancelled && (
-          <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-ink text-white">
-            <Check size={26} />
-          </span>
+          <div className="relative mx-auto size-14">
+            {celebrate && (
+              <>
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-0 rounded-full border-2 border-[#c9a35c]"
+                  initial={{ scale: 1, opacity: 0.9 }}
+                  animate={{ scale: 2.6, opacity: 0 }}
+                  transition={{ duration: 1.1, ease: "easeOut" }}
+                />
+                <div className="absolute inset-x-0 top-1/2">
+                  <Confetti />
+                </div>
+              </>
+            )}
+            <motion.span
+              className="relative flex size-14 items-center justify-center rounded-full bg-ink text-white"
+              initial={celebrate ? { scale: 0.4 } : false}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 380, damping: 14 }}
+            >
+              <Check size={26} />
+            </motion.span>
+          </div>
         )}
         <p className="eyebrow mt-6 text-muted">Order {order.id}</p>
         <h1 className="title mt-3 text-xl md:text-2xl">
@@ -132,6 +173,14 @@ export function OrderView({ id }: { id: string }) {
             )}
           </p>
         )}
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href="/shop" className="btn btn-outline h-12 px-7">
+            <ShoppingBag size={15} strokeWidth={1.6} /> Continue Shopping
+          </Link>
+          <Link href={account ? "/account" : `/orders/track?id=${order.id}`} className="btn btn-dark h-12 px-7">
+            Track Your Order <ArrowRight size={15} />
+          </Link>
+        </div>
       </section>
 
       <section className="mt-5 rounded-3xl border border-line bg-white p-6 md:p-8">
