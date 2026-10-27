@@ -31,6 +31,9 @@ export interface Product {
   short: string;
   description: string;
   details: string[];
+  /** Care and Shipping & Returns points for this piece; when absent the standard text applies (lib/product-copy.ts). */
+  care?: string[];
+  shippingReturns?: string[];
 }
 
 /** `name` is the plain label (menus, filters, breadcrumbs); `title` is the editorial name shown on tiles and page headers. */

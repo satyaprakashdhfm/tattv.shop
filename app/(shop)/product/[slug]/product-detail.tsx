@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ArrowLeft, BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck } from "lucide-react";
 import { MATERIALS, type Product } from "@/lib/products";
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
+import { DEFAULT_SHIPPING_RETURNS, defaultCare } from "@/lib/product-copy";
 import { ProductImage } from "@/components/product-image";
 import { useStore } from "@/components/store-provider";
 
@@ -109,25 +110,11 @@ export function ProductDetail({ product }: { product: Product }) {
     },
     {
       title: "Care",
-      body:
-        product.finish === "leather" ? (
-          <p>Wipe clean with a soft dry cloth. Condition every few months and keep away from direct heat and prolonged moisture to preserve the patina.</p>
-        ) : (
-          <ul className="space-y-2">
-            <li>Store in the TATTV pouch, away from moisture and perfume.</li>
-            <li>Wipe gently with a soft, dry cloth after wearing.</li>
-            <li>Remove before swimming, showering or exercising.</li>
-          </ul>
-        ),
+      body: <Points lines={product.care ?? defaultCare(product.finish)} />,
     },
     {
       title: "Shipping & Returns",
-      body: (
-        <div className="space-y-3">
-          <p>Complimentary insured shipping on orders above {formatPrice(FREE_SHIPPING_THRESHOLD)}. Dispatched within 24 hours.</p>
-          <p>Returns and exchanges accepted within 15 days of delivery (engraved pieces are final sale).</p>
-        </div>
-      ),
+      body: <Points lines={product.shippingReturns ?? DEFAULT_SHIPPING_RETURNS} />,
     },
   ];
   const activeTab = tabs.find((t) => t.title === tab) ?? tabs[0];
@@ -329,5 +316,16 @@ export function ProductDetail({ product }: { product: Product }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Care / Shipping & Returns points, edited per product in the admin. */
+function Points({ lines }: { lines: string[] }) {
+  return (
+    <ul className="space-y-2">
+      {lines.map((l) => (
+        <li key={l}>{l}</li>
+      ))}
+    </ul>
   );
 }

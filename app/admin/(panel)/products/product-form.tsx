@@ -5,6 +5,7 @@ import { startTransition, useActionState, useEffect, useRef, useState } from "re
 import { COLLECTIONS, MATERIALS, type Category, type Product } from "@/lib/products";
 import { shrinkImage } from "@/lib/shrink-image";
 import { deleteProductAction, saveProductAction } from "../../actions";
+import { DEFAULT_SHIPPING_RETURNS, defaultCare } from "@/lib/product-copy";
 
 let nextKey = 0;
 type Photo = { key: number; url?: string; file?: File; preview?: string };
@@ -113,11 +114,24 @@ export function ProductForm({ product, categories, savedNotice, returnTo }: { pr
               <textarea id="f-details" name="details" rows={4} defaultValue={p.details?.join("\n")} placeholder={"Face: 13 × 13mm\nStainless steel, natural onyx"} className="adm-input" />
               <p className="mt-1 text-xs text-muted">Shown as bullet points; a line with a measurement (e.g. “Width: 8mm”) also fills the Dimensions row.</p>
             </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="f-care" className="adm-label">
+                Care (one per line)
+              </label>
+              <textarea id="f-care" name="care" rows={3} defaultValue={(p.care ?? defaultCare(p.finish)).join("\n")} className="adm-input" />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="f-ship" className="adm-label">
+                Shipping &amp; Returns (one per line)
+              </label>
+              <textarea id="f-ship" name="shippingReturns" rows={4} defaultValue={(p.shippingReturns ?? DEFAULT_SHIPPING_RETURNS).join("\n")} className="adm-input" />
+              <p className="mt-1 text-xs text-muted">Both start with the store&apos;s standard text. Edit them for this piece if needed; left unchanged, they follow the standard.</p>
+            </div>
           </section>
 
           <section className="adm-card">
             <h2 className="adm-h2">Photos</h2>
-            <p className="mb-4 text-xs text-muted">The first photo is the main one in the shop; the second shows on hover. Use the arrows to reorder.</p>
+            <p className="mb-4 text-xs text-muted">Add as many photos as you like: choose several at once, or press + Add Photos again. The first is the main one in the shop and the second shows on hover; use the arrows to reorder.</p>
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {photos.map((img, i) => (
                 <li key={img.key} className={`relative overflow-hidden rounded-2xl border bg-sand ${i === 0 ? "border-ink" : "border-line"}`}>

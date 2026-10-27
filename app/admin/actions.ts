@@ -120,6 +120,8 @@ export async function saveProductAction(_prev: FormState, fd: FormData): Promise
         short: str(fd, "short"),
         description: str(fd, "description"),
         details: str(fd, "details"),
+        care: str(fd, "care"),
+        shippingReturns: str(fd, "shippingReturns"),
         active: fd.get("active") === "on",
         images,
       },

@@ -6,6 +6,7 @@ import { makeCatalog, type CatalogData, type StoreSettings } from "@/lib/catalog
 import type { Category, Finish, Product } from "@/lib/products";
 import { OrderError } from "@/lib/pricing";
 import { DEFAULT_SETTINGS } from "@/lib/site";
+import { DEFAULT_SHIPPING_RETURNS, customLines, defaultCare } from "@/lib/product-copy";
 import { query, transaction } from "./db";
 
 // Catalogue storage: categories, products (+ product_images) and the store settings row.
@@ -35,6 +36,8 @@ interface ProductRow {
   short: string;
   description: string;
   details: string[];
+  care: string[] | null;
+  shipping_returns: string[] | null;
   stock: number | null;
   active: boolean;
   images: string[] | null;
@@ -60,6 +63,8 @@ const toProduct = (r: ProductRow): Product => ({
   short: r.short,
   description: r.description,
   details: r.details,
+  ...(r.care?.length ? { care: r.care } : {}),
+  ...(r.shipping_returns?.length ? { shippingReturns: r.shipping_returns } : {}),
 });
 
 /** Everything, including hidden products (for the admin and order pricing). */
@@ -166,6 +171,8 @@ export interface ProductInput {
   short: string;
   description: string;
   details: string;
+  care: string;
+  shippingReturns: string;
   active: boolean;
   images: string[];
 }
@@ -207,19 +214,20 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
       String(input.short || "").trim().slice(0, 300), String(input.description || "").trim().slice(0, 5000),
       String(input.details || "").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 20),
       stock, !!input.active,
+      customLines(input.care, defaultCare(String(input.finish))), customLines(input.shippingReturns, DEFAULT_SHIPPING_RETURNS),
     ];
     if (isNew) {
       await db.query(
         `INSERT INTO products (slug, name, category_id, collection, price, compare_at, material, finish, size_label, size_values,
-           badge, is_new, bestseller, short, description, details, stock, active, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM products))`,
+           badge, is_new, bestseller, short, description, details, stock, active, care, shipping_returns, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM products))`,
         values,
       );
     } else {
       await db.query(
         `UPDATE products SET name=$2, category_id=$3, collection=$4, price=$5, compare_at=$6, material=$7, finish=$8, size_label=$9,
            size_values=$10, badge=$11, is_new=$12, bestseller=$13, short=$14, description=$15, details=$16, stock=$17, active=$18,
-           updated_at=now() WHERE slug=$1`,
+           care=$19, shipping_returns=$20, updated_at=now() WHERE slug=$1`,
         values,
       );
     }

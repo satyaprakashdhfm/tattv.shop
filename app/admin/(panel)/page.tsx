@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ClickRow } from "./click-row";
-import { CalendarDays, CalendarRange, IndianRupee, MessageSquare, Package, Truck, Wallet, Boxes } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Boxes, MessageSquare, Package, Truck, Wallet } from "lucide-react";
 import { formatPrice } from "@/lib/format";
 import { loadCatalogData } from "@/lib/server/catalog";
 import { isLive, listMessages, listOrders, paymentConfig } from "@/lib/server/orders";
@@ -16,17 +16,39 @@ const startOfDay = (t: number) => {
   return d.getTime();
 };
 
-export default async function Dashboard() {
+/** The dashboard's period filter (?range=…); 7 days by default. */
+const RANGES = [
+  { id: "today", days: 1, label: "Today" },
+  { id: "7d", days: 7, label: "7 days" },
+  { id: "30d", days: 30, label: "30 days" },
+  { id: "90d", days: 90, label: "90 days" },
+] as const;
+
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+  const { range: rangeId } = await searchParams;
+  const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[1];
   const [orders, messages, { products }] = await Promise.all([listOrders(), listMessages(), loadCatalogData()]);
   const live = orders.filter(isLive);
   const today = startOfDay(Date.now());
-  const since = (days: number) => live.filter((o) => Date.parse(o.createdAt) >= today - (days - 1) * DAY);
+  const between = (from: number, to: number) =>
+    live.filter((o) => {
+      const t = Date.parse(o.createdAt);
+      return t >= from && t < to;
+    });
   const sum = (list: typeof live) => list.reduce((s, o) => s + o.total, 0);
+  const itemsIn = (list: typeof live) => list.reduce((n, o) => n + o.lines.reduce((m, l) => m + l.qty, 0), 0);
 
-  const periods: [string, typeof live, typeof IndianRupee][] = [
-    ["Today", since(1), IndianRupee],
-    ["Last 7 days", since(7), CalendarDays],
-    ["Last 30 days", since(30), CalendarRange],
+  // The chosen period, and the one just before it for comparison.
+  const from = today - (range.days - 1) * DAY;
+  const current = between(from, today + DAY);
+  const previous = between(from - range.days * DAY, from);
+  const stat = (now: number, before: number) => ({ now, change: before ? Math.round(((now - before) / before) * 100) : null });
+  const avg = (list: typeof live) => (list.length ? Math.round(sum(list) / list.length) : 0);
+  const kpis = [
+    { label: "Revenue", ...stat(sum(current), sum(previous)), money: true },
+    { label: "Orders", ...stat(current.length, previous.length), money: false },
+    { label: "Average order", ...stat(avg(current), avg(previous)), money: true },
+    { label: "Items sold", ...stat(itemsIn(current), itemsIn(previous)), money: false },
   ];
   const newMessages = messages.filter((m) => m.status === "new").length;
   const queue: [string, string, number, typeof Package][] = [
@@ -38,9 +60,10 @@ export default async function Dashboard() {
   ];
   const unpaid = orders.filter((o) => o.status === "pending_payment" && Date.parse(o.createdAt) > Date.now() - 7 * DAY).length;
 
-  // Revenue per day, last 14 days.
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const start = today - (13 - i) * DAY;
+  // Revenue per day across the chosen period (at least a week, so "Today" still has a shape).
+  const chartDays = Math.max(7, range.days);
+  const days = Array.from({ length: chartDays }, (_, i) => {
+    const start = today - (chartDays - 1 - i) * DAY;
     const list = live.filter((o) => {
       const t = Date.parse(o.createdAt);
       return t >= start && t < start + DAY;
@@ -49,9 +72,9 @@ export default async function Dashboard() {
   });
   const peak = Math.max(1, ...days.map((d) => d.revenue));
 
-  // Units sold per piece, last 30 days.
+  // Units sold per piece in the chosen period.
   const units: Record<string, number> = {};
-  for (const o of since(30)) for (const l of o.lines) units[l.slug] = (units[l.slug] || 0) + l.qty;
+  for (const o of current) for (const l of o.lines) units[l.slug] = (units[l.slug] || 0) + l.qty;
   const best = Object.entries(units).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const nameOf = (slug: string) => products.find((p) => p.slug === slug)?.name || slug;
 
@@ -76,22 +99,42 @@ export default async function Dashboard() {
         </a>
       </PageHead>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        {periods.map(([label, list, Icon]) => (
-          <div key={label} className="adm-card transition-shadow duration-300 hover:shadow-lift">
-            <p className="flex items-center gap-3 text-sm text-muted">
-              <span className="flex size-10 items-center justify-center rounded-2xl bg-sand text-ink">
-                <Icon size={18} strokeWidth={1.7} />
-              </span>
-              {label}
-            </p>
-            <p className="mt-4 text-3xl font-semibold tracking-tight">{formatPrice(sum(list))}</p>
-            <p className="mt-1 text-xs text-muted">
-              {list.length} {list.length === 1 ? "order" : "orders"}
-              {list.length ? ` · avg ${formatPrice(Math.round(sum(list) / list.length))}` : ""}
-            </p>
-          </div>
-        ))}
+      <section className="adm-card !p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-4">
+          <h2 className="adm-h2 !mb-0">Sales overview</h2>
+          {/* Period filter: a quiet segmented control. */}
+          <nav aria-label="Period" className="flex rounded-full bg-[#f1f1ef] p-1 text-xs">
+            {RANGES.map((r) => (
+              <Link
+                key={r.id}
+                href={r.id === "7d" ? "/admin" : `/admin?range=${r.id}`}
+                scroll={false}
+                aria-current={r.id === range.id ? "page" : undefined}
+                className={`rounded-full px-3.5 py-1.5 transition-colors ${r.id === range.id ? "bg-white font-medium text-ink shadow-soft" : "text-ink/55 hover:text-ink"}`}
+              >
+                {r.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <dl className="grid grid-cols-2 divide-line md:grid-cols-4 md:divide-x">
+          {kpis.map((k) => (
+            <div key={k.label} className="px-6 py-5">
+              <dt className="text-xs text-muted">{k.label}</dt>
+              <dd className="mt-2 text-2xl font-semibold tracking-tight">{k.money ? formatPrice(k.now) : k.now}</dd>
+              <dd className="mt-1 flex items-center gap-1 text-[11px] text-ink/50">
+                {k.change === null ? (
+                  "No earlier data"
+                ) : (
+                  <>
+                    {k.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                    <span className="font-medium text-ink/70">{Math.abs(k.change)}%</span> vs previous {range.days === 1 ? "day" : `${range.days} days`}
+                  </>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
@@ -99,31 +142,40 @@ export default async function Dashboard() {
           <Link
             key={label}
             href={href}
-            className={`rounded-3xl border p-5 shadow-soft transition-[box-shadow,transform,background-color] duration-300 hover:-translate-y-0.5 hover:shadow-lift ${n ? "border-ink bg-ink text-white" : "border-line bg-white"}`}
+            className="group rounded-3xl border border-line bg-white p-5 shadow-soft transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-lift"
           >
-            <span className={`flex size-9 items-center justify-center rounded-xl ${n ? "bg-white/10" : "bg-sand"}`}>
-              <Icon size={16} strokeWidth={1.7} />
-            </span>
-            <p className="mt-4 text-3xl font-semibold tracking-tight">{n}</p>
-            <p className={`mt-1 text-xs ${n ? "text-white/70" : "text-muted"}`}>{label}</p>
+            <div className="flex items-center justify-between">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-[#f1f1ef] text-ink/60">
+                <Icon size={16} strokeWidth={1.7} />
+              </span>
+              {n > 0 && <span className="size-2 rounded-full bg-ink/70" aria-label="Needs attention" />}
+            </div>
+            <p className={`mt-4 text-3xl font-semibold tracking-tight ${n ? "text-ink" : "text-ink/30"}`}>{n}</p>
+            <p className="mt-1 text-xs text-muted">{label}</p>
           </Link>
         ))}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <section className="adm-card">
-          <h2 className="adm-h2">Sales, last 14 days</h2>
+          <h2 className="adm-h2">Sales, last {chartDays} days</h2>
           {/* Daily sales as bars on a baseline; hover (or tab to) a day for its takings and order count. */}
-          <div className="mb-8 flex h-48 items-end gap-0.5 border-b border-line pt-2.5" role="img" aria-label={`Daily sales for the last 14 days, highest ${formatPrice(peak)}`}>
-            {days.map((d) => {
+          <div className="mb-8 flex h-48 items-end gap-0.5 border-b border-line pt-2.5" role="img" aria-label={`Daily sales for the last ${chartDays} days, highest ${formatPrice(peak)}`}>
+            {days.map((d, i) => {
               const label = new Date(d.start).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
               return (
                 <div key={d.start} tabIndex={0} className="group relative flex h-full flex-1 flex-col items-center justify-end outline-none">
                   <span className="pointer-events-none absolute bottom-[calc(100%+4px)] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus:opacity-100">
                     {label}: {formatPrice(d.revenue)} · {d.orders} {d.orders === 1 ? "order" : "orders"}
                   </span>
-                  <span className="min-h-0.5 w-full max-w-7 rounded-t bg-ink/80 transition-colors duration-150 group-hover:bg-ink group-focus:bg-ink" style={{ height: `${(d.revenue / peak) * 100}%` }} />
-                  <span className="absolute -bottom-[22px] text-[11px] text-muted">{new Date(d.start).getDate()}</span>
+                  <span
+                    className={`min-h-0.5 w-full max-w-7 rounded-t transition-colors duration-150 group-hover:bg-ink/70 group-focus:bg-ink/70 ${d.start === today ? "bg-ink/45" : "bg-[#d9d9d6]"}`}
+                    style={{ height: `${(d.revenue / peak) * 100}%` }}
+                  />
+                  {/* Every day labelled up to two weeks; beyond that, every few days. */}
+                  {(chartDays <= 14 || i % Math.ceil(chartDays / 12) === 0 || d.start === today) && (
+                    <span className="absolute -bottom-[22px] text-[11px] text-muted">{new Date(d.start).getDate()}</span>
+                  )}
                 </div>
               );
             })}
@@ -135,7 +187,7 @@ export default async function Dashboard() {
         </section>
 
         <section className="adm-card">
-          <h2 className="adm-h2">Best sellers (30 days)</h2>
+          <h2 className="adm-h2">Best sellers ({range.days === 1 ? "today" : `${range.days} days`})</h2>
           {best.length === 0 ? (
             <p className="text-sm text-muted">No sales yet.</p>
           ) : (

@@ -152,6 +152,10 @@ CREATE TABLE IF NOT EXISTS messages (
   status     text NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'read', 'archived'))
 );
 
+-- Per-product Care and Shipping & Returns text (empty = the standard text).
+ALTER TABLE products ADD COLUMN IF NOT EXISTS care text[] NOT NULL DEFAULT '{}';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS shipping_returns text[] NOT NULL DEFAULT '{}';
+
 -- Gift packing (added after launch of the schema, so existing databases get the columns too).
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_wrap integer NOT NULL DEFAULT 0;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_message text NOT NULL DEFAULT '';
