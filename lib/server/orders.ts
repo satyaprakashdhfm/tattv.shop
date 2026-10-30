@@ -145,18 +145,48 @@ async function confirm(db: PoolClient, o: Order, note: string) {
   }
 }
 
-/** Tells the store about a new confirmed order, by email to the store inbox (Site Settings email, or STORE_EMAIL). */
+/**
+ * A new confirmed order: an alert to the store inbox (Site Settings email, or STORE_EMAIL) and a
+ * confirmation to the customer with the link to their order page.
+ */
 async function alertNewOrder(o: Order) {
   const c = o.customer;
+  const items = o.lines.map((l) => `${l.qty} × ${l.name}${l.size ? ` (${l.size})` : ""}  ₹${(l.price * l.qty).toLocaleString("en-IN")}`);
+  const inbox = await storeInbox();
   await sendMail({
-    to: await storeInbox(),
+    to: c.email,
+    replyTo: inbox,
+    subject: `Your TATTV order ${o.id} is confirmed`,
+    text: [
+      `Hi ${c.firstName},`,
+      "",
+      `Thank you for your order. We're preparing it now and will share tracking as soon as it ships.`,
+      "",
+      ...items,
+      o.discount ? `Discount (${o.discountCode}): −₹${o.discount.toLocaleString("en-IN")}` : null,
+      `Shipping: ${o.shipping ? `₹${o.shipping}` : "Free"}`,
+      `Total: ₹${o.total.toLocaleString("en-IN")}${o.payment.method === "cod" ? " (to pay on delivery)" : " (paid)"}`,
+      "",
+      `Delivering to: ${c.address}${c.apartment ? `, ${c.apartment}` : ""}, ${c.city}, ${c.state} ${c.pin}`,
+      "",
+      `Follow your order: ${SITE_URL}/orders/${o.id}?t=${o.token}`,
+      "",
+      `Questions? Reply to this email or write to ${inbox}.`,
+      "TATTV",
+    ]
+      .filter((l) => l !== null)
+      .join("\n"),
+  }).catch((e) => console.error("Could not send the order confirmation", e));
+  await sendMail({
+    to: inbox,
+    audience: "store",
     replyTo: c.email,
     subject: `New order ${o.id}: ₹${o.total.toLocaleString("en-IN")} (${o.payment.method === "cod" ? "cash on delivery" : "paid online"})`,
     text: [
       `${c.firstName} ${c.lastName} · +91 ${c.phone} · ${c.email}`,
       `${c.address}${c.apartment ? `, ${c.apartment}` : ""}, ${c.city}, ${c.state} ${c.pin}`,
       "",
-      ...o.lines.map((l) => `${l.qty} × ${l.name}${l.size ? ` (${l.size})` : ""}  ₹${(l.price * l.qty).toLocaleString("en-IN")}`),
+      ...items,
       o.discountCode ? `Coupon ${o.discountCode}: −₹${o.discount.toLocaleString("en-IN")}` : null,
       o.gift ? `Gift packing${o.gift.occasion ? ` (${o.gift.occasion})` : ""}${o.gift.message ? `: "${o.gift.message}"` : ""}` : null,
       `Total ₹${o.total.toLocaleString("en-IN")}`,
@@ -448,6 +478,7 @@ export async function createMessage(input: Record<string, unknown>) {
   // Also emailed to the store, so the team can reply straight from their inbox. Saved first, so a mail problem never loses a message.
   await sendMail({
     to: await storeInbox(),
+    audience: "store",
     replyTo: m.email,
     subject: `${m.kind === "return" ? "Return request" : "New message"}: ${m.subject || "(no subject)"}`,
     text: [`From: ${m.name || "(no name)"} <${m.email}>${m.phone ? ` · ${m.phone}` : ""}`, "", m.body].join("\n"),

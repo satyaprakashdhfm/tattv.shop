@@ -17,6 +17,9 @@ import { query, transaction } from "./db";
 //
 // With neither, local development shows the code on screen (anyone could then sign in as any number, so
 // never on the live site), and the live site says mobile login is coming soon.
+//
+// Switched off until CUSTOMER_OTP_LOGIN=true, even with the MSG91 keys in place: until then the account
+// page offers the preview (test) account only.
 
 const isProd = process.env.NODE_ENV === "production";
 const authkey = () => process.env.MSG91_TOKEN || process.env.MSG91_AUTH_KEY || "";
@@ -27,7 +30,8 @@ const PER_HOUR = 5;
 export const widgetReady = () => !!(authkey() && process.env.MSG91_WIDGET_ID && process.env.MSG91_WIDGET_TOKEN);
 export const templateReady = () => !!(authkey() && process.env.MSG91_TEMPLATE_ID);
 const showCode = () => !widgetReady() && !templateReady() && !isProd;
-export const otpAvailable = () => widgetReady() || templateReady() || showCode();
+export const otpSwitchedOn = () => process.env.CUSTOMER_OTP_LOGIN === "true";
+export const otpAvailable = () => otpSwitchedOn() && (widgetReady() || templateReady() || showCode());
 
 /** What the browser needs to show the right login form. */
 export function otpConfig() {

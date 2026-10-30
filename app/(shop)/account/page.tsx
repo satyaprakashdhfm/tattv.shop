@@ -139,7 +139,6 @@ function SignIn() {
           </div>
         ) : (
           <>
-            <p className="mt-8 rounded-2xl bg-sand px-5 py-4 text-center text-sm text-ink/75">Sign-in with your mobile number is coming soon. You can check out as a guest meanwhile.</p>
             <PreviewSignIn />
           </>
         )}
