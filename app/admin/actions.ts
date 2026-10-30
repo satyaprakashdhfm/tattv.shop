@@ -7,7 +7,7 @@ import { checkAdminLogin, endAdminSession, requireAdmin, startAdminSession } fro
 import { adminUpdateOrder, listOrders, setMessageStatus } from "@/lib/server/orders";
 import { OrderError } from "@/lib/pricing";
 import { deleteCoupon, saveCoupon, setCouponActive } from "@/lib/server/coupons";
-import { deleteReview, setReviewStatus } from "@/lib/server/reviews";
+import { deleteReview, saveReview, setReviewStatus } from "@/lib/server/reviews";
 import { resetPolicy, savePolicy } from "@/lib/server/policies";
 import { awaitingPickup, bookShipment, cancelBooking, refreshAllInTransit, refreshTracking, registerPickup, requestPickup } from "@/lib/server/shipments";
 import { deletePickupAddress, saveParcelSettings, savePickupAddress, saveWeights, setDefaultPickup } from "@/lib/server/pickup";
@@ -431,4 +431,15 @@ export async function refreshAllTrackingAction() {
     const r = await refreshAllInTransit();
     return r.checked ? `Asked Delhivery about ${r.checked} parcel${r.checked === 1 ? "" : "s"}.` : "No parcels are on their way.";
   });
+}
+
+export async function saveReviewAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const res = await attempt(() => saveReview(Object.fromEntries(fd)));
+  if (res && typeof res === "object" && "error" in res) return res;
+  revalidatePath("/admin/reviews");
+  revalidatePath("/");
+  const back = backTo(fd, { saved: "1" });
+  if (back) redirect(back);
+  return { ok: "Saved." };
 }

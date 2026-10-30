@@ -7,13 +7,17 @@ import { getOrderFor } from "./orders";
 
 // Customer reviews: once an order is delivered, its page asks for a star rating (1 to 5) and a few
 // words. One per order. Each waits in Admin → Reviews; only the ones the admin publishes show on the
-// home page, marked Verified (they come from a real, delivered order).
+// home page. Reviews from real, delivered orders are marked Verified. The admin can also write reviews
+// (source "admin") and edit any review; the starting samples have source "sample".
 
 export type ReviewStatus = "pending" | "published" | "hidden";
 
+export type ReviewSource = "order" | "admin" | "sample";
+
 export interface StoredReview {
   id: string;
-  orderId: string;
+  orderId: string | null;
+  source: ReviewSource;
   createdAt: string;
   rating: number;
   title: string;
@@ -27,6 +31,7 @@ export interface StoredReview {
 const toReview = (r: any): StoredReview => ({
   id: r.id,
   orderId: r.order_id,
+  source: r.source,
   createdAt: new Date(r.created_at).toISOString(),
   rating: r.rating,
   title: r.title,
@@ -87,6 +92,27 @@ export async function publishedReviews(): Promise<Review[]> {
     name: x.name || "TATTV customer",
     city: x.city,
     rating: x.rating,
-    verified: true,
+    verified: x.source === "order",
   }));
+}
+
+/** Admin → Reviews: edit a review, or write a new one (no `id`). */
+export async function saveReview(input: { id?: unknown; rating?: unknown; title?: unknown; body?: unknown; name?: unknown; city?: unknown; status?: unknown }) {
+  const rating = Number(input.rating);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new OrderError("Choose from 1 to 5 stars.");
+  const t = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+  const status = ["pending", "published", "hidden"].includes(String(input.status)) ? String(input.status) : "published";
+  const name = t(input.name, 60);
+  if (!name) throw new OrderError("Add the customer's name as it should show, e.g. Rahul S.");
+  const values = [rating, t(input.title, 80), t(input.body, 1000), name, t(input.city, 60), status];
+  const id = t(input.id, 40);
+  if (id) {
+    const r = await query("UPDATE reviews SET rating=$2, title=$3, body=$4, name=$5, city=$6, status=$7 WHERE id=$1", [id, ...values]);
+    if (!r.rowCount) throw new OrderError("That review no longer exists.", 404);
+  } else {
+    await query("INSERT INTO reviews (id, order_id, rating, title, body, name, city, status, source) VALUES ($1, NULL, $2,$3,$4,$5,$6,$7, 'admin')", [
+      "rev_" + crypto.randomBytes(6).toString("hex"),
+      ...values,
+    ]);
+  }
 }

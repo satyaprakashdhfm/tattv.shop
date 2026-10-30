@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { REVIEWS_URL, SAMPLE_REVIEWS, SHOW_SAMPLE_REVIEWS, type Review } from "@/lib/reviews";
+import { REVIEWS_URL, type Review } from "@/lib/reviews";
 import { useMarquee } from "./use-marquee";
 
 const GOLD = "#c9a35c";
@@ -49,10 +49,9 @@ function ReviewQuote({ quote, open, onToggle, copy }: { quote: string; open: boo
 /**
  * "What our customers say": cream band with fine gold curves, centred heading, and white review cards
  * gliding slowly sideways. Hover pauses it; the arrows nudge it. Shows the reviews published in
- * Admin → Reviews, or the samples while there are none.
+ * Admin → Reviews; with none published, the section is hidden.
  */
-export function ReviewsSection({ reviews }: { reviews: Review[] }) {
-  const REVIEWS = reviews.length ? reviews : SHOW_SAMPLE_REVIEWS ? SAMPLE_REVIEWS : [];
+export function ReviewsSection({ reviews: REVIEWS }: { reviews: Review[] }) {
   const track = useRef<HTMLUListElement>(null);
   const nudge = useMarquee(track, { speed: 0.5 });
   // Reviews opened with "Read more" (by review, so both copies in the loop open together).

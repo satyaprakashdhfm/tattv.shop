@@ -3,6 +3,7 @@ import pg from "pg";
 import { SEED_CATEGORIES, SEED_PRODUCTS, type Product } from "@/lib/products";
 import { DEFAULT_SETTINGS, SEED_COUPONS } from "@/lib/site";
 import { SEED_REELS, reelPoster, reelVideo } from "@/lib/reels";
+import { SAMPLE_REVIEWS } from "@/lib/reviews";
 
 // Postgres access. DATABASE_URL is required (locally: ../tattv-local-env, see README).
 //
@@ -232,6 +233,10 @@ CREATE INDEX IF NOT EXISTS reviews_status_idx ON reviews (status, created_at DES
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipment jsonb;
 CREATE INDEX IF NOT EXISTS orders_waybill_idx ON orders ((shipment->>'waybill')) WHERE shipment IS NOT NULL;
 
+-- Reviews can also be written in the admin (no order): the source column says where each came from.
+ALTER TABLE reviews ALTER COLUMN order_id DROP NOT NULL;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'order';
+
 -- Delivery set-up (Admin → Delivery): each piece's packed weight, the places Delhivery collects from, and
 -- the pickups asked for. Packaging / margin / fragile live in settings under the key 'parcel'.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams integer CHECK (weight_grams IS NULL OR weight_grams > 0);
@@ -397,6 +402,15 @@ async function addLaterData(client: pg.PoolClient) {
       await client.query(
         "INSERT INTO coupons (code, kind, value, label, first_order_only, min_subtotal) VALUES ($1, 'percent', $2, $3, $4, $5) ON CONFLICT DO NOTHING",
         [code, c.percent, c.label, !!c.firstOrderOnly, c.minSubtotal ?? 0],
+      );
+    }
+  });
+  // The sample reviews the home page showed, as published reviews the admin can edit, hide or delete.
+  await once(client, "added:sample-reviews", async () => {
+    for (const [i, r] of SAMPLE_REVIEWS.entries()) {
+      await client.query(
+        "INSERT INTO reviews (id, order_id, rating, title, body, name, city, status, source, created_at) VALUES ($1, NULL, 5, $2, $3, $4, $5, 'published', 'sample', now() - make_interval(days => $6))",
+        [`rev_sample_${i + 1}`, r.title, r.quote, r.name, r.city, i],
       );
     }
   });

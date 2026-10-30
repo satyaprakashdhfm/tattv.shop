@@ -1,11 +1,9 @@
-// Real reviews come from customers: a delivered order's page asks for a star rating and a few words,
-// and the admin publishes the good ones in Admin → Reviews (lib/server/reviews.ts).
+// Reviews live in the database and are managed in Admin → Reviews (lib/server/reviews.ts): customers
+// rate delivered orders, and the admin can also write, edit, hide or delete any review.
 //
-// PLACEHOLDER: until the first review is published, the home page shows these samples instead. They
-// are not from real customers; set SHOW_SAMPLE_REVIEWS to false to hide the section until real ones
-// exist, since showing invented reviews to shoppers misleads them.
-
-export const SHOW_SAMPLE_REVIEWS = true;
+// PLACEHOLDER: SAMPLE_REVIEWS are copied in once as published "sample" reviews so the section can be
+// seen before real ones exist. They are not from real customers: hide or delete them in the admin
+// before launch, since showing invented reviews to shoppers misleads them.
 
 /** Where "Read more reviews" goes (e.g. the Google reviews page once there is one). */
 export const REVIEWS_URL = "https://www.instagram.com/tattv.shop/";
