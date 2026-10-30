@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
-import { COLLECTIONS, MATERIALS, type Product } from "@/lib/products";
+import { COLLECTIONS, MATERIALS, type Category, type Product } from "@/lib/products";
 import { ProductCard } from "@/components/product-card";
 import { useCatalog } from "@/components/store-provider";
 
@@ -26,13 +26,9 @@ interface Banner {
   align?: "left" | "right";
 }
 
-const BANNERS: Partial<Record<string, Banner>> = {
-  chains: { src: "/images/shop/chains.jpg", position: "75% 60%", tone: "light" },
-  rings: { src: "/images/shop/rings.jpg", position: "85% 55%", tone: "light" },
-  bracelets: { src: "/images/shop/bracelets.jpg", position: "0% 55%", tone: "light", align: "right" },
-  wallets: { src: "/images/shop/wallets.jpg", position: "85% 58%", tone: "dark" },
-  earrings: { src: "/images/shop/earrings.jpg", position: "15% 55%", tone: "dark", align: "right" },
-};
+/** A category's banner, uploaded in Admin → Categories (its second photo, beside the home page arch). */
+const categoryBanner = (c?: Category): Banner | undefined =>
+  c?.banner ? { src: c.banner, position: c.bannerPosition || "50% 50%", tone: c.bannerTone ?? "light", align: c.bannerAlign } : undefined;
 
 const NEW_ARRIVALS_BANNER: Banner = { src: "/images/shop/new.jpg", position: "100% 55%", tone: "dark" };
 const ALL_BANNER: Banner = { src: "/images/shop/all.jpg", position: "80% 35%", tone: "light" };
@@ -128,7 +124,7 @@ export function ShopView() {
             }
           : { title: "All Men's Jewellery", blurb: "Chains, pendants, rings, bracelets and fine leather, crafted to be worn every day." };
 
-  const banner = (tag === "new" ? NEW_ARRIVALS_BANNER : !q && !tag && category ? BANNERS[category as Product["category"]] : undefined) ?? ALL_BANNER;
+  const banner = (tag === "new" ? NEW_ARRIVALS_BANNER : !q && !tag && category ? categoryBanner(CATEGORIES.find((c) => c.id === category)) : undefined) ?? ALL_BANNER;
   const light = banner.tone === "light";
 
   const activeChips = [

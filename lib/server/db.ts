@@ -244,6 +244,12 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS advance integer NOT NULL DEFAULT 0;
 -- A short video of a product (MP4 in the media table), shown in its gallery with the photos.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS video text NOT NULL DEFAULT '';
 
+-- Each category's second photo: the wide banner on its shop page (the arch photo is "image").
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner text NOT NULL DEFAULT '';
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner_tone text NOT NULL DEFAULT 'light';
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner_align text NOT NULL DEFAULT 'left';
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner_position text NOT NULL DEFAULT '50% 50%';
+
 -- Delivery set-up (Admin → Delivery): each piece's packed weight, the places Delhivery collects from, and
 -- the pickups asked for. Packaging / margin / fragile live in settings under the key 'parcel'.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams integer CHECK (weight_grams IS NULL OR weight_grams > 0);
@@ -419,6 +425,19 @@ async function addLaterData(client: pg.PoolClient) {
         "INSERT INTO reviews (id, order_id, rating, title, body, name, city, status, source, created_at) VALUES ($1, NULL, 5, $2, $3, $4, $5, 'published', 'sample', now() - make_interval(days => $6))",
         [`rev_sample_${i + 1}`, r.title, r.quote, r.name, r.city, i],
       );
+    }
+  });
+  // The shop page banners that were fixed in code, as each category's editable banner.
+  await once(client, "added:category-banners", async () => {
+    const banners: [string, string, string, string, string][] = [
+      ["chains", "/images/shop/chains.jpg", "light", "left", "75% 60%"],
+      ["rings", "/images/shop/rings.jpg", "light", "left", "85% 55%"],
+      ["bracelets", "/images/shop/bracelets.jpg", "light", "right", "0% 55%"],
+      ["wallets", "/images/shop/wallets.jpg", "dark", "left", "85% 58%"],
+      ["earrings", "/images/shop/earrings.jpg", "dark", "right", "15% 55%"],
+    ];
+    for (const [id, src, tone, align, position] of banners) {
+      await client.query("UPDATE categories SET banner = $2, banner_tone = $3, banner_align = $4, banner_position = $5 WHERE id = $1 AND banner = ''", [id, src, tone, align, position]);
     }
   });
   await once(client, "added:reels", async () => {

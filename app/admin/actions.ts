@@ -179,7 +179,14 @@ export async function saveCategoryAction(_prev: FormState, fd: FormData): Promis
     const upload = fd.get("imageFile") as File | null;
     if (upload && upload.size) image = (await saveImage(upload)) ?? image;
     if (fd.get("removeImage") === "on") image = "";
-    await saveCategory({ id: str(fd, "id"), name: str(fd, "name"), title: str(fd, "title"), blurb: str(fd, "blurb"), image }, { isNew });
+    let banner = str(fd, "banner");
+    const bannerUpload = fd.get("bannerFile") as File | null;
+    if (bannerUpload && bannerUpload.size) banner = (await saveImage(bannerUpload)) ?? banner;
+    if (fd.get("removeBanner") === "on") banner = "";
+    await saveCategory(
+      { id: str(fd, "id"), name: str(fd, "name"), title: str(fd, "title"), blurb: str(fd, "blurb"), image, banner, bannerTone: str(fd, "bannerTone"), bannerAlign: str(fd, "bannerAlign") },
+      { isNew },
+    );
     return { saved: true };
   });
   refreshStore();

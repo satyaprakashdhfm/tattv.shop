@@ -76,7 +76,10 @@ export async function loadCatalogData(): Promise<CatalogData> {
     query<ProductRow>(`
       SELECT p.*, COALESCE((SELECT array_agg(url ORDER BY position) FROM product_images i WHERE i.product_slug = p.slug), '{}') AS images
       FROM products p ORDER BY p.sort_order, p.created_at`),
-    query<Category>("SELECT id, name, title, blurb, image FROM categories ORDER BY sort_order, created_at"),
+    query<Category>(
+      `SELECT id, name, title, blurb, image, banner, banner_tone AS "bannerTone", banner_align AS "bannerAlign", banner_position AS "bannerPosition"
+       FROM categories ORDER BY sort_order, created_at`,
+    ),
     query<{ value: Partial<StoreSettings> & { announcement?: string; whatsapp?: string } }>("SELECT value FROM settings WHERE key = 'store'"),
   ]);
   const data: CatalogData = {
@@ -334,8 +337,13 @@ export async function moveProduct(slug: string, dir: number | "top", scope: Prod
 export const moveCategory = (id: string, dir: number) => move("categories", id, dir);
 
 // ── Categories ──
-export async function saveCategory(input: { id?: string; name: string; title: string; blurb: string; image: string }, { isNew }: { isNew: boolean }) {
+export async function saveCategory(
+  input: { id?: string; name: string; title: string; blurb: string; image: string; banner: string; bannerTone: string; bannerAlign: string },
+  { isNew }: { isNew: boolean },
+) {
   const name = String(input.name || "").trim().slice(0, 60);
+  const tone = input.bannerTone === "dark" ? "dark" : "light";
+  const align = input.bannerAlign === "right" ? "right" : "left";
   if (!name) throw new OrderError("Give the category a name.");
   const title = String(input.title || "").trim().slice(0, 80) || name;
   const blurb = String(input.blurb || "").trim().slice(0, 300);
@@ -343,11 +351,16 @@ export async function saveCategory(input: { id?: string; name: string; title: st
     if (isNew) {
       const id = await uniqueSlug(db, "categories", slugify(name));
       await db.query(
-        "INSERT INTO categories (id, name, title, blurb, image, sort_order) VALUES ($1,$2,$3,$4,$5,(SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories))",
-        [id, name, title, blurb, input.image || ""],
+        "INSERT INTO categories (id, name, title, blurb, image, banner, banner_tone, banner_align, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,(SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories))",
+        [id, name, title, blurb, input.image || "", input.banner || "", tone, align],
       );
     } else {
-      const r = await db.query("UPDATE categories SET name=$2, title=$3, blurb=$4, image=$5 WHERE id=$1", [input.id, name, title, blurb, input.image || ""]);
+      // A new banner photo is framed from its centre; a kept one keeps its framing.
+      const r = await db.query(
+        `UPDATE categories SET name=$2, title=$3, blurb=$4, image=$5, banner_position = CASE WHEN banner = $6 THEN banner_position ELSE '50% 50%' END,
+           banner=$6, banner_tone=$7, banner_align=$8 WHERE id=$1`,
+        [input.id, name, title, blurb, input.image || "", input.banner || "", tone, align],
+      );
       if (!r.rowCount) throw new OrderError("Category not found", 404);
     }
   });

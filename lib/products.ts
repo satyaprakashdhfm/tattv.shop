@@ -44,7 +44,16 @@ export interface Category {
   name: string;
   title: string;
   blurb: string;
+  /** Tall photo in the arch ("window") on the home page's Shop by Category. */
   image: string;
+  /** Wide photo across the top of the category's shop page ("" = the store's general banner). */
+  banner?: string;
+  /** How light the banner is behind the title: light photos get dark text, dark ones white text. */
+  bannerTone?: "light" | "dark";
+  /** Which side of the banner the title sits on (the photo's empty side). */
+  bannerAlign?: "left" | "right";
+  /** CSS object-position for the banner, so the subject stays in view. */
+  bannerPosition?: string;
 }
 
 export const SEED_CATEGORIES: Category[] = [
