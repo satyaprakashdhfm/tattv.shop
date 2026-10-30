@@ -711,6 +711,11 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
 
           {/* The pay button floats centred at the bottom of the screen until the form ends, then rests under it. */}
           <div className="sticky bottom-3 z-30 mx-auto mt-6 max-w-xl md:bottom-5">
+            {/* Orders can't be changed or cancelled on the site: the team does it. Said before paying. */}
+            <p className="mb-2 rounded-2xl bg-white/95 px-4 py-2.5 text-center text-xs leading-relaxed text-ink/75 shadow-soft backdrop-blur">
+              Please check your address and phone number: once the order is placed they can&apos;t be changed online. For any change, cancellation or return, call or WhatsApp us on{" "}
+              <b className="font-medium text-ink">{catalog.settings.phone}</b>.
+            </p>
             {error && (
               <p role="alert" className="mb-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-center text-sm text-red-800 shadow-soft">
                 {error}

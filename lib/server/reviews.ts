@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { OrderError } from "@/lib/pricing";
 import type { Review } from "@/lib/reviews";
 import { query } from "./db";
-import { getOrderFor } from "./orders";
+import { accountOrders, getOrderFor } from "./orders";
 
 // Customer reviews: once an order is delivered, its page asks for a star rating (1 to 5) and a few
 // words. One per order. Each waits in Admin → Reviews; only the ones the admin publishes show on the
@@ -66,6 +66,19 @@ export async function submitReview(orderId: string, token: string | null, input:
   );
   if (!r.rowCount) throw new OrderError("You have already rated this order. Thank you!", 409);
   return toReview(r.rows[0]);
+}
+
+/**
+ * The newest delivered order without a review among the visitor's orders (those saved in this browser,
+ * proven by their tokens, and the signed-in customer's), for the "Rate your order" pop-up.
+ */
+export async function orderAwaitingReview(refs: unknown, phone: string | null) {
+  const orders = (await accountOrders(refs, { email: null, phone })).filter((o) => o.status === "delivered");
+  if (!orders.length) return null;
+  const done = await query<{ order_id: string }>("SELECT order_id FROM reviews WHERE order_id = ANY($1)", [orders.map((o) => o.id)]);
+  const rated = new Set(done.rows.map((r) => r.order_id));
+  const o = orders.find((x) => !rated.has(x.id));
+  return o ? { id: o.id, token: o.token, firstName: o.customer.firstName, name: o.lines[0]?.name ?? "", image: o.lines[0]?.image ?? "", more: o.lines.length - 1 } : null;
 }
 
 /** Admin → Reviews: newest first. */

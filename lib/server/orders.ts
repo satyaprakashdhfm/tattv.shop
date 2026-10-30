@@ -387,7 +387,8 @@ export async function adminUpdateOrder(
   id: string,
   change: { status?: string; statusNote?: unknown; tracking?: { courier?: unknown; number?: unknown; url?: unknown }; note?: string; paymentStatus?: string },
 ) {
-  return transaction(async (db) => {
+  let delivered = false;
+  const order = await transaction(async (db) => {
     const o = await loadOrder(db, id, true);
     if (!o) throw new OrderError("Order not found", 404);
 
@@ -421,9 +422,32 @@ export async function adminUpdateOrder(
       }
       await db.query("UPDATE orders SET status = $2 WHERE id = $1", [id, next]);
       await addEvent(db, id, next, change.statusNote ? String(change.statusNote).slice(0, 300) : "", true);
+      delivered = next === "delivered";
     }
     return (await loadOrder(db, id))!;
   });
+  if (delivered) await askForReview(order);
+  return order;
+}
+
+/** Once an order is delivered: an email asking for a star rating, linking to the order page where it is given. */
+async function askForReview(o: Order) {
+  await sendMail({
+    to: o.customer.email,
+    replyTo: await storeInbox(),
+    subject: `How do you like your TATTV order ${o.id}?`,
+    text: [
+      `Hi ${o.customer.firstName},`,
+      "",
+      `Your order ${o.id} has been delivered. We hope you love wearing it.`,
+      "",
+      "Would you rate it? Five stars and a few words take ten seconds, and they help other customers choose:",
+      `${SITE_URL}/orders/${o.id}?t=${o.token}#review`,
+      "",
+      "Thank you,",
+      "TATTV",
+    ].join("\n"),
+  }).catch((e) => console.error("Could not send the review request", e));
 }
 
 /**

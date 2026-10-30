@@ -455,6 +455,11 @@ function OrderCard({ order, onOpen }: { order: AccountOrder; onOpen: (o: Account
             Track Parcel <ArrowUpRight size={13} />
           </a>
         )}
+        {order.tracking?.number && (
+          <span className="text-xs text-muted">
+            {order.tracking.courier} AWB <b className="font-medium text-ink">{order.tracking.number}</b>
+          </span>
+        )}
         <HelpLink order={order} className="ml-auto" />
       </footer>
     </article>

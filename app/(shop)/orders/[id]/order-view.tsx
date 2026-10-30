@@ -168,19 +168,26 @@ export function OrderView({ id }: { id: string }) {
           </ol>
         )}
 
+        {/* The courier's AWB (waybill) number and their own tracking page, for every scan and place. */}
         {order.tracking && (
-          <p className="mt-6 flex items-center justify-center gap-2 rounded-full bg-sand px-4 py-3 text-sm">
-            <Package size={16} strokeWidth={1.5} /> Shipped with <b className="font-medium">{order.tracking.courier || "our courier"}</b>
-            {order.tracking.number && <> · {order.tracking.number}</>}
+          <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-3xl bg-sand px-5 py-4 text-left text-sm sm:flex-row">
+            <p className="flex items-center gap-3">
+              <Package size={18} strokeWidth={1.5} className="shrink-0" />
+              <span>
+                Shipped with <b className="font-medium">{order.tracking.courier || "our courier"}</b>
+                {order.tracking.number && (
+                  <span className="block text-xs text-ink/70">
+                    AWB <b className="font-medium tracking-[0.06em] text-ink">{order.tracking.number}</b>
+                  </span>
+                )}
+              </span>
+            </p>
             {order.tracking.url && (
-              <>
-                {" · "}
-                <a href={order.tracking.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
-                  Track parcel
-                </a>
-              </>
+              <a href={order.tracking.url} target="_blank" rel="noopener noreferrer" className="btn btn-dark h-10 shrink-0 px-5 text-[11px]">
+                Track on {order.tracking.courier || "courier"} <ArrowRight size={14} />
+              </a>
             )}
-          </p>
+          </div>
         )}
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href="/shop" className="btn btn-outline h-12 px-7">
@@ -192,7 +199,11 @@ export function OrderView({ id }: { id: string }) {
         </div>
       </section>
 
-      {order.status === "delivered" && token && <RateOrder orderId={order.id} token={token} />}
+      {order.status === "delivered" && token && (
+        <div id="review" className="scroll-mt-28">
+          <RateOrder orderId={order.id} token={token} />
+        </div>
+      )}
 
       <section className="mt-5 rounded-3xl border border-line bg-white p-6 md:p-8">
         <h2 className="eyebrow">Items</h2>

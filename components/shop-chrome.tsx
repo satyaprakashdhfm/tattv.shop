@@ -9,6 +9,7 @@ import { CartDrawer } from "./cart-drawer";
 import { SearchOverlay } from "./search-overlay";
 import { CheckoutBar } from "./checkout-bar";
 import { WhatsAppButton } from "./whatsapp-button";
+import { ReviewPopup } from "./review-popup";
 
 /** Ribbon, header, footer and bag state around every storefront page (and the 404 page). The catalogue is loaded here once per request. */
 export async function ShopChrome({ children }: { children: ReactNode }) {
@@ -25,6 +26,7 @@ export async function ShopChrome({ children }: { children: ReactNode }) {
       <SearchOverlay />
       <CheckoutBar />
       <WhatsAppButton />
+      <ReviewPopup />
     </StoreProvider>
   );
 }
