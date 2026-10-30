@@ -10,6 +10,8 @@ import { formatPrice } from "@/lib/format";
 import { useStore } from "./store-provider";
 import { ProductImage } from "./product-image";
 import { RotatingLogo } from "./rotating-logo";
+import { useOtpConfig } from "./otp-login";
+import { QuickLogin } from "./quick-login";
 
 function Badge({ count }: { count: number }) {
   if (!count) return null;
@@ -30,6 +32,8 @@ function CloseOnNavigate({ onNavigate }: { onNavigate: () => void }) {
 export function Header() {
   const { cartCount, wishlist, setCartOpen, setSearchOpen, account, catalog } = useStore();
   const { getProduct } = catalog;
+  const otp = useOtpConfig();
+  const [loginOpen, setLoginOpen] = useState(false);
   const [active, setActive] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -117,7 +121,18 @@ export function Header() {
           <button aria-label="Search" onClick={() => setSearchOpen(true)} className="hover:opacity-60">
             <Search size={20} strokeWidth={1.5} />
           </button>
-          <Link href="/account" aria-label={account ? `My account (${account.firstName})` : "Sign in"} className="relative hidden hover:opacity-60 sm:block">
+          {/* Signed out with mobile login on: the account button signs in right here (a pop-up), as on Minimalstoys. */}
+          <Link
+            href="/account"
+            onClick={(e) => {
+              if (!account && otp?.available) {
+                e.preventDefault();
+                setLoginOpen(true);
+              }
+            }}
+            aria-label={account ? `My account (${account.firstName})` : "Sign in"}
+            className="relative hidden hover:opacity-60 sm:block"
+          >
             <User size={20} strokeWidth={1.5} />
             {account && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white" />}
             {/* Signed in: a greeting under the icon, so it's clear who is signed in. */}
@@ -237,6 +252,8 @@ export function Header() {
           </div>
         </div>
       )}
+
+      {loginOpen && otp && <QuickLogin config={otp} onClose={() => setLoginOpen(false)} />}
     </header>
   );
 }

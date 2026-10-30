@@ -8,10 +8,13 @@ import { useStore } from "@/components/store-provider";
 import { CartLineItem } from "@/components/cart-line-item";
 import { QuickAddList } from "@/components/quick-add-list";
 import { DemoPayment } from "@/components/demo-payment";
+import { useOtpConfig } from "@/components/otp-login";
+import { QuickLogin } from "@/components/quick-login";
+import type { Account } from "@/lib/demo-account";
 import { GIFT_WRAP, advanceFor, discountFor, offerBlocker, offerName, type Offer } from "@/lib/site";
 import { CUSTOMER_RULES, type CustomerInput } from "@/lib/pricing";
 import { formatPrice, shippingFor } from "@/lib/format";
-import { api, rememberOrder } from "@/lib/client-api";
+import { api, myOrders, rememberOrder } from "@/lib/client-api";
 
 const STATES = ["Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"];
 
@@ -108,8 +111,10 @@ const Panel = ({ title, step, icon, className = "", children }: { title: string;
  */
 export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | null; cod: boolean }) {
   const router = useRouter();
-  const { cart, cartCount, subtotal, cartReady, clearCart, catalog } = useStore();
+  const { cart, cartCount, subtotal, cartReady, clearCart, catalog, account } = useStore();
   const [form, setForm] = useState<CustomerInput>(EMPTY);
+  const otp = useOtpConfig();
+  const [loginOpen, setLoginOpen] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const [code, setCode] = useState("");
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -149,6 +154,30 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
       // Storage unavailable: the form still works.
     }
   }, [form]);
+  // Signed in: fill the empty fields from the account and the address of the last order on this mobile.
+  // Typed values are never overwritten.
+  const fillFrom = (a: Account) => {
+    const fill = (d: Partial<CustomerInput>) =>
+      setForm((f) => {
+        const next = { ...f };
+        for (const [k, v] of Object.entries(d) as [keyof CustomerInput, string][]) if (v && !next[k]) next[k] = v;
+        return next;
+      });
+    fill({ firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone.replace(/\D/g, "").slice(-10) });
+    api<{ orders: { customer: CustomerInput }[] }>("/api/account/orders", { method: "POST", body: { refs: myOrders() } })
+      .then((d) => {
+        const c = d.orders[0]?.customer;
+        if (c) fill({ address: c.address, apartment: c.apartment, city: c.city, state: c.state, pin: c.pin });
+      })
+      .catch(() => {});
+  };
+  const filledRef = useRef(false);
+  useEffect(() => {
+    if (!account || filledRef.current || !otp?.available) return;
+    filledRef.current = true;
+    fillFrom(account);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, otp]);
   useEffect(() => setPending(null), [cart, applied, payMethod, gift, giftOccasion, giftMessage]);
   useEffect(() => {
     const pin = form.pin;
@@ -470,6 +499,27 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
             {/* Right: details, payment and totals */}
             <div ref={rightRef} className="contents lg:flex lg:flex-col lg:gap-5">
               <Panel title="Contact" step={1} className="order-2 lg:order-none">
+                {!account && otp?.available && (
+                  <button type="button" onClick={() => setLoginOpen(true)} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-line bg-sand/40 px-4 py-3 text-left text-sm hover:border-ink">
+                    <span>
+                      <span className="block font-medium">Sign in for faster checkout</span>
+                      <span className="text-xs text-muted">Your details and last address, filled in. Personal coupons work only when signed in.</span>
+                    </span>
+                    <span className="text-[11px] uppercase tracking-[0.14em] underline underline-offset-2">Sign in</span>
+                  </button>
+                )}
+                {loginOpen && otp && (
+                  <QuickLogin
+                    config={otp}
+                    title="Faster Checkout"
+                    note="Sign in with your mobile number. We fill in your details and last delivery address."
+                    onClose={() => setLoginOpen(false)}
+                    onSignedIn={(a) => {
+                      filledRef.current = true;
+                      fillFrom(a);
+                    }}
+                  />
+                )}
                 <div className="grid gap-4">
                   <Field name="email" label="Email" type="email" autoComplete="email" {...fieldProps} />
                   <Field name="phone" label="Mobile number (for delivery updates)" type="tel" inputMode="tel" autoComplete="tel" {...fieldProps} />

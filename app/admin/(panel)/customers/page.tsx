@@ -12,7 +12,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const all = customersFrom(orders);
   // Codes linked to a customer, by their email or mobile.
   const personal = coupons.filter((c) => c.ownerEmail || c.ownerPhone);
-  const codesOf = (email: string, phone: string) => personal.filter((c) => c.ownerEmail === email || c.ownerPhone === phone);
+  const codesOf = (phone: string) => personal.filter((c) => c.ownerPhone === phone);
   const customers = q ? all.filter((c) => [c.name, c.email, c.phone, c.city].join(" ").toLowerCase().includes(q)) : all;
   const repeat = all.filter((c) => c.orders > 1).length;
 
@@ -55,13 +55,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   <td className="hidden md:table-cell">{new Date(c.last).toLocaleDateString("en-IN", { dateStyle: "medium" })}</td>
                   <td>
                     <span className="flex flex-wrap items-center gap-1.5">
-                      {codesOf(c.email, c.phone).map((x) => (
+                      {codesOf(c.phone).map((x) => (
                         <Link key={x.code} href={`/admin/coupons?edit=${x.code}`} className={`pill ${x.state === "on" ? "pill-delivered" : "pill-hidden"}`} title={`${x.label} · used ${x.used}`}>
                           {x.code}
                         </Link>
                       ))}
                       <Link
-                        href={`/admin/coupons?edit=new&email=${encodeURIComponent(c.email)}&phone=${encodeURIComponent(c.phone)}`}
+                        href={`/admin/coupons?edit=new&phone=${encodeURIComponent(c.phone)}`}
                         className="whitespace-nowrap text-[11px] uppercase tracking-[0.12em] text-muted underline underline-offset-2 hover:text-ink"
                       >
                         + Give coupon

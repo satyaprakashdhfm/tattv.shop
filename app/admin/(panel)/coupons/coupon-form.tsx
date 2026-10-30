@@ -149,23 +149,10 @@ export function CouponForm({
             <div>
               <h2 className="adm-h2 !mb-1">Link to one customer (optional)</h2>
               <p className="text-xs text-muted">
-                Fill in a customer&apos;s email or mobile and only their orders can use this code, even if it gets shared. Leave both empty for everyone.
+                Fill in a customer&apos;s mobile and only they can use this code: they must be signed in on the site with that number (checked with a login code), so it can&apos;t be used from another account even if it gets shared. It also shows in their account. Leave empty for everyone.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="c-oemail" className="adm-label">
-                  Customer&apos;s email
-                </label>
-                <input id="c-oemail" name="ownerEmail" type="email" list="c-emails" defaultValue={coupon?.ownerEmail ?? prefill?.email ?? ""} placeholder="name@example.com" className="adm-input" />
-                <datalist id="c-emails">
-                  {customers.map((c) => (
-                    <option key={c.email} value={c.email}>
-                      {c.name}
-                    </option>
-                  ))}
-                </datalist>
-              </div>
               <div>
                 <label htmlFor="c-ophone" className="adm-label">
                   Customer&apos;s mobile

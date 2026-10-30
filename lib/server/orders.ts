@@ -7,6 +7,7 @@ import { type Db, pool, query, transaction } from "./db";
 import { sendMail, storeInbox } from "./mail";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
 import { checkCoupon } from "./coupons";
+import { currentCustomer } from "./customers";
 import { afterStockChange } from "./stock-alerts";
 import { deliveryCheck } from "./delhivery";
 import { defaultPickup } from "./pickup";
@@ -234,6 +235,8 @@ export async function createOrder(input: {
   const codOk = cfg.cod && (advancePercent === 0 || !!cfg.online);
   if (method === "cod" ? !codOk : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
   const items = Array.isArray(input.items) ? input.items : [];
+  // Personal coupons need the customer signed in on their mobile (a proven login, never what's typed).
+  const signedInPhone = (await currentCustomer())?.phone ?? null;
   // Delhivery's word on the PIN code (accepted as deliverable when Delhivery isn't set up or can't be reached).
   const reach = await deliveryCheck(customer.pin, (await defaultPickup()).pin);
   if (!reach.serviceable) throw new OrderError("Sorry, our courier doesn't deliver to this PIN code yet. Please use another address.");
@@ -254,7 +257,7 @@ export async function createOrder(input: {
       const p = bySlug.get(slug);
       return p && live.has(slug) ? { ...p, stock: live.get(slug) ?? null } : undefined;
     };
-    const coupon = input.discountCode ? await checkCoupon(db, input.discountCode, customer, { lock: true }) : null;
+    const coupon = input.discountCode ? await checkCoupon(db, input.discountCode, customer, { lock: true, signedInPhone }) : null;
     const priced = priceOrder({ items, getProduct, coupon, giftWrap, rules: settings });
     const plan = method === "cod" && advancePercent > 0 ? "advance" : "full";
     const advance = plan === "advance" ? advanceFor(priced.total, advancePercent) : 0;

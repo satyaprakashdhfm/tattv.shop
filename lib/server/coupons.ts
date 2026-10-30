@@ -12,7 +12,10 @@ import { type Db, query, transaction } from "./db";
 //   maxUses         orders in all that may use it (0 = no limit)
 //   perCustomer     orders one customer may use it on (0 = no limit)
 //   startsAt / expiresAt  the days it works (India time; either may be empty)
-//   ownerEmail / ownerPhone  linked to one customer: only an order with that email or mobile can use it
+//   ownerPhone      linked to one customer: only works while that customer is signed in with that mobile
+//                   (proven by their login code), so nobody else can use it even if the code leaks.
+//                   (ownerEmail is kept from older coupons but no longer links: an email typed at checkout
+//                   proves nothing.)
 // Times used are counted from the orders themselves, so they can't drift: an order that isn't cancelled
 // counts, and an online checkout waiting for payment holds its place for an hour.
 
@@ -187,8 +190,7 @@ export async function saveCoupon(input: CouponInput, { isNew }: { isNew: boolean
   const starts = day(input.startsOn, "first day");
   const expires = day(input.expiresOn, "last day");
   if (starts && expires && starts > expires) throw new OrderError("The last day is before the first day.");
-  const ownerEmail = String(input.ownerEmail || "").trim().toLowerCase() || null;
-  if (ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) throw new OrderError("The customer's email doesn't look right.");
+  const ownerEmail = null;
   const phoneRaw = String(input.ownerPhone || "").trim();
   const ownerPhone = phoneRaw ? normalisePhone(phoneRaw) : null;
   if (ownerPhone && !/^[6-9]\d{9}$/.test(ownerPhone)) throw new OrderError("The customer's mobile doesn't look right. Use their 10-digit number, or leave it empty.");
@@ -238,15 +240,17 @@ export interface Shopper {
 }
 
 const who = (s: Shopper) => ({ email: String(s.email || "").trim().toLowerCase() || null, phone: normalisePhone(s.phone || "") || null });
-const isOwner = (c: Coupon, s: ReturnType<typeof who>) => (!!c.ownerEmail && c.ownerEmail === s.email) || (!!c.ownerPhone && c.ownerPhone === s.phone);
+/** A personal coupon belongs to the mobile it was given to. */
+const isOwner = (c: Coupon, phone: string | null) => !!c.ownerPhone && c.ownerPhone === phone;
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long" });
 
 /**
  * Checks a typed code for this customer and returns it, or throws with the reason it can't be used.
  * Inside an order transaction (`lock`), the coupon row is locked so two checkouts can't both take the last use.
  * The bag minimum is checked when the order is priced (lib/pricing.ts), since "Apply" doesn't send the bag.
+ * `signedInPhone`: the mobile of the signed-in customer (from their session cookie), for personal coupons.
  */
-export async function checkCoupon(db: Db, rawCode: unknown, shopper: Shopper, { lock = false } = {}): Promise<Offer> {
+export async function checkCoupon(db: Db, rawCode: unknown, shopper: Shopper, { lock = false, signedInPhone = null }: { lock?: boolean; signedInPhone?: string | null } = {}): Promise<Offer> {
   const code = String(rawCode || "").trim().toUpperCase();
   if (!code) throw new OrderError("Enter a discount code.");
   const r = await db.query(`SELECT * FROM coupons WHERE code = $1${lock ? " FOR UPDATE" : ""}`, [code]);
@@ -258,9 +262,10 @@ export async function checkCoupon(db: Db, rawCode: unknown, shopper: Shopper, { 
   if (c.expiresAt && Date.parse(c.expiresAt) < now) throw new OrderError(`${code} has ended.`);
 
   const s = who(shopper);
+  // Personal: only for the customer signed in (with their login code) on the mobile it was given to.
   const personal = !!(c.ownerEmail || c.ownerPhone);
-  if (personal && !s.email && !s.phone) throw new OrderError(`${code} is a personal coupon. Enter your email and mobile number first, then apply it.`);
-  if (personal && !isOwner(c, s)) throw new OrderError(`${code} belongs to another customer. Use the email or mobile number it was given to.`);
+  if (personal && !signedInPhone) throw new OrderError(`${code} is a personal coupon. Sign in with the mobile number it was given to, then apply it.`);
+  if (personal && !isOwner(c, signedInPhone)) throw new OrderError(`${code} belongs to another account. Sign in with the mobile number it was given to.`);
 
   const uses = await db.query<{ total: number; mine: number }>(
     `SELECT count(*)::int AS total, count(*) FILTER (WHERE o.email = $2 OR o.phone = $3)::int AS mine FROM orders o WHERE o.discount_code = $1 AND ${IS_USE}`,
@@ -284,9 +289,8 @@ export async function publicOffers(): Promise<Offer[]> {
     .map(toOffer);
 }
 
-/** Codes linked to a customer (by email or mobile), for the admin customer list and the customer's account. */
-export async function couponsOwnedBy(shopper: Shopper): Promise<CouponWithUse[]> {
-  const s = who(shopper);
-  if (!s.email && !s.phone) return [];
-  return (await listCoupons()).filter((c) => isOwner(c, s));
+/** Codes linked to a customer's mobile, for the admin customer list and the signed-in customer's account. */
+export async function couponsOwnedBy(phone: string | null): Promise<CouponWithUse[]> {
+  if (!phone) return [];
+  return (await listCoupons()).filter((c) => isOwner(c, phone));
 }

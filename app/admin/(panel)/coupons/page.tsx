@@ -24,7 +24,7 @@ const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { timeZon
 /** The rules of a coupon in a few words, for the table. */
 function rulesOf(c: CouponWithUse) {
   return [
-    c.ownerEmail || c.ownerPhone ? `Only for ${[c.ownerEmail, c.ownerPhone && `+91 ${c.ownerPhone}`].filter(Boolean).join(" / ")}` : null,
+    c.ownerPhone ? `Only for the account on +91 ${c.ownerPhone}` : null,
     c.firstOrderOnly && "First order only",
     c.minSubtotal > 0 && `Bags of ${formatPrice(c.minSubtotal)}+`,
     c.perCustomer > 0 ? `${c.perCustomer}× per customer` : "No limit per customer",

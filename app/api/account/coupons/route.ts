@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const GET = handler(async () => {
   const me = await currentCustomer();
   if (!me) return json({ error: "Please sign in" }, { status: 401 });
-  const list = await couponsOwnedBy({ phone: me.phone, email: me.email });
+  const list = await couponsOwnedBy(me.phone);
   return json({
     coupons: list.map((c) => ({ code: c.code, name: offerName(c), label: c.label, expiresAt: c.expiresAt, usable: c.state === "on" })),
   });
