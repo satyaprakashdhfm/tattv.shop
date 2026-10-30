@@ -61,6 +61,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const maxMore = Math.max(0, limitFor(product.slug) - inBag);
   const lowStock = product.stock != null && product.stock > 0 && product.stock <= 5;
   const [size, setSize] = useState<string | null>(null);
+  const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
   const [viewIndex, setViewIndex] = useState(0);
   const [sizeError, setSizeError] = useState(false);
@@ -79,6 +80,8 @@ export function ProductDetail({ product }: { product: Product }) {
       return;
     }
     addToCart({ slug: product.slug, size: size ?? undefined }, qty);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1600);
   };
 
   const tabs: { title: string; body: React.ReactNode }[] = [
@@ -255,7 +258,15 @@ export function ProductDetail({ product }: { product: Product }) {
               <NotifyMe slug={product.slug} name={product.name} />
             ) : (
               <button onClick={handleAdd} className="btn flex-1 bg-espresso !px-4 text-white shadow-[0_6px_16px_-8px_rgba(43,33,26,0.6)] hover:bg-espresso-hover">
-                <ShoppingBag size={16} strokeWidth={1.6} /> Add to Bag · {formatPrice(price * qty)}
+                {added ? (
+                  <>
+                    <Check size={16} strokeWidth={1.8} /> Added to Bag
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={16} strokeWidth={1.6} /> Add to Bag · {formatPrice(price * qty)}
+                  </>
+                )}
               </button>
             )}
             <button

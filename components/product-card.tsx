@@ -11,6 +11,7 @@ import { useStore } from "./store-provider";
 export function ProductCard({ product }: { product: Product }) {
   const { wishlist, toggleWishlist, addToCart } = useStore();
   const [picking, setPicking] = useState(false);
+  const [added, setAdded] = useState(false);
   const saved = wishlist.includes(product.slug);
   const href = `/product/${product.slug}`;
   const hasAlt = product.images.length > 1;
@@ -18,6 +19,8 @@ export function ProductCard({ product }: { product: Product }) {
   const add = (size?: string) => {
     addToCart({ slug: product.slug, size });
     setPicking(false);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1600);
   };
 
   return (
@@ -81,7 +84,7 @@ export function ProductCard({ product }: { product: Product }) {
               </div>
             ) : (
               <button onClick={() => (product.sizes ? setPicking(true) : add())} className="btn btn-dark h-11 w-full px-4">
-                Add to Cart
+                {added ? "Added ✓" : "Add to Cart"}
               </button>
             )}
         </div>

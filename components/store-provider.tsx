@@ -155,7 +155,8 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
         if (existing) return prev.map((l) => (l.key === key ? { ...l, qty: next } : l));
         return [...prev, { ...line, key, qty: next }];
       });
-      if (opts?.open !== false) setCartOpen(true);
+      // Phones don't jump into the bag; the floating Checkout bar at the bottom takes them there when they choose.
+      if (opts?.open !== false && !window.matchMedia("(max-width: 767px)").matches) setCartOpen(true);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- room only reads limitFor
     [limitFor],
