@@ -173,6 +173,8 @@ export interface ProductInput {
   details: string;
   care: string;
   shippingReturns: string;
+  /** What TATTV pays for one; admin only. Empty = not known. */
+  costPrice: unknown;
   active: boolean;
   images: string[];
 }
@@ -190,6 +192,8 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
   const price = rupees(input.price, "Price")!;
   const compareAt = rupees(input.compareAt, "Original price", true);
   const stock = stockOf(input.stock);
+  const costPrice = input.costPrice === "" || input.costPrice == null ? null : Math.round(Number(input.costPrice));
+  if (costPrice != null && (!Number.isFinite(costPrice) || costPrice < 0)) throw new OrderError("Cost price must be a whole number of rupees (or empty).");
   if (!input.images.length) throw new OrderError("Add at least one photo.");
   const sizeValues = String(input.sizeValues || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 30);
   const sizeLabel = String(input.sizeLabel || "").trim().slice(0, 40);
@@ -214,20 +218,20 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
       String(input.short || "").trim().slice(0, 300), String(input.description || "").trim().slice(0, 5000),
       String(input.details || "").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 20),
       stock, !!input.active,
-      customLines(input.care, defaultCare(String(input.finish))), customLines(input.shippingReturns, DEFAULT_SHIPPING_RETURNS),
+      customLines(input.care, defaultCare(String(input.finish))), customLines(input.shippingReturns, DEFAULT_SHIPPING_RETURNS), costPrice,
     ];
     if (isNew) {
       await db.query(
         `INSERT INTO products (slug, name, category_id, collection, price, compare_at, material, finish, size_label, size_values,
-           badge, is_new, bestseller, short, description, details, stock, active, care, shipping_returns, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM products))`,
+           badge, is_new, bestseller, short, description, details, stock, active, care, shipping_returns, cost_price, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM products))`,
         values,
       );
     } else {
       await db.query(
         `UPDATE products SET name=$2, category_id=$3, collection=$4, price=$5, compare_at=$6, material=$7, finish=$8, size_label=$9,
            size_values=$10, badge=$11, is_new=$12, bestseller=$13, short=$14, description=$15, details=$16, stock=$17, active=$18,
-           care=$19, shipping_returns=$20, updated_at=now() WHERE slug=$1`,
+           care=$19, shipping_returns=$20, cost_price=$21, updated_at=now() WHERE slug=$1`,
         values,
       );
     }
@@ -239,6 +243,12 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
   });
   invalidateCatalog();
   return slug;
+}
+
+/** Cost prices by product (admin only: never part of the catalogue sent to the store). */
+export async function loadCosts(): Promise<Map<string, number>> {
+  const r = await query<{ slug: string; cost_price: number }>("SELECT slug, cost_price FROM products WHERE cost_price IS NOT NULL");
+  return new Map(r.rows.map((x) => [x.slug, x.cost_price]));
 }
 
 export async function deleteProduct(slug: string) {

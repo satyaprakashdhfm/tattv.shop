@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { REVIEWS, REVIEWS_URL, SHOW_REVIEWS } from "@/lib/reviews";
+import { REVIEWS_URL, SAMPLE_REVIEWS, SHOW_SAMPLE_REVIEWS, type Review } from "@/lib/reviews";
 import { useMarquee } from "./use-marquee";
 
 const GOLD = "#c9a35c";
@@ -48,9 +48,11 @@ function ReviewQuote({ quote, open, onToggle, copy }: { quote: string; open: boo
 
 /**
  * "What our customers say": cream band with fine gold curves, centred heading, and white review cards
- * gliding slowly sideways. Hover pauses it; the arrows nudge it.
+ * gliding slowly sideways. Hover pauses it; the arrows nudge it. Shows the reviews published in
+ * Admin → Reviews, or the samples while there are none.
  */
-export function ReviewsSection() {
+export function ReviewsSection({ reviews }: { reviews: Review[] }) {
+  const REVIEWS = reviews.length ? reviews : SHOW_SAMPLE_REVIEWS ? SAMPLE_REVIEWS : [];
   const track = useRef<HTMLUListElement>(null);
   const nudge = useMarquee(track, { speed: 0.5 });
   // Reviews opened with "Read more" (by review, so both copies in the loop open together).
@@ -63,7 +65,7 @@ export function ReviewsSection() {
       return next;
     });
 
-  if (!SHOW_REVIEWS || REVIEWS.length === 0) return null;
+  if (REVIEWS.length === 0) return null;
 
   const arrow =
     "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-[#e5d6bb] bg-white text-ink shadow-[0_6px_16px_-8px_rgba(120,90,40,0.45)] transition hover:border-ink md:flex";
@@ -98,15 +100,16 @@ export function ReviewsSection() {
                 aria-hidden={i >= REVIEWS.length || undefined}
                 className="flex min-h-[185px] w-[230px] shrink-0 flex-col items-center rounded-2xl border border-[#efe4d1] bg-white/90 px-5 pb-4 pt-4 text-center shadow-[0_10px_26px_-18px_rgba(120,90,40,0.5)] md:w-[240px]"
               >
-                <span role="img" aria-label="5 out of 5 stars" className="text-[15px] leading-none tracking-[0.06em]" style={{ color: STAR }}>
-                  ★★★★★
+                <span role="img" aria-label={`${r.rating ?? 5} out of 5 stars`} className="text-[15px] leading-none tracking-[0.06em]" style={{ color: STAR }}>
+                  {"★".repeat(r.rating ?? 5)}
+                  <span className="text-[#e5d6bb]">{"★".repeat(5 - (r.rating ?? 5))}</span>
                 </span>
                 <p className="mt-2.5 flex items-center gap-2 text-[13px] font-semibold">
                   {r.name}
                   {r.verified && <span className="rounded-full bg-ink px-2 py-px text-[9px] font-medium uppercase tracking-[0.12em] text-white">Verified</span>}
                 </p>
                 <h3 className="mt-2 text-[13px] font-bold uppercase leading-snug tracking-[0.08em]">{r.title}</h3>
-                <ReviewQuote quote={r.quote} open={isOpen} onToggle={() => toggle(n)} copy={i >= REVIEWS.length} />
+                {r.quote && <ReviewQuote quote={r.quote} open={isOpen} onToggle={() => toggle(n)} copy={i >= REVIEWS.length} />}
                 <p className="mt-auto pt-2.5 text-[10.5px] font-medium uppercase tracking-[0.24em] text-ink/50">{r.city}</p>
               </li>
               );

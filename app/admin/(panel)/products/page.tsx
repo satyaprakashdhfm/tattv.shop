@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/products";
-import { loadCatalogData, type ProductScope } from "@/lib/server/catalog";
+import { loadCatalogData, loadCosts, type ProductScope } from "@/lib/server/catalog";
 import { moveProductAction } from "../../actions";
 import { PageHead } from "../ui";
 import { ClickRow } from "../click-row";
@@ -16,7 +16,7 @@ type View = { scope: ProductScope; label: string; where: string; storeHref: stri
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const { products, categories } = await loadCatalogData();
+  const [{ products, categories }, costs] = await Promise.all([loadCatalogData(), loadCosts()]);
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
 
   // Every place on the store where the order of products matters. Each one is the same shop order, filtered.
@@ -75,6 +75,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 <th className="w-10">#</th>
                 <th>Product</th>
                 <th className="text-right">Price</th>
+                <th className="hidden text-right lg:table-cell">Cost · Profit</th>
                 <th className="hidden text-right md:table-cell">Stock</th>
                 {!view.scope.startsWith("cat:") && <th className="hidden md:table-cell">Category</th>}
                 <th className="text-right">Order</th>
@@ -97,6 +98,18 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                   <td className="text-right">
                     {formatPrice(p.price)}
                     {p.compareAt ? <s className="block text-xs text-muted">{formatPrice(p.compareAt)}</s> : null}
+                  </td>
+                  <td className="hidden text-right lg:table-cell">
+                    {costs.has(p.slug) ? (
+                      <>
+                        {formatPrice(costs.get(p.slug)!)}
+                        <span className={`block text-xs ${p.price - costs.get(p.slug)! < 0 ? "text-red-700" : "text-muted"}`}>
+                          {formatPrice(p.price - costs.get(p.slug)!)} · {Math.round(((p.price - costs.get(p.slug)!) / p.price) * 100)}%
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted">No cost price</span>
+                    )}
                   </td>
                   <td className="hidden text-right md:table-cell">
                     {p.stock == null ? <span className="text-muted">Not tracked</span> : p.stock === 0 ? <b className="font-medium text-red-700">Sold out</b> : p.stock}
@@ -133,7 +146,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           title={editing === "new" ? "Add a Product" : editing.name}
           sub={editing === "new" ? "It goes live when you add it (untick “Show in the store” to keep it hidden)." : "Changes go live when you save."}
         >
-          <ProductForm key={editing === "new" ? "new" : editing.slug} product={editing === "new" ? undefined : editing} categories={categories} returnTo={withParam("edit", editing === "new" ? "new" : editing.slug)} />
+          <ProductForm key={editing === "new" ? "new" : editing.slug} product={editing === "new" ? undefined : editing} cost={editing === "new" ? null : costs.get(editing.slug)} categories={categories} returnTo={withParam("edit", editing === "new" ? "new" : editing.slug)} />
         </Modal>
       )}
     </>

@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getCatalog } from "@/lib/server/catalog";
+import { storeReels } from "@/lib/server/reels";
+import { publishedReviews } from "@/lib/server/reviews";
 import { ProductRail } from "@/components/product-rail";
 import { ProductCard } from "@/components/product-card";
 import { HeadingRule, SectionHeading } from "@/components/section-heading";
@@ -11,7 +13,7 @@ import { ReviewsSection } from "@/components/reviews-section";
 import { InstagramReels } from "@/components/instagram-reels";
 
 export default async function HomePage() {
-  const { products: PRODUCTS, categories: CATEGORIES } = await getCatalog();
+  const [{ products: PRODUCTS, categories: CATEGORIES }, reels, reviews] = await Promise.all([getCatalog(), storeReels(), publishedReviews()]);
   const newArrivals = PRODUCTS.filter((p) => p.isNew).concat(PRODUCTS.filter((p) => !p.isNew)).slice(0, 8);
   const bestsellers = PRODUCTS.filter((p) => p.bestseller).slice(0, 4);
 
@@ -78,10 +80,10 @@ export default async function HomePage() {
       </section>
 
       {/* Instagram reels, auto-scrolling */}
-      <InstagramReels />
+      <InstagramReels reels={reels} />
 
-      {/* Customer reviews (placeholder content, see lib/reviews.ts) */}
-      <ReviewsSection />
+      {/* Customer reviews: the ones published in Admin → Reviews (sample reviews until there are any, see lib/reviews.ts) */}
+      <ReviewsSection reviews={reviews} />
     </>
   );
 }

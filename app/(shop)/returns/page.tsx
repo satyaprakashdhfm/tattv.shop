@@ -24,7 +24,11 @@ export default async function ReturnsPage() {
         <p className="eyebrow text-muted">Client Care</p>
         <h1 className="display mt-3 text-4xl font-normal md:text-5xl">Returns &amp; Exchanges</h1>
         <p className="mt-4 leading-relaxed text-ink/70">
-          Not quite right? Return or exchange unworn pieces within {RETURN_WINDOW_DAYS} days of delivery. Fill in the form and we&apos;ll take it from there.
+          Not quite right? Return or exchange unworn pieces within {RETURN_WINDOW_DAYS} days of delivery. Fill in the form and we&apos;ll take it from there.{" "}
+          <Link href="/policies/returns-refunds" className="underline underline-offset-2">
+            Read the full policy
+          </Link>
+          .
         </p>
       </div>
 

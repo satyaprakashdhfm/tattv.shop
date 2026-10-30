@@ -29,13 +29,18 @@ On first start the app creates its tables and copies in the starting catalogue (
 | `lib/server/orders.ts` | Checkout, payment confirmation, stock, admin order updates, messages |
 | `lib/pricing.ts` | Order pricing and checkout validation, shared by browser and server |
 | `lib/catalog.ts` | Catalogue helpers (related products, "Complete the Look" recommendations, search) |
-| `lib/site.ts` | Contact details, coupons, order statuses |
-| `lib/reels.ts` | Instagram reels on the home page (self-hosted in `public/reels/`) |
-| `lib/reviews.ts` | Home page reviews. **Placeholders: replace with real reviews before launch** |
+| `lib/site.ts` | Contact details, order statuses, the starting coupon codes |
+| `lib/server/coupons.ts` | Discount codes and their rules (Admin → Coupons) |
+| `lib/server/reels.ts` | Home page videos, each linked to a product (Admin → Videos) |
+| `lib/server/reviews.ts` | Star ratings from delivered orders (Admin → Reviews). `lib/reviews.ts` holds the sample reviews shown until one is published |
+| `lib/policies.ts` | Standard text of the policy pages (`/policies/…`), edited in Admin → Policies. **Placeholder drafts: replace with approved text before launch** |
+| `lib/server/otp.ts`, `lib/server/customers.ts` | Customer sign-in with a mobile number and an MSG91 code |
+| `lib/server/delhivery.ts`, `lib/server/shipments.ts` | Delhivery: PIN-code checks, booking, labels, tracking |
+| `lib/server/search-console.ts` | Google Search reports (Admin → Google Search) |
 
 ## Database tables
 
-`categories`, `products`, `product_images`, `orders`, `order_items` (name, size and price as sold), `order_events` (timeline), `order_notes` (admin only), `messages` (contact form and return requests), `settings` (social links, announcement), `media` (uploaded photos), `app_meta`. Order numbers come from `order_number_seq` (`TTV-104830` onwards).
+`categories`, `products` (with an admin-only `cost_price`), `product_images`, `orders` (with the Delhivery `shipment`), `coupons`, `reels`, `reviews`, `policies`, `customers`, `otps`, `otp_tokens`, `order_items` (name, size and price as sold), `order_events` (timeline), `order_notes` (admin only), `messages` (contact form and return requests), `settings` (social links, announcement), `media` (uploaded photos), `app_meta`. Order numbers come from `order_number_seq` (`TTV-104830` onwards).
 
 ## Common edits
 
@@ -46,7 +51,13 @@ In the admin (`/admin`), live immediately:
 - **Categories** → Categories
 - **Instagram / Facebook / X links, announcement ribbon** → Settings
 
-In code: discount codes → `COUPONS` in `lib/site.ts`; reviews → `lib/reviews.ts`; reels → `lib/reels.ts`.
+- **Coupons**: codes, % or ₹ off, rules, link to one customer, times used → Coupons
+- **Home page videos** and the product each one opens → Videos
+- **Reviews** from delivered orders: publish or hide → Reviews
+- **Policy pages** (Shipping & Payment, Returns, Terms, Privacy) → Policies
+- **Cost price** on each product, for profit on the dashboard → Products
+
+Free shipping starts at ₹799 (`FREE_SHIPPING_THRESHOLD` in `lib/format.ts`).
 
 ## How an order flows
 

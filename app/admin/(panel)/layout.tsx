@@ -4,15 +4,17 @@ import type { ReactNode } from "react";
 import { ArrowUpRight, LogOut } from "lucide-react";
 import { adminTestLogin, requireAdmin } from "@/lib/server/auth";
 import { listMessages, listOrders } from "@/lib/server/orders";
+import { query } from "@/lib/server/db";
 import { logout } from "../actions";
 import { AdminNav } from "./admin-nav";
 
 export default async function PanelLayout({ children }: { children: ReactNode }) {
   await requireAdmin();
-  const [orders, messages] = await Promise.all([listOrders(), listMessages()]);
+  const [orders, messages, reviews] = await Promise.all([listOrders(), listMessages(), query<{ n: number }>("SELECT count(*)::int AS n FROM reviews WHERE status = 'pending'")]);
   const counts = {
     toPack: orders.filter((o) => o.status === "confirmed").length,
     messages: messages.filter((m) => m.status === "new").length,
+    reviews: reviews.rows[0].n,
   };
   return (
     <div className="min-h-screen bg-paper">

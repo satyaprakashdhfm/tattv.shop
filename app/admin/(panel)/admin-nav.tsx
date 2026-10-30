@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, LayoutGrid, MessageSquare, Package, Receipt, Settings, Tags, Users, type LucideIcon } from "lucide-react";
+import { Boxes, Clapperboard, FileText, LayoutGrid, MessageSquare, Package, Receipt, Search, Settings, Star, Tags, TicketPercent, Users, type LucideIcon } from "lucide-react";
 
-type Item = [href: string, label: string, icon: LucideIcon, count: "toPack" | "messages" | null];
+type Count = "toPack" | "messages" | "reviews";
+type Item = [href: string, label: string, icon: LucideIcon, count: Count | null];
 
 const GROUPS: [string, Item[]][] = [
   ["Insights", [["/admin", "Overview", LayoutGrid, null]]],
-  ["Orders", [["/admin/orders", "Orders", Receipt, "toPack"]]],
+  [
+    "Orders",
+    [
+      ["/admin/orders", "Orders", Receipt, "toPack"],
+      ["/admin/coupons", "Coupons", TicketPercent, null],
+    ],
+  ],
   [
     "Catalogue",
     [
@@ -22,12 +29,21 @@ const GROUPS: [string, Item[]][] = [
     [
       ["/admin/customers", "Customers", Users, null],
       ["/admin/messages", "Messages", MessageSquare, "messages"],
+      ["/admin/reviews", "Reviews", Star, "reviews"],
     ],
   ],
-  ["Store", [["/admin/settings", "Site Settings", Settings, null]]],
+  [
+    "Store",
+    [
+      ["/admin/videos", "Videos", Clapperboard, null],
+      ["/admin/policies", "Policies", FileText, null],
+      ["/admin/seo", "Google Search", Search, null],
+      ["/admin/settings", "Site Settings", Settings, null],
+    ],
+  ],
 ];
 
-export function AdminNav({ counts }: { counts: { toPack: number; messages: number } }) {
+export function AdminNav({ counts }: { counts: Record<Count, number> }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Admin" className="no-scrollbar flex gap-1 overflow-x-auto md:block md:space-y-4">

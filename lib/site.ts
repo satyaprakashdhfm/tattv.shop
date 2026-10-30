@@ -4,12 +4,12 @@
 import { FREE_SHIPPING_THRESHOLD, formatPrice } from "./format";
 
 // Starting contact details. The live values are edited in Admin → Site Settings (see StoreSettings);
-// these are only the defaults for a new store. Placeholders: replace in the admin with TATTV's real details.
+// these are only the defaults for a new store. The address is still a placeholder: replace it in the admin.
 export const CONTACT = {
-  email: "care@tattv.shop",
-  phoneDisplay: "+91 00000 00000",
-  phone: "+910000000000",
-  whatsapp: "910000000000",
+  email: "contact@tattv.co.in",
+  phoneDisplay: "+91 90306 11790",
+  phone: "+919030611790",
+  whatsapp: "919030611790",
   instagram: "https://www.instagram.com/tattv.shop/",
   instagramHandle: "@tattv.shop",
   youtube: "https://www.youtube.com/",
@@ -53,28 +53,38 @@ export const RETURN_WINDOW_DAYS = 15;
 
 export const MAX_QTY_PER_ITEM = 10;
 
-export interface Coupon {
-  percent: number;
-  firstOrderOnly?: boolean;
-  /** Bag subtotal (₹) the code needs. */
-  minSubtotal?: number;
-  label: string;
-}
-
-// Discount codes, checked on the server when an order is placed. `firstOrderOnly` is checked
-// against earlier orders with the same email or phone. Checkout lists them all as offers.
-// Sample codes for the preview: replace with TATTV's real offers before launch.
-export const COUPONS: Record<string, Coupon> = {
+// Discount codes are made in Admin → Coupons (lib/server/coupons.ts) and checked on the server when
+// an order is placed. These sample codes are copied in once as the starting set; edit or delete them there.
+export const SEED_COUPONS: Record<string, { percent: number; label: string; firstOrderOnly?: boolean; minSubtotal?: number }> = {
   WELCOME10: { percent: 10, firstOrderOnly: true, label: "10% off your first order" },
   TATTV15: { percent: 15, minSubtotal: 2999, label: "15% off orders above ₹2,999" },
   ELEMENT20: { percent: 20, minSubtotal: 4999, label: "20% off orders above ₹4,999" },
 };
 
-/** Why a code can't be used on this bag yet, or "" if it can (first-order checks happen at the server). */
-export function couponBlocker(code: string, subtotal: number): string {
-  const c = COUPONS[code];
-  if (!c) return "That code is not valid";
-  if (c.minSubtotal && subtotal < c.minSubtotal) return `Add ₹${(c.minSubtotal - subtotal).toLocaleString("en-IN")} more to use ${code}`;
+/** A discount code as checkout sees it. */
+export interface Offer {
+  code: string;
+  /** "percent": `value` % off the bag; "flat": `value` rupees off. */
+  kind: "percent" | "flat";
+  value: number;
+  label: string;
+  /** Bag subtotal (₹) the code needs; 0 for none. */
+  minSubtotal: number;
+  firstOrderOnly?: boolean;
+  /** Linked to this customer only. */
+  personal?: boolean;
+}
+
+/** "15% off" / "₹200 off". */
+export const offerName = (o: Pick<Offer, "kind" | "value">) => (o.kind === "percent" ? `${o.value}% off` : `${formatPrice(o.value)} off`);
+
+/** The discount a code gives on this bag (never more than the bag). */
+export const discountFor = (o: Pick<Offer, "kind" | "value">, subtotal: number) =>
+  Math.min(subtotal, o.kind === "percent" ? Math.round((subtotal * o.value) / 100) : o.value);
+
+/** Why a code can't be used on this bag yet, or "" if it can (the other rules are checked at the server). */
+export function offerBlocker(o: Offer, subtotal: number): string {
+  if (o.minSubtotal && subtotal < o.minSubtotal) return `Add ${formatPrice(o.minSubtotal - subtotal)} more to use ${o.code}`;
   return "";
 }
 

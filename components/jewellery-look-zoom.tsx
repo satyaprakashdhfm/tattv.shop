@@ -446,6 +446,9 @@ export function JewelleryLookZoom() {
   return (
     <section
       ref={ref}
+      // The floating WhatsApp button and checkout bar step aside on phones while this fills the screen,
+      // so they never sit on the look cards and buttons pinned to its bottom edge.
+      data-floating-clear
       className={`@container relative bg-[#16100c] ${done ? "" : "h-[600vh]"}`}
       // Once played, a still that fits the first screen under the ribbon and header.
       style={done ? { height: `calc(100svh - ${lift}px)` } : undefined}

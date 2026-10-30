@@ -26,3 +26,16 @@ export async function body<T = Record<string, unknown>>(req: Request): Promise<T
 }
 
 export const json = NextResponse.json;
+
+// In-memory limit per client address: at most `max` calls per `minutes` for each `key` (enough to stop code guessing).
+const hits = new Map<string, number[]>();
+export function rateLimit(req: Request, key: string, max: number, minutes: number) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
+  const id = `${key}|${ip}`;
+  const now = Date.now();
+  const recent = (hits.get(id) ?? []).filter((t) => now - t < minutes * 60_000);
+  if (recent.length >= max) throw new OrderError("Too many tries. Please wait a few minutes and try again.", 429);
+  recent.push(now);
+  hits.set(id, recent);
+  if (hits.size > 5000) hits.delete(hits.keys().next().value!);
+}

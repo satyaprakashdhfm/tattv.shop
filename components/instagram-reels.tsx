@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { CONTACT } from "@/lib/site";
 import { useCatalog } from "./store-provider";
-import { REELS, reelPoster, reelVideo } from "@/lib/reels";
+import type { Reel } from "@/lib/reels";
 import { InstagramIcon } from "./social-icons";
 import { HeadingRule } from "./section-heading";
 import { useMarquee } from "./use-marquee";
@@ -15,9 +16,10 @@ import { useMarquee } from "./use-marquee";
  * Lazy on purpose: the clips add up to tens of MB, so a tile only gets its video `src` when it comes
  * near the viewport, plays while on screen and pauses when it leaves. Visitors who never scroll
  * here download only the small posters. One tile at a time can have sound; while it does, the row
- * holds still so the clip being listened to doesn't slide away.
+ * holds still so the clip being listened to doesn't slide away. A video linked to a product (Admin →
+ * Videos) opens that product when tapped.
  */
-export function InstagramReels() {
+export function InstagramReels({ reels }: { reels: Reel[] }) {
   const { settings } = useCatalog();
   const instagram = settings.instagram || CONTACT.instagram;
   const handle = "@" + (instagram.match(/instagram\.com\/([^/?#]+)/)?.[1] ?? "tattv.shop");
@@ -65,8 +67,8 @@ export function InstagramReels() {
     setAudible(next);
   };
 
-  if (REELS.length === 0) return null;
-  const tiles = [...REELS, ...REELS];
+  if (reels.length === 0) return null;
+  const tiles = [...reels, ...reels];
   const arrow = "flex size-10 items-center justify-center border border-line bg-white text-ink transition hover:border-ink";
 
   return (
@@ -78,25 +80,34 @@ export function InstagramReels() {
 
       <ul ref={track} className="no-scrollbar flex gap-3 overflow-x-auto px-5 md:gap-4 md:px-10">
         {tiles.map((r, i) => (
-          <li key={i} aria-hidden={i >= REELS.length || undefined} className="relative aspect-[9/16] w-[200px] shrink-0 overflow-hidden rounded-3xl bg-ink md:w-[240px]">
+          <li key={i} aria-hidden={i >= reels.length || undefined} className="group relative aspect-[9/16] w-[200px] shrink-0 overflow-hidden rounded-3xl bg-ink md:w-[240px]">
             <video
               ref={(el) => register(el, i)}
-              data-src={reelVideo(r.id)}
-              poster={reelPoster(r.id)}
+              data-src={r.video}
+              poster={r.poster || undefined}
               muted
               loop
               playsInline
-              preload="none"
+              preload={r.poster ? "none" : "metadata"}
               aria-label={r.caption}
               className="absolute inset-0 size-full object-cover"
             />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3.5 pb-3.5 pt-10 pr-14 text-[12px] font-medium leading-snug text-white">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3.5 pb-3.5 pt-12 pr-14 text-[12px] font-medium leading-snug text-white">
               {r.caption}
+              {r.product && (
+                <span className="mt-2 flex w-fit max-w-full items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-ink transition-transform duration-300 group-hover:-translate-y-0.5">
+                  <span className="truncate">Shop {r.product.name}</span> <ArrowUpRight size={11} className="shrink-0" />
+                </span>
+              )}
             </div>
+            {/* The whole tile opens the product; the sound button sits above the link. */}
+            {r.product && (
+              <Link href={`/product/${r.product.slug}`} tabIndex={i >= reels.length ? -1 : undefined} aria-label={`Shop ${r.product.name}`} className="absolute inset-0" />
+            )}
             <button
               type="button"
               onClick={() => toggleSound(i)}
-              tabIndex={i >= REELS.length ? -1 : undefined}
+              tabIndex={i >= reels.length ? -1 : undefined}
               aria-label={audible === i ? "Mute video" : "Unmute video"}
               className="absolute bottom-3 right-3 flex size-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition hover:bg-black/75"
             >

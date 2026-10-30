@@ -1,11 +1,13 @@
 import "server-only";
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
-import { COUPONS, GIFT_WRAP, ORDER_STATUSES, type OrderStatus, type PaymentStatus } from "@/lib/site";
+import { GIFT_WRAP, ORDER_STATUSES, SITE_URL, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { OrderError, normalisePhone, priceOrder, validateCustomer, type CustomerInput, type OrderItemInput, type PricedLine } from "@/lib/pricing";
 import { type Db, pool, query, transaction } from "./db";
 import { sendMail, storeInbox } from "./mail";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
+import { checkCoupon } from "./coupons";
+import { deliveryCheck } from "./delhivery";
 import { createRazorpayOrder, razorpayEnabled, razorpayKeyId, verifyPaymentSignature, type RazorpayResponse } from "./razorpay";
 
 export { OrderError };
@@ -13,6 +15,25 @@ export { OrderError };
 const isProd = process.env.NODE_ENV === "production";
 
 export type PaymentMethod = "cod" | "razorpay" | "demo";
+
+export interface Shipment {
+  carrier: "delhivery";
+  /** booked: live with Delhivery; cancelled: called off; failed: the last booking attempt was refused. */
+  state: "booked" | "cancelled" | "failed";
+  waybill: string | null;
+  grams: number | null;
+  /** Cash the courier collects (0 for prepaid). */
+  cod: number;
+  /** What Delhivery charges TATTV for the parcel, when it says. */
+  cost: number | null;
+  bookedAt: string | null;
+  error: string | null;
+  lastStatus: string | null;
+  lastLocation: string | null;
+  lastScanAt: string | null;
+  checkedAt: string | null;
+  scans: { at: string; status: string; location: string; note: string }[];
+}
 
 export interface Order {
   id: string;
@@ -30,6 +51,8 @@ export interface Order {
   total: number;
   payment: { method: PaymentMethod; status: PaymentStatus; razorpayOrderId: string | null; paymentId: string | null; paidAt: string | null };
   tracking: { courier: string; number: string; url: string } | null;
+  /** The Delhivery booking, if one was made (admin only). */
+  shipment: Shipment | null;
   history: { at: string; status: OrderStatus; note: string; byAdmin: boolean }[];
   notes: { at: string; text: string }[];
   stockApplied: boolean;
@@ -78,6 +101,7 @@ const toOrder = (r: any): Order => ({
     paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
   },
   tracking: r.tracking_courier || r.tracking_number ? { courier: r.tracking_courier ?? "", number: r.tracking_number ?? "", url: r.tracking_url ?? "" } : null,
+  shipment: r.shipment ?? null,
   history: r.history,
   notes: r.notes,
   stockApplied: r.stock_applied,
@@ -95,7 +119,7 @@ export const isLive = (o: Pick<Order, "status">) => o.status !== "pending_paymen
 /** Strip admin-only fields before an order goes to the browser. */
 export function publicOrder(o: Order) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { notes, token, stockApplied, ...rest } = o;
+  const { notes, token, stockApplied, shipment, ...rest } = o;
   return { ...rest, history: o.history.map(({ at, status, note }) => ({ at, status, note })) };
 }
 export type PublicOrder = ReturnType<typeof publicOrder>;
@@ -121,6 +145,29 @@ async function confirm(db: PoolClient, o: Order, note: string) {
   }
 }
 
+/** Tells the store about a new confirmed order, by email to the store inbox (Site Settings email, or STORE_EMAIL). */
+async function alertNewOrder(o: Order) {
+  const c = o.customer;
+  await sendMail({
+    to: await storeInbox(),
+    replyTo: c.email,
+    subject: `New order ${o.id}: ₹${o.total.toLocaleString("en-IN")} (${o.payment.method === "cod" ? "cash on delivery" : "paid online"})`,
+    text: [
+      `${c.firstName} ${c.lastName} · +91 ${c.phone} · ${c.email}`,
+      `${c.address}${c.apartment ? `, ${c.apartment}` : ""}, ${c.city}, ${c.state} ${c.pin}`,
+      "",
+      ...o.lines.map((l) => `${l.qty} × ${l.name}${l.size ? ` (${l.size})` : ""}  ₹${(l.price * l.qty).toLocaleString("en-IN")}`),
+      o.discountCode ? `Coupon ${o.discountCode}: −₹${o.discount.toLocaleString("en-IN")}` : null,
+      o.gift ? `Gift packing${o.gift.occasion ? ` (${o.gift.occasion})` : ""}${o.gift.message ? `: "${o.gift.message}"` : ""}` : null,
+      `Total ₹${o.total.toLocaleString("en-IN")}`,
+      "",
+      `Open it in the admin: ${SITE_URL}/admin/orders/${o.id}`,
+    ]
+      .filter((l) => l !== null)
+      .join("\n"),
+  }).catch((e) => console.error("Could not send the new-order alert", e));
+}
+
 // ── Checkout ──
 export async function createOrder(input: {
   customer?: unknown;
@@ -137,6 +184,10 @@ export async function createOrder(input: {
   const method = input.paymentMethod;
   if (method === "cod" ? !cfg.cod : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
   const items = Array.isArray(input.items) ? input.items : [];
+  // Delhivery's word on the PIN code (accepted as deliverable when Delhivery isn't set up or can't be reached).
+  const reach = await deliveryCheck(customer.pin);
+  if (!reach.serviceable) throw new OrderError("Sorry, our courier doesn't deliver to this PIN code yet. Please use another address.");
+  if (method === "cod" && !reach.cod) throw new OrderError("Cash on delivery isn't available for this PIN code. Please pay online.");
 
   const { products } = await loadCatalogData();
   const bySlug = new Map(products.filter((p) => p.active !== false).map((p) => [p.slug, p]));
@@ -144,20 +195,18 @@ export async function createOrder(input: {
   const order = await transaction(async (db) => {
     // Lock the rows being bought, so two checkouts can't both take the last piece.
     const slugs = [...new Set(items.map((i) => String(i?.slug)))];
-    const stock = await db.query<{ slug: string; stock: number | null; active: boolean }>(
-      "SELECT slug, stock, active FROM products WHERE slug = ANY($1) ORDER BY slug FOR UPDATE",
+    const stock = await db.query<{ slug: string; stock: number | null; active: boolean; cost_price: number | null }>(
+      "SELECT slug, stock, active, cost_price FROM products WHERE slug = ANY($1) ORDER BY slug FOR UPDATE",
       [slugs],
     );
     const live = new Map(stock.rows.filter((r) => r.active).map((r) => [r.slug, r.stock]));
+    const costOf = new Map(stock.rows.map((r) => [r.slug, r.cost_price]));
     const getProduct = (slug: string) => {
       const p = bySlug.get(slug);
       return p && live.has(slug) ? { ...p, stock: live.get(slug) ?? null } : undefined;
     };
-    const prior = await db.query<{ n: number }>(
-      "SELECT count(*)::int AS n FROM orders WHERE status NOT IN ('pending_payment', 'cancelled') AND (email = $1 OR phone = $2)",
-      [customer.email, customer.phone],
-    );
-    const priced = priceOrder({ items, getProduct, coupons: COUPONS, couponCode: input.discountCode, priorOrders: prior.rows[0].n, giftWrap });
+    const coupon = input.discountCode ? await checkCoupon(db, input.discountCode, customer, { lock: true }) : null;
+    const priced = priceOrder({ items, getProduct, coupon, giftWrap });
 
     const seq = await db.query<{ n: string }>("SELECT nextval('order_number_seq') AS n");
     const id = `TTV-${seq.rows[0].n}`;
@@ -173,8 +222,8 @@ export async function createOrder(input: {
         priced.giftWrap, giftOccasion, giftMessage],
     );
     for (const [n, l] of priced.lines.entries()) {
-      await db.query("INSERT INTO order_items (order_id, line_no, product_slug, name, size, price, qty, image) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", [
-        id, n, l.slug, l.name, l.size, l.price, l.qty, l.image,
+      await db.query("INSERT INTO order_items (order_id, line_no, product_slug, name, size, price, qty, image, cost) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)", [
+        id, n, l.slug, l.name, l.size, l.price, l.qty, l.image, costOf.get(l.slug) ?? null,
       ]);
     }
     await addEvent(db, id, "pending_payment", "Order created");
@@ -183,6 +232,7 @@ export async function createOrder(input: {
     return (await loadOrder(db, id))!;
   });
 
+  if (order.status === "confirmed") await alertNewOrder(order);
   if (order.payment.method === "razorpay") {
     const rzp = await createRazorpayOrder({ amount: order.total, receipt: order.id, notes: { order: order.id } });
     await query("UPDATE orders SET razorpay_order_id = $2 WHERE id = $1", [order.id, rzp.id]);
@@ -215,7 +265,10 @@ export async function completePayment(id: string, token: string | null, resp: Ra
     }
     await db.query("UPDATE orders SET payment_status = 'paid', payment_id = $2, paid_at = now() WHERE id = $1", [id, paymentId]);
     if (o.status === "pending_payment") await confirm(db, o, "Payment received");
-    return (await loadOrder(db, id))!;
+    return { order: (await loadOrder(db, id))!, fresh: o.status === "pending_payment" };
+  }).then(async (r) => {
+    if ("fresh" in r && r.fresh) await alertNewOrder(r.order);
+    return "order" in r ? r.order : r;
   });
 }
 
@@ -242,18 +295,19 @@ export async function getOrderFor(id: string, token: string | null) {
 }
 
 /**
- * Orders for My Account: the ones this browser placed (each proven by its token) plus, for the
- * preview account, every order under its email. Unpaid checkouts are left out.
+ * Orders for My Account: the ones this browser placed (each proven by its token), every order with the
+ * signed-in customer's mobile (proven by their login code), and for the preview account every order under
+ * its email. Unpaid checkouts are left out.
  */
-export async function accountOrders(refs: unknown, email: string | null) {
+export async function accountOrders(refs: unknown, { email, phone }: { email: string | null; phone: string | null }) {
   const db = await pool();
   const found = new Map<string, Order>();
   for (const r of (Array.isArray(refs) ? refs : []).slice(0, 30)) {
     const o = await getOrderFor(String(r?.id ?? ""), r?.token ? String(r.token) : null);
     if (o) found.set(o.id, o);
   }
-  if (email) {
-    const r = await db.query(`${ORDER_SELECT} WHERE o.email = $1 ORDER BY o.created_at DESC LIMIT 30`, [email]);
+  if (email || phone) {
+    const r = await db.query(`${ORDER_SELECT} WHERE o.email = $1 OR o.phone = $2 ORDER BY o.created_at DESC LIMIT 50`, [email, phone]);
     for (const row of r.rows) found.set(row.id, toOrder(row));
   }
   return [...found.values()].filter((o) => o.status !== "pending_payment").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -319,6 +373,21 @@ export async function adminUpdateOrder(
     return (await loadOrder(db, id))!;
   });
 }
+
+/**
+ * What each order's pieces cost TATTV (admin only), for profit: the cost price saved on the line when it
+ * was sold, else the product's cost price now. `missing` counts units with no cost price at all.
+ */
+export async function orderCosts(): Promise<Map<string, { cost: number; missing: number }>> {
+  const r = await query<{ order_id: string; cost: number; missing: number }>(`
+    SELECT i.order_id, COALESCE(sum(COALESCE(i.cost, p.cost_price) * i.qty), 0)::int AS cost,
+           COALESCE(sum(i.qty) FILTER (WHERE COALESCE(i.cost, p.cost_price) IS NULL), 0)::int AS missing
+    FROM order_items i LEFT JOIN products p ON p.slug = i.product_slug GROUP BY i.order_id`);
+  return new Map(r.rows.map((x) => [x.order_id, { cost: x.cost, missing: x.missing }]));
+}
+
+/** Profit on an order: what the pieces sold for after the discount, less what they cost. Shipping and gift packing are left out. */
+export const orderProfit = (o: Pick<Order, "id" | "subtotal" | "discount">, costs: Map<string, { cost: number }>) => o.subtotal - o.discount - (costs.get(o.id)?.cost ?? 0);
 
 export interface CustomerSummary {
   email: string;

@@ -16,7 +16,20 @@ const SIZE_PRESETS: { label: string; name: string; values: string }[] = [
   { label: "Wrist sizes", name: "Wrist Size", values: 'S · 7", M · 7.5", L · 8", XL · 8.5"' },
 ];
 
-export function ProductForm({ product, categories, savedNotice, returnTo }: { product?: Product; categories: Category[]; savedNotice?: boolean; returnTo?: string }) {
+export function ProductForm({
+  product,
+  cost,
+  categories,
+  savedNotice,
+  returnTo,
+}: {
+  product?: Product;
+  /** Cost price (admin only, kept apart from the product). */
+  cost?: number | null;
+  categories: Category[];
+  savedNotice?: boolean;
+  returnTo?: string;
+}) {
   const isNew = !product;
   const p: Partial<Product> = product ?? { collection: "classic", finish: "silver", details: [], images: [], active: true };
   const [state, formAction, pending] = useActionState(saveProductAction, savedNotice ? { ok: "Saved. Changes are live on the store." } : null);
@@ -24,6 +37,9 @@ export function ProductForm({ product, categories, savedNotice, returnTo }: { pr
   const [preparing, setPreparing] = useState(false);
   const [sizeLabel, setSizeLabel] = useState(p.sizes?.label ?? "");
   const [sizeValues, setSizeValues] = useState(p.sizes?.values.join(", ") ?? "");
+  const [price, setPrice] = useState(p.price ? String(p.price) : "");
+  const [costPrice, setCostPrice] = useState(cost != null ? String(cost) : "");
+  const margin = Number(price) > 0 && costPrice !== "" ? Number(price) - Number(costPrice) : null;
   const formRef = useRef<HTMLFormElement>(null);
 
   // After a save the page re-renders with the stored product: show its saved photos (so new uploads aren't sent twice).
@@ -87,13 +103,31 @@ export function ProductForm({ product, categories, savedNotice, returnTo }: { pr
               <label htmlFor="f-price" className="adm-label">
                 Price (₹) *
               </label>
-              <input id="f-price" name="price" type="number" min="1" step="1" defaultValue={p.price} required className="adm-input" />
+              <input id="f-price" name="price" type="number" min="1" step="1" value={price} onChange={(e) => setPrice(e.target.value)} required className="adm-input" />
             </div>
             <div>
               <label htmlFor="f-compare" className="adm-label">
                 Original price (₹)
               </label>
               <input id="f-compare" name="compareAt" type="number" min="1" step="1" defaultValue={p.compareAt ?? ""} placeholder="Shows crossed out" className="adm-input" />
+            </div>
+            <div>
+              <label htmlFor="f-cost" className="adm-label">
+                Cost price (₹)
+              </label>
+              <input id="f-cost" name="costPrice" type="number" min="0" step="1" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="What one costs TATTV" className="adm-input" />
+              <p className="mt-1 text-xs text-muted">Only the admin sees this. Used for profit on the dashboard.</p>
+            </div>
+            <div className="self-start rounded-2xl bg-sand/60 px-4 py-3 text-sm sm:mt-6">
+              {margin == null ? (
+                <span className="text-muted">Add the cost price to see the profit on each sale.</span>
+              ) : (
+                <>
+                  Profit per piece{" "}
+                  <b className={`font-semibold ${margin < 0 ? "text-red-700" : ""}`}>₹{margin.toLocaleString("en-IN")}</b>
+                  <span className="text-muted"> · {Math.round((margin / Number(price)) * 100)}% margin</span>
+                </>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="f-short" className="adm-label">

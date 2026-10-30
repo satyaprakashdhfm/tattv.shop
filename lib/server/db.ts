@@ -1,7 +1,8 @@
 import "server-only";
 import pg from "pg";
 import { SEED_CATEGORIES, SEED_PRODUCTS, type Product } from "@/lib/products";
-import { DEFAULT_SETTINGS } from "@/lib/site";
+import { DEFAULT_SETTINGS, SEED_COUPONS } from "@/lib/site";
+import { SEED_REELS, reelPoster, reelVideo } from "@/lib/reels";
 
 // Postgres access. DATABASE_URL is required (locally: ../tattv-local-env, see README).
 //
@@ -163,6 +164,106 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_occasion text NOT NULL DEFAULT 
 
 -- One-off data fix: categories seeded with the landscape photos switch to the arch photos the home page shows.
 UPDATE categories SET image = '/images/categories/arch/' || id || '.jpg' WHERE image = '/images/categories/' || id || '.jpg';
+
+-- Free shipping moved from ₹1,999 to ₹799: saved ribbon messages and product text follow.
+UPDATE settings SET value = replace(value::text, '₹1,999', '₹799')::jsonb WHERE key = 'store' AND value::text LIKE '%₹1,999%';
+UPDATE products SET shipping_returns = ARRAY(SELECT replace(x, '₹1,999', '₹799') FROM unnest(shipping_returns) AS x)
+  WHERE array_to_string(shipping_returns, '|') LIKE '%₹1,999%';
+
+-- TATTV's real contact details replace the placeholders saved at first start (a value typed in the admin is kept).
+UPDATE settings SET value = jsonb_set(value, '{email}', '"contact@tattv.co.in"') WHERE key = 'store' AND value->>'email' = 'care@tattv.shop';
+UPDATE settings SET value = jsonb_set(value, '{phone}', '"+91 90306 11790"') WHERE key = 'store' AND value->>'phone' = '+91 00000 00000';
+
+-- Cost price: what TATTV pays for a piece. Admin only (never sent to the store), for profit.
+-- Order lines keep the cost as it was when sold, like the price.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price integer CHECK (cost_price IS NULL OR cost_price >= 0);
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS cost integer;
+
+-- Discount codes, made in Admin → Coupons. Times used are counted from the orders, so they can't drift.
+-- owner_email / owner_phone link a code to one customer: only their orders can use it.
+CREATE TABLE IF NOT EXISTS coupons (
+  code             text PRIMARY KEY,
+  kind             text NOT NULL DEFAULT 'percent' CHECK (kind IN ('percent', 'flat')),
+  value            integer NOT NULL CHECK (value > 0),
+  label            text NOT NULL DEFAULT '',
+  active           boolean NOT NULL DEFAULT true,
+  show_at_checkout boolean NOT NULL DEFAULT true,
+  first_order_only boolean NOT NULL DEFAULT false,
+  min_subtotal     integer NOT NULL DEFAULT 0,
+  max_uses         integer NOT NULL DEFAULT 0,
+  per_customer     integer NOT NULL DEFAULT 0,
+  starts_at        timestamptz,
+  expires_at       timestamptz,
+  owner_email      text,
+  owner_phone      text,
+  note             text NOT NULL DEFAULT '',
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now()
+);
+
+-- Instagram-style videos on the home page, each optionally linked to the product it shows.
+CREATE TABLE IF NOT EXISTS reels (
+  id           text PRIMARY KEY,
+  video        text NOT NULL,
+  poster       text NOT NULL DEFAULT '',
+  caption      text NOT NULL DEFAULT '',
+  product_slug text REFERENCES products(slug) ON UPDATE CASCADE ON DELETE SET NULL,
+  active       boolean NOT NULL DEFAULT true,
+  sort_order   integer NOT NULL DEFAULT 0,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+-- A star rating and a few words from the customer, once an order is delivered (one per order).
+-- New reviews wait for the admin; only published ones show on the store.
+CREATE TABLE IF NOT EXISTS reviews (
+  id         text PRIMARY KEY,
+  order_id   text NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  rating     integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  title      text NOT NULL DEFAULT '',
+  body       text NOT NULL DEFAULT '',
+  name       text NOT NULL DEFAULT '',
+  city       text NOT NULL DEFAULT '',
+  status     text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'published', 'hidden'))
+);
+CREATE INDEX IF NOT EXISTS reviews_status_idx ON reviews (status, created_at DESC);
+
+-- The Delhivery booking for an order (waybill, state, weight, latest scan…), see lib/server/shipments.ts.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipment jsonb;
+CREATE INDEX IF NOT EXISTS orders_waybill_idx ON orders ((shipment->>'waybill')) WHERE shipment IS NOT NULL;
+
+-- Customer accounts: signed in with a mobile number and a one-time code (MSG91). The number is the account.
+CREATE TABLE IF NOT EXISTS customers (
+  phone         text PRIMARY KEY,
+  first_name    text NOT NULL DEFAULT '',
+  last_name     text NOT NULL DEFAULT '',
+  email         text NOT NULL DEFAULT '',
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  last_login_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- One-time login codes we send ourselves (only a hash is kept), and MSG91 widget tokens already used.
+CREATE TABLE IF NOT EXISTS otps (
+  key     text PRIMARY KEY,
+  hash    text NOT NULL,
+  exp     timestamptz NOT NULL,
+  tries   integer NOT NULL DEFAULT 0,
+  sent_at timestamptz NOT NULL DEFAULT now(),
+  sends   timestamptz[] NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS otp_tokens (
+  key text PRIMARY KEY,
+  at  timestamptz NOT NULL DEFAULT now()
+);
+DELETE FROM otp_tokens WHERE at < now() - interval '2 days';
+
+-- Policy pages (Shipping & Payment, Terms…), edited in Admin → Policies. A missing row shows the standard text.
+CREATE TABLE IF NOT EXISTS policies (
+  slug       text PRIMARY KEY,
+  title      text NOT NULL,
+  body       text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 `;
 
 export type Db = pg.PoolClient | pg.Pool;
@@ -255,6 +356,33 @@ async function addLaterProducts(client: pg.PoolClient) {
   }
 }
 
+/** Runs `fn` the first time only (marked in app_meta), on new and existing databases alike. */
+async function once(client: pg.PoolClient, key: string, fn: () => Promise<void>) {
+  const first = await client.query("INSERT INTO app_meta (key, value) VALUES ($1, 'true') ON CONFLICT DO NOTHING", [key]);
+  if (first.rowCount) await fn();
+}
+
+// Features that moved from code into the admin: their starting rows, copied in once. After that the admin owns them.
+async function addLaterData(client: pg.PoolClient) {
+  await addLaterProducts(client);
+  await once(client, "added:coupons", async () => {
+    for (const [code, c] of Object.entries(SEED_COUPONS)) {
+      await client.query(
+        "INSERT INTO coupons (code, kind, value, label, first_order_only, min_subtotal) VALUES ($1, 'percent', $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+        [code, c.percent, c.label, !!c.firstOrderOnly, c.minSubtotal ?? 0],
+      );
+    }
+  });
+  await once(client, "added:reels", async () => {
+    for (const [i, r] of SEED_REELS.entries()) {
+      const linked = r.product ? (await client.query("SELECT 1 FROM products WHERE slug = $1", [r.product])).rowCount : 0;
+      await client.query("INSERT INTO reels (id, video, poster, caption, product_slug, sort_order) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING", [
+        r.id, reelVideo(r.id), reelPoster(r.id), r.caption, linked ? r.product : null, i,
+      ]);
+    }
+  });
+}
+
 // First run only: copy the starting catalogue and default settings in. After that the admin owns them.
 async function seed(p: pg.Pool) {
   const client = await p.connect();
@@ -263,7 +391,7 @@ async function seed(p: pg.Pool) {
     await client.query("SELECT pg_advisory_xact_lock(4231)");
     const done = await client.query("SELECT 1 FROM app_meta WHERE key = 'seeded'");
     if (done.rowCount) {
-      await addLaterProducts(client);
+      await addLaterData(client);
       await client.query("COMMIT");
       return;
     }
@@ -279,6 +407,7 @@ async function seed(p: pg.Pool) {
     await client.query("INSERT INTO app_meta (key, value) VALUES ('seeded', $1)", [JSON.stringify(new Date().toISOString())]);
     // A fresh database already has every batch below.
     for (const batch of Object.keys(LATER_PRODUCTS)) await client.query("INSERT INTO app_meta (key, value) VALUES ($1, 'true') ON CONFLICT DO NOTHING", [`added:${batch}`]);
+    await addLaterData(client);
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK").catch(() => {});

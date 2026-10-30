@@ -33,11 +33,14 @@ interface StoreValue {
   setSearchOpen: (open: boolean) => void;
   /** False until the saved bag has been read from this device. */
   cartReady: boolean;
-  /** Signed-in customer (demo only until real authentication exists). */
+  /** Signed-in customer: a mobile-number account (server session), or the browser-only preview account. */
   account: Account | null;
   /** False until the saved session has been read, so pages don't flash the signed-out view. */
   sessionReady: boolean;
+  /** The browser-only preview account (shown only while mobile login isn't set up). */
   signIn: (email: string, password: string) => boolean;
+  /** After a mobile login code is checked on the server. */
+  setSignedIn: (account: Account) => void;
   signOut: () => void;
 }
 
@@ -73,6 +76,7 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
   const [cartOpen, setCartOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
     setCart(readStorage<CartLine[]>(CART_KEY, []).filter((l) => getProduct(l.slug)));
@@ -82,7 +86,24 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
     setWishlist(readStorage<string[] | null>(WISHLIST_KEY, null) ?? previewDefault.filter((s) => getProduct(s)));
     setAccount(saved);
     setHydrated(true);
+    // A mobile-number session (a signed cookie) wins over the preview account.
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { customer?: Account | null }) => {
+        if (d.customer) setAccount(d.customer);
+      })
+      .catch(() => {})
+      .finally(() => setSessionReady(true));
   }, [getProduct]);
+
+  const setSignedIn = useCallback((a: Account) => {
+    setAccount(a);
+    try {
+      window.localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // Nothing saved to clear.
+    }
+  }, []);
 
   const signIn = useCallback((email: string, password: string) => {
     const found = checkDemoCredentials(email, password);
@@ -96,6 +117,7 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
 
   const signOut = useCallback(() => {
     setAccount(null);
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     try {
       window.localStorage.removeItem(SESSION_KEY);
     } catch {
@@ -181,11 +203,12 @@ export function StoreProvider({ catalogData, children }: { catalogData: CatalogD
       setSearchOpen,
       cartReady: hydrated,
       account,
-      sessionReady: hydrated,
+      sessionReady,
       signIn,
+      setSignedIn,
       signOut,
     };
-  }, [catalog, getProduct, cart, wishlist, cartOpen, searchOpen, account, hydrated, addToCart, limitFor, updateQty, removeLine, clearCart, toggleWishlist, signIn, signOut]);
+  }, [catalog, getProduct, cart, wishlist, cartOpen, searchOpen, account, hydrated, sessionReady, addToCart, limitFor, updateQty, removeLine, clearCart, toggleWishlist, signIn, setSignedIn, signOut]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

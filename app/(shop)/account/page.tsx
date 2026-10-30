@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Truck,
   User,
+  Tag,
 } from "lucide-react";
 import { useCatalog, useStore } from "@/components/store-provider";
 import { ProductCard } from "@/components/product-card";
@@ -30,7 +31,8 @@ import { WhatsAppIcon } from "@/components/social-icons";
 import { formatPrice } from "@/lib/format";
 import { api, myOrders } from "@/lib/client-api";
 import { ORDER_STATUSES, PAYMENT_LABELS, RETURN_WINDOW_DAYS, TRACKER_STEPS, telHref, whatsappHello, whatsappLink, type OrderStatus, type PaymentStatus } from "@/lib/site";
-import { DEMO_ADDRESSES, DEMO_CREDENTIALS, type Account } from "@/lib/demo-account";
+import { DEMO_ADDRESSES, DEMO_CREDENTIALS, type Account, type Address } from "@/lib/demo-account";
+import { OtpLogin, useOtpConfig } from "@/components/otp-login";
 import { ContactForm } from "../contact/contact-form";
 
 const SECTIONS = [
@@ -92,8 +94,23 @@ function useAccountOrders(account: Account) {
     })
       .then((d) => setOrders(d.orders))
       .catch(() => setOrders([]));
-  }, [account.email]);
+  }, [account.email, account.phone]);
   return orders;
+}
+
+const isPreview = (a: Account) => a.email === DEMO_CREDENTIALS.email;
+
+/** Saved addresses: the sample ones for the preview account, else the addresses used on the customer's orders (newest first). */
+function addressesOf(account: Account, orders: AccountOrder[] | null): Address[] {
+  if (isPreview(account)) return DEMO_ADDRESSES;
+  const seen = new Map<string, Address>();
+  for (const o of orders ?? []) {
+    const c = o.customer;
+    const lines = [c.address + (c.apartment ? `, ${c.apartment}` : ""), `${c.city}, ${c.state} ${c.pin}`];
+    const key = lines.join("|").toLowerCase();
+    if (!seen.has(key)) seen.set(key, { id: key, label: seen.size ? "Also used" : "Last used", name: `${c.firstName} ${c.lastName}`.trim(), lines, phone: c.phone, isDefault: !seen.size });
+  }
+  return [...seen.values()];
 }
 
 export default function AccountPage() {
@@ -102,90 +119,81 @@ export default function AccountPage() {
   return account ? <Dashboard account={account} /> : <SignIn />;
 }
 
+/**
+ * Sign in with a mobile number and a texted code (MSG91). While mobile login isn't set up on the live
+ * site, the browser-only preview account is offered instead so the account area can still be reviewed.
+ */
 function SignIn() {
-  const { signIn } = useStore();
-  const [mode, setMode] = useState<"signin" | "register">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-
+  const config = useOtpConfig();
+  const { setSignedIn } = useStore();
   return (
     <div className="container-x flex justify-center py-16 md:py-24">
       <div className="w-full max-w-md">
-        <h1 className="title text-center text-xl md:text-2xl">{mode === "signin" ? "Sign In" : "Create Account"}</h1>
-        <p className="mt-3 text-center text-sm text-muted">
-          {mode === "signin" ? "Access your orders, wishlist and saved addresses." : "Join TATTV for early access and faster checkout."}
-        </p>
-
-        <div className="mt-8 rounded-2xl border border-dashed border-ink/25 bg-sand px-5 py-4 text-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">Preview account</p>
-          <p className="mt-2 text-ink/75">
-            Email: <span className="font-medium text-ink">{DEMO_CREDENTIALS.email}</span>
-            <br />
-            Password: <span className="font-medium text-ink">{DEMO_CREDENTIALS.password}</span>
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signin");
-              setEmail(DEMO_CREDENTIALS.email);
-              setPassword(DEMO_CREDENTIALS.password);
-              setMessage(null);
-            }}
-            className="mt-3 text-xs font-medium underline underline-offset-4"
-          >
-            Fill in for me
-          </button>
-        </div>
-
-        <div className="mt-8 grid grid-cols-2 rounded-full bg-sand p-1">
-          {(["signin", "register"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => {
-                setMode(m);
-                setMessage(null);
-              }}
-              className={`eyebrow rounded-full py-2.5 transition-colors ${mode === m ? "bg-white text-ink shadow-soft" : "text-muted"}`}
-            >
-              {m === "signin" ? "Sign In" : "Register"}
-            </button>
-          ))}
-        </div>
-        <form
-          className="mt-8 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (mode === "register") {
-              setMessage("Registration opens at launch. Use the preview account above to look around.");
-            } else if (!signIn(email, password)) {
-              setMessage("That email and password don't match. Try the preview account above.");
-            }
-          }}
-        >
-          {mode === "register" && <input required placeholder="Full name" aria-label="Full name" className="field" />}
-          <input required type="email" placeholder="Email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="field" />
-          <input
-            required
-            type="password"
-            placeholder="Password"
-            aria-label="Password"
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="field"
-          />
-          <button type="submit" className="btn btn-dark w-full">
-            {mode === "signin" ? "Sign In" : "Create Account"}
-          </button>
-          {message && (
-            <p role="alert" className="text-center text-sm text-muted">
-              {message}
-            </p>
-          )}
-        </form>
+        <h1 className="title text-center text-xl md:text-2xl">Sign In</h1>
+        <p className="mt-3 text-center text-sm text-muted">Your orders, coupons and wishlist, with just your mobile number.</p>
+        {config === undefined ? (
+          <div className="min-h-[220px]" />
+        ) : config.available ? (
+          <div className="mt-8 rounded-3xl border border-line bg-white p-6 md:p-7">
+            <OtpLogin config={config} onSignedIn={setSignedIn} />
+          </div>
+        ) : (
+          <>
+            <p className="mt-8 rounded-2xl bg-sand px-5 py-4 text-center text-sm text-ink/75">Sign-in with your mobile number is coming soon. You can check out as a guest meanwhile.</p>
+            <PreviewSignIn />
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+/** PREVIEW ONLY: the sample account (lib/demo-account.ts), shown while mobile login isn't set up. */
+function PreviewSignIn() {
+  const { signIn } = useStore();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  return (
+    <>
+      <div className="mt-8 rounded-2xl border border-dashed border-ink/25 bg-sand px-5 py-4 text-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">Preview account</p>
+        <p className="mt-2 text-ink/75">
+          Email: <span className="font-medium text-ink">{DEMO_CREDENTIALS.email}</span>
+          <br />
+          Password: <span className="font-medium text-ink">{DEMO_CREDENTIALS.password}</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setEmail(DEMO_CREDENTIALS.email);
+            setPassword(DEMO_CREDENTIALS.password);
+            setMessage(null);
+          }}
+          className="mt-3 text-xs font-medium underline underline-offset-4"
+        >
+          Fill in for me
+        </button>
+      </div>
+      <form
+        className="mt-6 space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!signIn(email, password)) setMessage("That email and password don't match. Try the preview account above.");
+        }}
+      >
+        <input required type="email" placeholder="Email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="field" />
+        <input required type="password" placeholder="Password" aria-label="Password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
+        <button type="submit" className="btn btn-dark w-full">
+          Sign In
+        </button>
+        {message && (
+          <p role="alert" className="text-center text-sm text-muted">
+            {message}
+          </p>
+        )}
+      </form>
+    </>
   );
 }
 
@@ -212,7 +220,7 @@ function Dashboard({ account }: { account: Account }) {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow text-muted">My Account</p>
-            <h1 className="display mt-2 text-3xl font-normal md:text-4xl">Welcome back, {account.firstName}</h1>
+            <h1 className="display mt-2 text-3xl font-normal md:text-4xl">Welcome back{account.firstName ? `, ${account.firstName}` : ""}</h1>
           </div>
           <p className="rounded-full bg-white px-4 py-2 text-xs text-muted shadow-soft">Member since {account.memberSince}</p>
         </div>
@@ -240,7 +248,7 @@ function Dashboard({ account }: { account: Account }) {
           <div className="min-w-0">
             {section === "overview" && <Overview account={account} orders={orders} go={go} onOpen={open} />}
             {section === "orders" && (viewing ? <OrderDetail order={viewing} onBack={() => setViewing(null)} /> : <Orders orders={orders} onOpen={open} />)}
-            {section === "addresses" && <Addresses />}
+            {section === "addresses" && <Addresses account={account} orders={orders} />}
             {section === "wishlist" && <Wishlist />}
             {section === "details" && <Details account={account} />}
             {section === "support" && <Support />}
@@ -269,9 +277,10 @@ function Overview({ account, orders, go, onOpen }: { account: Account; orders: A
   const stats = [
     { label: "Orders", value: orders?.length ?? "–", to: "orders" as const, icon: Package },
     { label: "Wishlist", value: wishlist.length, to: "wishlist" as const, icon: Heart },
-    { label: "Saved Addresses", value: DEMO_ADDRESSES.length, to: "addresses" as const, icon: MapPin },
+    { label: "Saved Addresses", value: addressesOf(account, orders).length, to: "addresses" as const, icon: MapPin },
   ];
-  const home = DEMO_ADDRESSES.find((a) => a.isDefault) ?? DEMO_ADDRESSES[0];
+  const addresses = addressesOf(account, orders);
+  const home = addresses.find((a) => a.isDefault) ?? addresses[0];
 
   return (
     <div className="space-y-8">
@@ -319,17 +328,25 @@ function Overview({ account, orders, go, onOpen }: { account: Account; orders: A
         </div>
         <div className={`${card} p-6`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">Default Address</p>
-          <p className="mt-3 font-medium">{home.name}</p>
-          {home.lines.map((l) => (
-            <p key={l} className="text-sm text-muted">
-              {l}
-            </p>
-          ))}
+          {home ? (
+            <>
+              <p className="mt-3 font-medium">{home.name}</p>
+              {home.lines.map((l) => (
+                <p key={l} className="text-sm text-muted">
+                  {l}
+                </p>
+              ))}
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-muted">Your delivery address is saved here after your first order.</p>
+          )}
           <button onClick={() => go("addresses")} className="mt-4 text-xs underline underline-offset-4">
             Manage addresses
           </button>
         </div>
       </section>
+
+      {!isPreview(account) && <MyCoupons />}
 
       <button onClick={() => go("support")} className={`${card} group flex w-full items-center gap-4 p-5 text-left transition-shadow hover:shadow-lift`}>
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sand">
@@ -691,23 +708,29 @@ function Support() {
   );
 }
 
-function Addresses() {
+function Addresses({ account, orders }: { account: Account; orders: AccountOrder[] | null }) {
   const [note, setNote] = useState<string | null>(null);
+  const preview = isPreview(account);
   const demoOnly = () => setNote("Saving changes is available once accounts go live.");
+  const list = addressesOf(account, orders);
   return (
     <section>
       <SectionTitle
         action={
-          <button onClick={demoOnly} className="btn btn-outline h-9 px-4">
-            Add Address
-          </button>
+          preview ? (
+            <button onClick={demoOnly} className="btn btn-outline h-9 px-4">
+              Add Address
+            </button>
+          ) : undefined
         }
       >
         Saved Addresses
       </SectionTitle>
       {note && <p className="mb-4 rounded-2xl bg-white px-4 py-2 text-sm text-muted shadow-soft">{note}</p>}
+      {!preview && <p className="mb-4 text-sm text-muted">The addresses you have had orders delivered to. A new one is added when you use it at checkout.</p>}
+      {list.length === 0 && <p className={`${card} px-6 py-10 text-center text-sm text-muted`}>No addresses yet.</p>}
       <div className="grid gap-4 md:grid-cols-2">
-        {DEMO_ADDRESSES.map((a) => (
+        {list.map((a) => (
           <div key={a.id} className={`${card} p-6 ${a.isDefault ? "ring-1 ring-ink" : ""}`}>
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">{a.label}</p>
@@ -720,6 +743,7 @@ function Addresses() {
               </p>
             ))}
             <p className="mt-1 text-sm text-muted">{a.phone}</p>
+            {preview && (
             <div className="mt-4 flex gap-4 text-xs">
               <button onClick={demoOnly} className="underline underline-offset-4">
                 Edit
@@ -733,6 +757,7 @@ function Addresses() {
                 Remove
               </button>
             </div>
+            )}
           </div>
         ))}
       </div>
@@ -766,42 +791,51 @@ function Wishlist() {
 }
 
 function Details({ account }: { account: Account }) {
+  const { setSignedIn } = useStore();
   const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const preview = isPreview(account);
   return (
     <section className={`${card} max-w-2xl p-6 md:p-8`}>
       <SectionTitle>Account Details</SectionTitle>
       <form
         className="space-y-4"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          setNote("Saving changes is available once accounts go live.");
+          if (preview) return setNote("Saving changes is available once accounts go live.");
+          const fd = new FormData(e.currentTarget);
+          setBusy(true);
+          try {
+            const d = await api<{ customer: Account }>("/api/auth/profile", { method: "POST", body: Object.fromEntries(fd) });
+            setSignedIn(d.customer);
+            setNote("Saved.");
+          } catch (err) {
+            setNote((err as Error).message);
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1.5 block text-muted">First name</span>
-            <input defaultValue={account.firstName} className="field" />
+            <input name="firstName" defaultValue={account.firstName} className="field" />
           </label>
           <label className="text-sm">
             <span className="mb-1.5 block text-muted">Last name</span>
-            <input defaultValue={account.lastName} className="field" />
+            <input name="lastName" defaultValue={account.lastName} className="field" />
           </label>
         </div>
         <label className="block text-sm">
           <span className="mb-1.5 block text-muted">Email</span>
-          <input type="email" defaultValue={account.email} className="field" />
+          <input name="email" type="email" defaultValue={account.email} className="field" />
         </label>
         <label className="block text-sm">
-          <span className="mb-1.5 block text-muted">Mobile</span>
-          <input type="tel" defaultValue={account.phone} className="field" />
+          <span className="mb-1.5 block text-muted">Mobile{preview ? "" : " (you sign in with this number)"}</span>
+          <input type="tel" defaultValue={preview ? account.phone : `+91 ${account.phone}`} readOnly={!preview} className={`field ${preview ? "" : "bg-sand/50"}`} />
         </label>
-
-        <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.16em]">Change Password</p>
-        <input type="password" placeholder="Current password" aria-label="Current password" className="field" />
-        <input type="password" placeholder="New password" aria-label="New password" className="field" />
-
-        <button type="submit" className="btn btn-dark">
-          Save Changes
+        <button type="submit" className="btn btn-dark" disabled={busy}>
+          {busy ? "Saving…" : "Save Changes"}
         </button>
         {note && (
           <p role="status" className="text-sm text-muted">
@@ -809,6 +843,40 @@ function Details({ account }: { account: Account }) {
           </p>
         )}
       </form>
+    </section>
+  );
+}
+
+/** Coupons the store gave this customer (Admin → Coupons, linked to their mobile or email). */
+function MyCoupons() {
+  const [coupons, setCoupons] = useState<{ code: string; name: string; label: string; expiresAt: string | null; usable: boolean }[] | null>(null);
+  useEffect(() => {
+    api<{ coupons: NonNullable<typeof coupons> }>("/api/account/coupons")
+      .then((d) => setCoupons(d.coupons))
+      .catch(() => setCoupons([]));
+  }, []);
+  if (!coupons?.length) return null;
+  return (
+    <section>
+      <SectionTitle>Your Coupons</SectionTitle>
+      <ul className="grid gap-3 md:grid-cols-2">
+        {coupons.map((c) => (
+          <li key={c.code} className={`${card} flex items-center gap-4 border border-dashed border-ink/25 p-5 ${c.usable ? "" : "opacity-50"}`}>
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-sand">
+              <Tag size={17} strokeWidth={1.5} />
+            </span>
+            <span className="min-w-0 flex-1 text-sm">
+              <span className="block font-semibold tracking-[0.08em]">{c.code}</span>
+              <span className="block text-xs text-muted">
+                {c.label}
+                {c.expiresAt && ` · until ${new Date(c.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                {!c.usable && " · not active"}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-muted">Only for you: enter the code at checkout with this mobile number.</p>
     </section>
   );
 }

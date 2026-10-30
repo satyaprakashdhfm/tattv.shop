@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import type { StoreSettings } from "@/lib/catalog";
 import { telHref, whatsappHello } from "@/lib/site";
+import { POLICIES } from "@/lib/policies";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon, XIcon, YouTubeIcon } from "./social-icons";
 
 const COLUMNS = [
@@ -20,7 +21,7 @@ const COLUMNS = [
     title: "Client Care",
     links: [
       { label: "Track Your Order", href: "/orders/track" },
-      { label: "Shipping", href: "/help#shipping" },
+      { label: "Shipping & Payment", href: "/policies/shipping-payment" },
       { label: "Returns & Exchanges", href: "/returns" },
       { label: "Size Guide", href: "/help#size-guide" },
       { label: "Jewellery Care", href: "/help#care" },
@@ -104,6 +105,17 @@ export function Footer({ settings }: { settings: StoreSettings }) {
       <div className="border-t border-white/10">
         <div className="container-x flex flex-col gap-2 py-6 text-xs text-white/50 md:flex-row md:items-center md:justify-between">
           <p>© {new Date().getFullYear()} TATTV. All rights reserved.</p>
+          <nav aria-label="Policies">
+            <ul className="flex flex-wrap gap-x-5 gap-y-2">
+              {POLICIES.map((p) => (
+                <li key={p.slug}>
+                  <Link href={`/policies/${p.slug}`} className="hover:text-white">
+                    {p.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
           <p className="tracking-[0.14em] uppercase">Energize Your Style Element</p>
         </div>
       </div>

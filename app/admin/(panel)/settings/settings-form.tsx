@@ -33,7 +33,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
           type="email"
           label="Email"
           defaultValue={settings.email}
-          placeholder="care@tattv.shop"
+          placeholder="contact@tattv.co.in"
           required
           hint="Shown on: footer, Contact Us, Help, Returns, My Account → Contact & Support, packing slips. Contact-form and return messages are emailed here."
         />

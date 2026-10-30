@@ -3,7 +3,7 @@ import { ClickRow } from "./click-row";
 import { ArrowDownRight, ArrowUpRight, Boxes, MessageSquare, Package, Truck, Wallet } from "lucide-react";
 import { formatPrice } from "@/lib/format";
 import { loadCatalogData } from "@/lib/server/catalog";
-import { isLive, listMessages, listOrders, paymentConfig } from "@/lib/server/orders";
+import { isLive, listMessages, listOrders, orderCosts, orderProfit, paymentConfig } from "@/lib/server/orders";
 import { adminConfigured } from "@/lib/server/auth";
 import { PageHead, StatusPill, when } from "./ui";
 
@@ -40,7 +40,7 @@ const shortDay = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string }> }) {
   const params = await searchParams;
-  const [orders, messages, { products }] = await Promise.all([listOrders(), listMessages(), loadCatalogData()]);
+  const [orders, messages, { products }, costs] = await Promise.all([listOrders(), listMessages(), loadCatalogData(), orderCosts()]);
   const live = orders.filter(isLive);
   const today = startOfDay(Date.now());
 
@@ -72,8 +72,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const previous = between(from - range.days * DAY, from);
   const stat = (now: number, before: number) => ({ now, change: before ? Math.round(((now - before) / before) * 100) : null });
   const avg = (list: typeof live) => (list.length ? Math.round(sum(list) / list.length) : 0);
+  const profit = (list: typeof live) => list.reduce((s, o) => s + orderProfit(o, costs), 0);
+  const noCost = current.reduce((n, o) => n + (costs.get(o.id)?.missing ?? 0), 0);
   const kpis = [
     { label: "Revenue", ...stat(sum(current), sum(previous)), money: true },
+    { label: "Profit", ...stat(profit(current), profit(previous)), money: true },
     { label: "Orders", ...stat(current.length, previous.length), money: false },
     { label: "Average order", ...stat(avg(current), avg(previous)), money: true },
     { label: "Items sold", ...stat(itemsIn(current), itemsIn(previous)), money: false },
@@ -164,7 +167,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </p>
           </form>
         )}
-        <dl className="grid grid-cols-2 divide-line md:grid-cols-4 md:divide-x">
+        <dl className="grid grid-cols-2 divide-line md:grid-cols-5 md:divide-x">
           {kpis.map((k) => (
             <div key={k.label} className="px-6 py-5">
               <dt className="text-xs text-muted">{k.label}</dt>
@@ -182,6 +185,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </div>
           ))}
         </dl>
+        {/* Profit = what the pieces sold for after discounts, less their cost price (shipping and gift packing left out). */}
+        <p className="border-t border-line px-6 py-3 text-xs text-muted">
+          Profit is the items&apos; selling price after discounts, less their cost price; shipping and gift packing are left out.
+          {noCost > 0 && (
+            <>
+              {" "}
+              {noCost} {noCost === 1 ? "piece" : "pieces"} sold in this period {noCost === 1 ? "has" : "have"} no cost price yet, so {noCost === 1 ? "it counts" : "they count"} as pure profit.{" "}
+              <Link href="/admin/products" className="underline underline-offset-2">
+                Add cost prices
+              </Link>
+            </>
+          )}
+        </p>
       </section>
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-5">

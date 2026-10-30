@@ -11,6 +11,7 @@ import { useCatalog, useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUSES, PAYMENT_LABELS, TRACKER_STEPS, whatsappLink, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { api, orderToken, rememberOrder } from "@/lib/client-api";
+import { RateOrder } from "./rate-order";
 
 interface OrderView {
   id: string;
@@ -82,6 +83,7 @@ export function OrderView({ id }: { id: string }) {
   const cancelled = order.status === "cancelled";
   const step = TRACKER_STEPS.indexOf(order.status);
   const help = whatsappLink(`Hi TATTV! A question about my order ${order.id}`, settings.phone);
+  const token = params.get("t") || orderToken(order.id);
 
   return (
     <div className="container-x max-w-3xl py-12 md:py-16">
@@ -182,6 +184,8 @@ export function OrderView({ id }: { id: string }) {
           </Link>
         </div>
       </section>
+
+      {order.status === "delivered" && token && <RateOrder orderId={order.id} token={token} />}
 
       <section className="mt-5 rounded-3xl border border-line bg-white p-6 md:p-8">
         <h2 className="eyebrow">Items</h2>

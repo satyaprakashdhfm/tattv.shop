@@ -6,6 +6,11 @@ import { revalidatePath } from "next/cache";
 import { checkAdminLogin, endAdminSession, requireAdmin, startAdminSession } from "@/lib/server/auth";
 import { adminUpdateOrder, setMessageStatus } from "@/lib/server/orders";
 import { OrderError } from "@/lib/pricing";
+import { deleteCoupon, saveCoupon, setCouponActive } from "@/lib/server/coupons";
+import { deleteReview, setReviewStatus } from "@/lib/server/reviews";
+import { resetPolicy, savePolicy } from "@/lib/server/policies";
+import { bookShipment, cancelBooking, refreshTracking } from "@/lib/server/shipments";
+import { addReel, deleteReel, moveReel, saveVideo, updateReel } from "@/lib/server/reels";
 import { deleteCategory, deleteProduct, moveCategory, moveProduct, quickUpdateProducts, saveCategory, saveImage, saveProduct, saveSettings, type ProductScope } from "@/lib/server/catalog";
 
 export type FormState = { ok?: string; error?: string } | null;
@@ -122,6 +127,7 @@ export async function saveProductAction(_prev: FormState, fd: FormData): Promise
         details: str(fd, "details"),
         care: str(fd, "care"),
         shippingReturns: str(fd, "shippingReturns"),
+        costPrice: fd.get("costPrice"),
         active: fd.get("active") === "on",
         images,
       },
@@ -207,4 +213,149 @@ export async function saveSettingsAction(_prev: FormState, fd: FormData): Promis
   }
   refreshStore();
   return { ok: "Saved. Changes are live on the store." };
+}
+
+// ── Coupons ──
+export async function saveCouponAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const isNew = fd.get("create") === "1";
+  const res = await attempt(() =>
+    saveCoupon(
+      {
+        code: fd.get("code"),
+        kind: fd.get("kind"),
+        value: fd.get("value"),
+        label: fd.get("label"),
+        active: fd.get("active") === "on",
+        showAtCheckout: fd.get("showAtCheckout") === "on",
+        firstOrderOnly: fd.get("firstOrderOnly") === "on",
+        minSubtotal: fd.get("minSubtotal"),
+        maxUses: fd.get("maxUses"),
+        perCustomer: fd.get("perCustomer"),
+        startsOn: fd.get("startsOn"),
+        expiresOn: fd.get("expiresOn"),
+        ownerEmail: fd.get("ownerEmail"),
+        ownerPhone: fd.get("ownerPhone"),
+        note: fd.get("note"),
+      },
+      { isNew },
+    ),
+  );
+  if (typeof res === "object") return res;
+  revalidatePath("/admin/coupons");
+  redirect(backTo(fd, { saved: res }) ?? `/admin/coupons?saved=${res}`);
+}
+
+export async function toggleCouponAction(fd: FormData) {
+  await requireAdmin();
+  await setCouponActive(str(fd, "code"), fd.get("active") === "1");
+  revalidatePath("/admin/coupons");
+}
+
+export async function deleteCouponAction(fd: FormData) {
+  await requireAdmin();
+  await deleteCoupon(str(fd, "code"));
+  revalidatePath("/admin/coupons");
+  redirect(backTo(fd, { deleted: "1" }) ?? "/admin/coupons?deleted=1");
+}
+
+// ── Home page videos ──
+const refreshVideos = () => {
+  revalidatePath("/admin/videos");
+  revalidatePath("/");
+};
+
+export async function addReelAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const res = await attempt(async () => {
+    const video = await saveVideo(fd.get("video") as File | null);
+    const poster = await saveImage(fd.get("poster") as File | null);
+    await addReel({ video, poster, caption: fd.get("caption"), product: fd.get("product") });
+  });
+  if (res && typeof res === "object" && "error" in res) return res;
+  refreshVideos();
+  return { ok: "Added. It plays first on the home page." };
+}
+
+export async function updateReelAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const res = await attempt(async () => {
+    const poster = await saveImage(fd.get("poster") as File | null);
+    await updateReel(str(fd, "id"), { caption: fd.get("caption"), product: fd.get("product"), active: fd.get("active") === "on", poster });
+  });
+  if (res && typeof res === "object" && "error" in res) return res;
+  refreshVideos();
+  return { ok: "Saved." };
+}
+
+export async function moveReelAction(fd: FormData) {
+  await requireAdmin();
+  const dir = str(fd, "dir");
+  await moveReel(str(fd, "id"), dir === "top" ? "top" : Number(dir) < 0 ? -1 : 1);
+  refreshVideos();
+}
+
+export async function deleteReelAction(fd: FormData) {
+  await requireAdmin();
+  await deleteReel(str(fd, "id"));
+  refreshVideos();
+}
+
+// ── Reviews ──
+export async function setReviewStatusAction(fd: FormData) {
+  await requireAdmin();
+  await setReviewStatus(str(fd, "id"), str(fd, "status"));
+  revalidatePath("/admin/reviews");
+  revalidatePath("/");
+}
+
+export async function deleteReviewAction(fd: FormData) {
+  await requireAdmin();
+  await deleteReview(str(fd, "id"));
+  revalidatePath("/admin/reviews");
+  revalidatePath("/");
+}
+
+// ── Policies ──
+export async function savePolicyAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const slug = str(fd, "slug");
+  const res = await attempt(() => savePolicy(slug, { title: fd.get("title"), body: fd.get("body") }));
+  if (res && typeof res === "object" && "error" in res) return res;
+  revalidatePath("/admin/policies");
+  revalidatePath(`/policies/${slug}`);
+  return { ok: "Saved. The page is live." };
+}
+
+export async function resetPolicyAction(fd: FormData) {
+  await requireAdmin();
+  const slug = str(fd, "slug");
+  await resetPolicy(slug);
+  revalidatePath("/admin/policies");
+  revalidatePath(`/policies/${slug}`);
+}
+
+// ── Delhivery ──
+export async function bookShipmentAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = str(fd, "id");
+  const res = await attempt(() => bookShipment(id, fd.get("grams")));
+  refresh(id);
+  return typeof res === "object" ? res : { ok: `Booked with Delhivery: waybill ${res}. Print the label and pack the parcel.` };
+}
+
+export async function shipmentAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = str(fd, "id");
+  const what = str(fd, "do");
+  const res = await attempt(async () => {
+    if (what === "cancel") {
+      await cancelBooking(id);
+      return "Delhivery booking cancelled.";
+    }
+    const t = await refreshTracking(id);
+    return `Delhivery says: ${t.status || "no scans yet"}${t.location ? `, ${t.location}` : ""}.`;
+  });
+  refresh(id);
+  return typeof res === "object" ? res : { ok: res };
 }

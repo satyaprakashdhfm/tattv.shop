@@ -8,7 +8,7 @@ import { useStore } from "@/components/store-provider";
 import { CartLineItem } from "@/components/cart-line-item";
 import { QuickAddList } from "@/components/quick-add-list";
 import { DemoPayment } from "@/components/demo-payment";
-import { COUPONS, GIFT_WRAP, couponBlocker } from "@/lib/site";
+import { GIFT_WRAP, discountFor, offerBlocker, offerName, type Offer } from "@/lib/site";
 import { CUSTOMER_RULES, type CustomerInput } from "@/lib/pricing";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice, shippingFor } from "@/lib/format";
 import { api, rememberOrder } from "@/lib/client-api";
@@ -111,8 +111,12 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
   const [form, setForm] = useState<CustomerInput>(EMPTY);
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const [code, setCode] = useState("");
-  const [applied, setApplied] = useState<string | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [applied, setApplied] = useState<Offer | null>(null);
   const [codeMsg, setCodeMsg] = useState("");
+  const [checking, setChecking] = useState(false);
+  // Delhivery's answer for the PIN code typed (null until a 6-digit one is checked).
+  const [reach, setReach] = useState<{ pin: string; serviceable: boolean; cod: boolean; days: number | null; checked: boolean } | null>(null);
   const [gift, setGift] = useState(false);
   const [giftOccasion, setGiftOccasion] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
@@ -145,6 +149,27 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
     }
   }, [form]);
   useEffect(() => setPending(null), [cart, applied, payMethod, gift, giftOccasion, giftMessage]);
+  useEffect(() => {
+    const pin = form.pin;
+    if (!/^[1-9]\d{5}$/.test(pin)) return setReach(null);
+    let live = true;
+    api<{ serviceable: boolean; cod: boolean; days: number | null; checked: boolean }>(`/api/delivery/check?pin=${pin}`)
+      .then((d) => live && setReach({ pin, ...d }))
+      .catch(() => live && setReach(null));
+    return () => {
+      live = false;
+    };
+  }, [form.pin]);
+  const codOk = cod && (!reach || reach.cod);
+  useEffect(() => {
+    if (!codOk && payMethod === "cod" && online) setPayMethod("online");
+  }, [codOk, payMethod, online]);
+
+  useEffect(() => {
+    api<{ offers: Offer[] }>("/api/coupons")
+      .then((d) => setOffers(d.offers))
+      .catch(() => setOffers([]));
+  }, []);
 
   // fitSuggestions: on desktop, add or remove suggestion rows until the left column's natural height
   // just reaches the right column's, so neither side ends in empty space (the suggestions card then
@@ -198,9 +223,9 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
 
   const errors = Object.fromEntries(Object.entries(CUSTOMER_RULES).map(([k, fn]) => [k, fn(form[k as RuleKey])])) as Record<RuleKey, string>;
   // A code stays chosen if the bag drops below its minimum, but stops counting until it's back above.
-  const appliedBlocker = applied ? couponBlocker(applied, subtotal) : "";
+  const appliedBlocker = applied ? offerBlocker(applied, subtotal) : "";
   const usable = applied && !appliedBlocker ? applied : null;
-  const discount = usable ? Math.round((subtotal * COUPONS[usable].percent) / 100) : 0;
+  const discount = usable ? discountFor(usable, subtotal) : 0;
   const shipping = shippingFor(subtotal);
   const giftFee = gift ? GIFT_WRAP.fee : 0;
   const total = subtotal - discount + shipping + giftFee;
@@ -216,16 +241,25 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
   const onBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => setTouched({ ...touched, [e.target.name]: true });
   const fieldProps = { form, errors, touched, onChange, onBlur };
 
-  const applyCode = (raw = code) => {
+  // The server checks the code for this customer (personal codes, first order, uses left); the bag minimum is checked here.
+  const applyCode = async (raw = code) => {
     const c = raw.trim().toUpperCase();
-    if (!c) return;
-    const why = couponBlocker(c, subtotal);
-    if (!why) {
-      setApplied(c);
-      setCodeMsg("");
-      setCode("");
-    } else {
-      setCodeMsg(why);
+    if (!c || checking) return;
+    setChecking(true);
+    try {
+      const { offer } = await api<{ offer: Offer }>("/api/coupons/check", { method: "POST", body: { code: c, email: form.email, phone: form.phone } });
+      const why = offerBlocker(offer, subtotal);
+      if (why) {
+        setCodeMsg(why);
+      } else {
+        setApplied(offer);
+        setCodeMsg("");
+        setCode("");
+      }
+    } catch (e) {
+      setCodeMsg((e as Error).message);
+    } finally {
+      setChecking(false);
     }
   };
   const toggleGift = () => {
@@ -298,7 +332,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
           body: {
             customer: form,
             items: cart.map(({ slug, size, qty }) => ({ slug, size, qty })),
-            discountCode: usable,
+            discountCode: usable?.code ?? null,
             paymentMethod: payMethod,
             gift: gift ? { wrap: true, occasion: giftOccasion, message: giftMessage } : null,
           },
@@ -444,7 +478,16 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                   <Field name="address" label="House no., street, area" autoComplete="address-line1" className="col-span-2" {...fieldProps} />
                   <Field name="apartment" label="Landmark / apartment (optional)" autoComplete="address-line2" className="col-span-2" {...fieldProps} />
                   <Field name="city" label="City" autoComplete="address-level2" {...fieldProps} />
-                  <Field name="pin" label="Pincode" inputMode="numeric" autoComplete="postal-code" {...fieldProps} />
+                  <div>
+                    <Field name="pin" label="Pincode" inputMode="numeric" autoComplete="postal-code" {...fieldProps} />
+                    {reach && reach.pin === form.pin && reach.checked && (
+                      <p className={`mt-1 text-xs ${reach.serviceable ? "text-emerald-700" : "text-red-700"}`}>
+                        {reach.serviceable
+                          ? `Delivers here${reach.days ? ` in about ${reach.days} ${reach.days === 1 ? "day" : "days"}` : ""}${reach.cod ? "" : " · prepaid only"}`
+                          : "Our courier doesn't deliver to this PIN code yet"}
+                      </p>
+                    )}
+                  </div>
                   <div className="col-span-2">
                     <label htmlFor="co-state" className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-ink/70">
                       State
@@ -478,11 +521,11 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                     </label>
                   )}
                   {cod && (
-                    <label className="flex cursor-pointer items-center gap-4 p-4 text-sm">
-                      <input type="radio" name="pay" checked={payMethod === "cod"} onChange={() => setPayMethod("cod")} className="size-4 accent-ink" />
+                    <label className={`flex items-center gap-4 p-4 text-sm ${codOk ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
+                      <input type="radio" name="pay" checked={payMethod === "cod"} disabled={!codOk} onChange={() => setPayMethod("cod")} className="size-4 accent-ink" />
                       <span className="flex-1">
                         <span className="block font-medium">Cash on delivery</span>
-                        <span className="text-xs text-muted">Pay in cash or UPI when your parcel arrives</span>
+                        <span className="text-xs text-muted">{codOk ? "Pay in cash or UPI when your parcel arrives" : "Not available for this PIN code"}</span>
                       </span>
                     </label>
                   )}
@@ -513,15 +556,28 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                     }}
                     className="field flex-1 uppercase placeholder:normal-case"
                   />
-                  <button type="button" onClick={() => applyCode()} disabled={!code.trim()} className="btn btn-outline !px-5 disabled:opacity-40">
-                    Apply
+                  <button type="button" onClick={() => applyCode()} disabled={!code.trim() || checking} className="btn btn-outline !px-5 disabled:opacity-40">
+                    {checking ? "…" : "Apply"}
                   </button>
                 </div>
                 {codeMsg && <p className="mt-2 text-xs text-red-700">{codeMsg}</p>}
+                {/* A code typed in (a personal or secret one) shows here once applied, since it isn't in the list below. */}
+                {applied && !offers.some((o) => o.code === applied.code) && (
+                  <p className="mt-3 flex items-center gap-2 rounded-2xl bg-sand/60 px-4 py-2.5 text-sm">
+                    <Check size={14} className="text-emerald-700" />
+                    <span className="flex-1">
+                      <b className="font-semibold tracking-[0.08em]">{applied.code}</b> · {appliedBlocker || applied.label}
+                    </span>
+                    <button type="button" aria-label={`Remove ${applied.code}`} onClick={() => setApplied(null)} className="text-muted hover:text-ink">
+                      <X size={14} />
+                    </button>
+                  </p>
+                )}
                 <ul className="mt-4 space-y-2.5">
-                  {Object.entries(COUPONS).map(([c, info]) => {
-                    const on = applied === c;
-                    const why = couponBlocker(c, subtotal);
+                  {offers.map((info) => {
+                    const c = info.code;
+                    const on = applied?.code === c;
+                    const why = offerBlocker(info, subtotal);
                     return (
                       <li key={c} className={`flex items-center gap-3 rounded-2xl border border-dashed p-3 transition-colors ${on ? "border-ink bg-sand/60" : "border-ink/25"}`}>
                         <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${on ? "bg-ink text-white" : "bg-sand text-ink"}`}>
@@ -578,7 +634,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                   {usable && (
                     <div className="flex justify-between text-emerald-700">
                       <dt>
-                        Coupon {usable} ({COUPONS[usable].percent}%)
+                        Coupon {usable.code} ({offerName(usable)})
                       </dt>
                       <dd>−{formatPrice(discount)}</dd>
                     </div>
@@ -613,11 +669,15 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 {discount > 0 && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">You save {formatPrice(discount)} on this order.</p>}
                 <p className="mt-4 text-xs text-muted">
                   By placing your order you agree to our{" "}
-                  <Link href="/help" className="underline underline-offset-2">
+                  <Link href="/policies/terms" target="_blank" className="underline underline-offset-2">
                     terms
+                  </Link>
+                  ,{" "}
+                  <Link href="/policies/shipping-payment" target="_blank" className="underline underline-offset-2">
+                    shipping &amp; payment
                   </Link>{" "}
                   and{" "}
-                  <Link href="/returns" className="underline underline-offset-2">
+                  <Link href="/policies/returns-refunds" target="_blank" className="underline underline-offset-2">
                     return policy
                   </Link>
                   .
@@ -633,7 +693,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 {error}
               </p>
             )}
-            <button type="submit" disabled={busy || !!soldOutLine} className="btn btn-dark h-14 w-full text-[13px] shadow-lift disabled:opacity-50">
+            <button type="submit" disabled={busy || !!soldOutLine || (reach?.pin === form.pin && !reach.serviceable)} className="btn btn-dark h-14 w-full text-[13px] shadow-lift disabled:opacity-50">
               <Lock size={15} /> {busy ? "Please wait…" : payLabel}
             </button>
           </div>

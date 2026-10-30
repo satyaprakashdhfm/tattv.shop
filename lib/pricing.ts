@@ -2,7 +2,7 @@
 // server (enforced). The browser never decides prices: the server re-prices every order with this.
 import type { Product } from "./products";
 import { shippingFor } from "./format";
-import { GIFT_WRAP, MAX_QTY_PER_ITEM, type Coupon } from "./site";
+import { GIFT_WRAP, MAX_QTY_PER_ITEM, discountFor, type Offer } from "./site";
 
 export class OrderError extends Error {
   status: number;
@@ -41,18 +41,14 @@ export interface PricedOrder {
 export function priceOrder({
   items,
   getProduct,
-  coupons,
-  couponCode,
-  priorOrders = 0,
+  coupon = null,
   giftWrap = false,
 }: {
   items: OrderItemInput[];
   /** Active products only; `stock` null means not tracked. */
   getProduct: (slug: string) => Product | undefined;
-  coupons: Record<string, Coupon>;
-  couponCode?: string | null;
-  /** Earlier confirmed orders by this customer (for first-order-only codes). */
-  priorOrders?: number;
+  /** A code the server has already checked for this customer (lib/server/coupons.ts); the bag minimum is checked here. */
+  coupon?: Pick<Offer, "code" | "kind" | "value" | "minSubtotal"> | null;
   giftWrap?: boolean;
 }): PricedOrder {
   if (!Array.isArray(items) || items.length === 0) throw new OrderError("Your bag is empty.");
@@ -90,14 +86,10 @@ export function priceOrder({
 
   let discount = 0;
   let discountCode: string | null = null;
-  const code = (couponCode || "").trim().toUpperCase();
-  if (code) {
-    const c = coupons[code];
-    if (!c) throw new OrderError("That discount code is not valid.");
-    if (c.firstOrderOnly && priorOrders > 0) throw new OrderError(`${code} is only for your first order.`);
-    if (c.minSubtotal && subtotal < c.minSubtotal) throw new OrderError(`${code} needs a bag of ₹${c.minSubtotal.toLocaleString("en-IN")} or more.`);
-    discount = Math.round((subtotal * c.percent) / 100);
-    discountCode = code;
+  if (coupon) {
+    if (coupon.minSubtotal && subtotal < coupon.minSubtotal) throw new OrderError(`${coupon.code} needs a bag of ₹${coupon.minSubtotal.toLocaleString("en-IN")} or more.`);
+    discount = discountFor(coupon, subtotal);
+    discountCode = coupon.code;
   }
 
   const shipping = shippingFor(subtotal);
