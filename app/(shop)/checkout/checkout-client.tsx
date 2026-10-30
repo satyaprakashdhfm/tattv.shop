@@ -127,6 +127,8 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
   const [giftOccasion, setGiftOccasion] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [payMethod, setPayMethod] = useState<"online" | "cod">(online ? "online" : "cod");
+  // Set once a pay button is tapped and the details check out: the "check your address" step before the order is placed.
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [demo, setDemo] = useState<PlacedOrder | null>(null);
@@ -346,8 +348,8 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
     rzp.open();
   };
 
-  const placeOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Either pay button: check the details, then ask the customer to look over the address and phone before placing.
+  const choose = (method: "online" | "cod") => {
     setError("");
     setTouched(Object.fromEntries(Object.keys(CUSTOMER_RULES).map((k) => [k, true])));
     const firstBad = (Object.keys(CUSTOMER_RULES) as RuleKey[]).find((k) => errors[k]);
@@ -357,6 +359,13 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
       el?.focus({ preventScroll: true });
       return;
     }
+    setPayMethod(method);
+    setConfirming(true);
+  };
+
+  const placeOrder = async () => {
+    setConfirming(false);
+    setError("");
     setBusy(true);
     try {
       const res =
@@ -384,7 +393,8 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
     }
   };
 
-  const payLabel = payMethod === "cod" ? (advance ? `Pay ${formatPrice(advance)} Advance & Place Order` : `Place Order · ${formatPrice(total)}`) : `Pay ${formatPrice(total)}`;
+  const codAdvance = advanceFor(total, rules.codAdvancePercent);
+  const blocked = busy || !!soldOutLine || (!!reach && reach.pin === form.pin && !reach.serviceable);
 
   return (
     <div className="bg-sand/50 pb-6">
@@ -403,7 +413,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
           </ol>
         </div>
 
-        <form ref={formRef} onSubmit={placeOrder} noValidate className="mt-7">
+        <form ref={formRef} onSubmit={(e) => e.preventDefault()} noValidate className="mt-7">
           <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
             {/* Left: the bag, gift packing, offers and suggestions. On phones the two columns interleave (see `order-*`). */}
             <div ref={leftRef} className="contents lg:flex lg:flex-col lg:gap-5">
@@ -637,33 +647,28 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
               </Panel>
 
               <Panel title="Payment" step={3} className="order-7 lg:order-none">
-                <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
+                {/* Two ways to pay, each with its own button at the bottom; nothing is picked for the customer. */}
+                <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line text-sm">
                   {online && (
-                    <label className="flex cursor-pointer items-center gap-4 p-4 text-sm">
-                      <input type="radio" name="pay" checked={payMethod === "online"} onChange={() => setPayMethod("online")} className="size-4 accent-ink" />
-                      <span className="flex-1">
-                        <span className="block font-medium">Pay online</span>
-                        <span className="text-xs text-muted">UPI, cards, net banking and wallets via Razorpay</span>
-                      </span>
-                    </label>
+                    <li className="p-4">
+                      <span className="block font-medium">Pay in full · {formatPrice(total)}</span>
+                      <span className="text-xs text-muted">UPI, cards, net banking and wallets via Razorpay</span>
+                    </li>
                   )}
                   {cod && (
-                    <label className={`flex items-center gap-4 p-4 text-sm ${codOk ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
-                      <input type="radio" name="pay" checked={payMethod === "cod"} disabled={!codOk} onChange={() => setPayMethod("cod")} className="size-4 accent-ink" />
-                      <span className="flex-1">
-                        <span className="block font-medium">Cash on delivery</span>
-                        <span className="text-xs text-muted">
-                          {!codOk
-                            ? "Not available for this PIN code"
-                            : rules.codAdvancePercent > 0
-                              ? `Pay ${rules.codAdvancePercent}% now online (${formatPrice(advanceFor(total, rules.codAdvancePercent))}), the rest in cash or UPI when your parcel arrives`
-                              : "Pay in cash or UPI when your parcel arrives"}
-                        </span>
+                    <li className={`p-4 ${codOk ? "" : "opacity-50"}`}>
+                      <span className="block font-medium">Cash on delivery</span>
+                      <span className="text-xs text-muted">
+                        {!codOk
+                          ? "Not available for this PIN code"
+                          : rules.codAdvancePercent > 0
+                            ? `Pay ${rules.codAdvancePercent}% now online (${formatPrice(codAdvance)}), the rest in cash or UPI when your parcel arrives`
+                            : "Pay in cash or UPI when your parcel arrives"}
                       </span>
-                    </label>
+                    </li>
                   )}
-                </div>
-                {online === "demo" && (payMethod === "online" || advance > 0) && (
+                </ul>
+                {online === "demo" && (
                   <p className="mt-3 text-xs text-muted">Demo mode: Razorpay keys aren&apos;t set up yet, so online payment is simulated and no money is charged.</p>
                 )}
               </Panel>
@@ -761,22 +766,73 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
 
           {/* The pay button floats centred at the bottom of the screen until the form ends, then rests under it. */}
           <div className="sticky bottom-3 z-30 mx-auto mt-6 max-w-xl md:bottom-5">
-            {/* Orders can't be changed or cancelled on the site: the team does it. Said before paying. */}
-            <p className="mb-2 rounded-2xl bg-white/95 px-4 py-2.5 text-center text-xs leading-relaxed text-ink/75 shadow-soft backdrop-blur">
-              Please check your address and phone number: once the order is placed they can&apos;t be changed online. For any change, cancellation or return, call or WhatsApp us on{" "}
-              <b className="font-medium text-ink">{catalog.settings.phone}</b>.
-            </p>
             {error && (
               <p role="alert" className="mb-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-center text-sm text-red-800 shadow-soft">
                 {error}
               </p>
             )}
-            <button type="submit" disabled={busy || !!soldOutLine || (reach?.pin === form.pin && !reach.serviceable)} className="btn btn-dark h-14 w-full text-[13px] shadow-lift disabled:opacity-50">
-              <Lock size={15} /> {busy ? "Please wait…" : payLabel}
-            </button>
+            {busy ? (
+              <button type="button" disabled className="btn btn-dark h-14 w-full text-[13px] shadow-lift disabled:opacity-50">
+                <Lock size={15} /> Please wait…
+              </button>
+            ) : (
+              <div className={`grid gap-2 ${online && cod ? "grid-cols-2" : ""}`}>
+                {online && (
+                  <button type="button" onClick={() => choose("online")} disabled={blocked} className="btn btn-dark h-14 w-full flex-col !gap-0 !px-3 leading-tight shadow-lift disabled:opacity-50">
+                    <span className="flex items-center gap-1.5 text-[12px]">
+                      <Lock size={13} /> Pay in full
+                    </span>
+                    <span className="text-[11px] font-normal normal-case tracking-normal text-white/75">{formatPrice(total)} online</span>
+                  </button>
+                )}
+                {cod && (
+                  <button type="button" onClick={() => choose("cod")} disabled={blocked || !codOk} className="btn h-14 w-full flex-col !gap-0 border border-ink bg-white !px-3 leading-tight text-ink shadow-lift hover:bg-sand disabled:opacity-50">
+                    <span className="text-[12px]">Cash on delivery</span>
+                    <span className="text-[11px] font-normal normal-case tracking-normal text-ink/65">
+                      {!codOk ? "Not for this PIN code" : codAdvance ? `${formatPrice(codAdvance)} now · rest on delivery` : "Pay when it arrives"}
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </form>
       </div>
+
+      {/* Orders can't be changed or cancelled on the site: the team does it. Said once, right before placing. */}
+      {confirming && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center" role="dialog" aria-modal="true" aria-label="Check your details">
+          <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={() => setConfirming(false)} />
+          <div className="relative w-full max-w-md animate-fade-in rounded-3xl bg-white p-6 shadow-lift">
+            <h2 className="eyebrow mb-4">Check your details</h2>
+            <div className="space-y-1 rounded-2xl bg-sand/60 p-4 text-sm">
+              <p className="font-medium">
+                {form.firstName} {form.lastName} · {form.phone}
+              </p>
+              <p className="text-ink/75">
+                {[form.address, form.apartment, form.city, form.state].filter(Boolean).join(", ")} – {form.pin}
+              </p>
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-ink/75">
+              Please check your address and phone number: once the order is placed they can&apos;t be changed online. For any change, cancellation or return, call or WhatsApp us on{" "}
+              <b className="font-medium text-ink">{catalog.settings.phone}</b>.
+            </p>
+            {payMethod === "cod" && advance > 0 && (
+              <p className="mt-3 text-xs text-ink/75">
+                Now: <b className="font-medium text-ink">{formatPrice(advance)}</b> online · on delivery: {formatPrice(total - advance)} in cash or UPI
+              </p>
+            )}
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setConfirming(false)} className="btn btn-outline h-12 !px-3 text-[12px]">
+                Edit details
+              </button>
+              <button type="button" onClick={placeOrder} className="btn btn-dark h-12 !px-3 text-[12px]">
+                <Lock size={13} /> {payMethod === "online" ? `Pay ${formatPrice(total)}` : advance ? `Pay ${formatPrice(advance)}` : "Place Order"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {demo && (
         <DemoPayment
