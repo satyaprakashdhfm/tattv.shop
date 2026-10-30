@@ -6,7 +6,7 @@ import { makeCatalog, type CatalogData, type StoreSettings } from "@/lib/catalog
 import type { Category, Finish, Product } from "@/lib/products";
 import { OrderError } from "@/lib/pricing";
 import { DEFAULT_SETTINGS } from "@/lib/site";
-import { DEFAULT_SHIPPING_RETURNS, customLines, defaultCare } from "@/lib/product-copy";
+import { customLines, defaultCare, defaultShippingReturns } from "@/lib/product-copy";
 import { query, transaction } from "./db";
 
 // Catalogue storage: categories, products (+ product_images) and the store settings row.
@@ -218,7 +218,7 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
       String(input.short || "").trim().slice(0, 300), String(input.description || "").trim().slice(0, 5000),
       String(input.details || "").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 20),
       stock, !!input.active,
-      customLines(input.care, defaultCare(String(input.finish))), customLines(input.shippingReturns, DEFAULT_SHIPPING_RETURNS), costPrice,
+      customLines(input.care, defaultCare(String(input.finish))), customLines(input.shippingReturns, defaultShippingReturns((await loadCatalogData()).settings)), costPrice,
     ];
     if (isNew) {
       await db.query(
@@ -377,6 +377,11 @@ function withDefaults(stored: (Partial<StoreSettings> & { announcement?: string;
 
 export async function saveSettings(input: Partial<Record<keyof StoreSettings, unknown>>) {
   const text = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
+  const whole = (v: unknown, label: string, min: number, max: number) => {
+    const n = Number(v);
+    if (String(v ?? "").trim() === "" || !Number.isInteger(n) || n < min || n > max) throw new Error(`${label} must be a whole number from ${min} to ${max.toLocaleString("en-IN")}.`);
+    return n;
+  };
   const email = text(input.email).toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
   const digits = text(input.phone).replace(/\D/g, "");
@@ -391,6 +396,10 @@ export async function saveSettings(input: Partial<Record<keyof StoreSettings, un
     phone: text(input.phone, 30),
     hours: text(input.hours, 120),
     address: text(input.address, 400).replace(/\r/g, ""),
+    freeShippingAbove: whole(input.freeShippingAbove, "Free shipping from", 0, 1_000_000),
+    shippingFee: whole(input.shippingFee, "Shipping fee", 0, 10_000),
+    giftWrapFee: whole(input.giftWrapFee, "Gift packing", 0, 10_000),
+    codAdvancePercent: whole(input.codAdvancePercent, "Cash on delivery advance", 0, 100),
   };
   await query(
     "INSERT INTO settings (key, value) VALUES ('store', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",

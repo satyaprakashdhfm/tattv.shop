@@ -1,8 +1,8 @@
 // Order pricing and validation. Pure functions, shared by the browser (instant feedback) and the
 // server (enforced). The browser never decides prices: the server re-prices every order with this.
 import type { Product } from "./products";
-import { shippingFor } from "./format";
-import { GIFT_WRAP, MAX_QTY_PER_ITEM, discountFor, type Offer } from "./site";
+import { shippingFor, type ShippingRules } from "./format";
+import { MAX_QTY_PER_ITEM, discountFor, type Offer } from "./site";
 
 export class OrderError extends Error {
   status: number;
@@ -43,6 +43,7 @@ export function priceOrder({
   getProduct,
   coupon = null,
   giftWrap = false,
+  rules,
 }: {
   items: OrderItemInput[];
   /** Active products only; `stock` null means not tracked. */
@@ -50,6 +51,8 @@ export function priceOrder({
   /** A code the server has already checked for this customer (lib/server/coupons.ts); the bag minimum is checked here. */
   coupon?: Pick<Offer, "code" | "kind" | "value" | "minSubtotal"> | null;
   giftWrap?: boolean;
+  /** The stored rules (Site Settings): shipping and the gift packing fee. */
+  rules: ShippingRules & { giftWrapFee: number };
 }): PricedOrder {
   if (!Array.isArray(items) || items.length === 0) throw new OrderError("Your bag is empty.");
   if (items.length > 50) throw new OrderError("Too many items in one order.");
@@ -92,8 +95,8 @@ export function priceOrder({
     discountCode = coupon.code;
   }
 
-  const shipping = shippingFor(subtotal);
-  const gift = giftWrap ? GIFT_WRAP.fee : 0;
+  const shipping = shippingFor(subtotal, rules);
+  const gift = giftWrap ? rules.giftWrapFee : 0;
   return { lines, subtotal, discount, discountCode, shipping, giftWrap: gift, total: subtotal - discount + shipping + gift };
 }
 

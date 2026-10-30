@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
-import { GIFT_WRAP, ORDER_STATUSES, SITE_URL, type OrderStatus, type PaymentStatus } from "@/lib/site";
+import { GIFT_WRAP, ORDER_STATUSES, SITE_URL, advanceFor, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { OrderError, normalisePhone, priceOrder, validateCustomer, type CustomerInput, type OrderItemInput, type PricedLine } from "@/lib/pricing";
 import { type Db, pool, query, transaction } from "./db";
 import { sendMail, storeInbox } from "./mail";
@@ -50,7 +50,16 @@ export interface Order {
   /** Gift packing: the fee charged (0 = not a gift), with the card's occasion and message. */
   gift: { fee: number; occasion: string; message: string } | null;
   total: number;
-  payment: { method: PaymentMethod; status: PaymentStatus; razorpayOrderId: string | null; paymentId: string | null; paidAt: string | null };
+  payment: {
+    method: PaymentMethod;
+    /** "full": the whole total online (or a plain cash-on-delivery order); "advance": cash on delivery with `advance` paid online first. */
+    plan: "full" | "advance";
+    advance: number;
+    status: PaymentStatus;
+    razorpayOrderId: string | null;
+    paymentId: string | null;
+    paidAt: string | null;
+  };
   tracking: { courier: string; number: string; url: string } | null;
   /** The Delhivery booking, if one was made (admin only). */
   shipment: Shipment | null;
@@ -58,6 +67,9 @@ export interface Order {
   notes: { at: string; text: string }[];
   stockApplied: boolean;
 }
+
+/** What the customer pays online now: the advance on a cash-on-delivery order, else the whole total. */
+const payNow = (o: Order) => (o.payment.plan === "advance" ? o.payment.advance : o.total);
 
 /** What the checkout can offer right now. */
 export function paymentConfig() {
@@ -96,6 +108,8 @@ const toOrder = (r: any): Order => ({
   total: r.total,
   payment: {
     method: r.payment_method,
+    plan: r.payment_plan ?? "full",
+    advance: r.advance ?? 0,
     status: r.payment_status,
     razorpayOrderId: r.razorpay_order_id,
     paymentId: r.payment_id,
@@ -166,7 +180,7 @@ async function alertNewOrder(o: Order) {
       ...items,
       o.discount ? `Discount (${o.discountCode}): −₹${o.discount.toLocaleString("en-IN")}` : null,
       `Shipping: ${o.shipping ? `₹${o.shipping}` : "Free"}`,
-      `Total: ₹${o.total.toLocaleString("en-IN")}${o.payment.method === "cod" ? " (to pay on delivery)" : " (paid)"}`,
+      `Total: ₹${o.total.toLocaleString("en-IN")}${o.payment.plan === "advance" ? ` (₹${o.payment.advance.toLocaleString("en-IN")} paid now, ₹${(o.total - o.payment.advance).toLocaleString("en-IN")} on delivery)` : o.payment.method === "cod" ? " (to pay on delivery)" : " (paid)"}`,
       "",
       `Delivering to: ${c.address}${c.apartment ? `, ${c.apartment}` : ""}, ${c.city}, ${c.state} ${c.pin}`,
       "",
@@ -182,7 +196,7 @@ async function alertNewOrder(o: Order) {
     to: inbox,
     audience: "store",
     replyTo: c.email,
-    subject: `New order ${o.id}: ₹${o.total.toLocaleString("en-IN")} (${o.payment.method === "cod" ? "cash on delivery" : "paid online"})`,
+    subject: `New order ${o.id}: ₹${o.total.toLocaleString("en-IN")} (${o.payment.plan === "advance" ? `₹${o.payment.advance.toLocaleString("en-IN")} advance paid, rest on delivery` : o.payment.method === "cod" ? "cash on delivery" : "paid online"})`,
     text: [
       `${c.firstName} ${c.lastName} · +91 ${c.phone} · ${c.email}`,
       `${c.address}${c.apartment ? `, ${c.apartment}` : ""}, ${c.city}, ${c.state} ${c.pin}`,
@@ -213,14 +227,17 @@ export async function createOrder(input: {
   const giftMessage = giftWrap ? String(input.gift?.message ?? "").trim().slice(0, GIFT_WRAP.messageMax) : "";
   const cfg = paymentConfig();
   const method = input.paymentMethod;
-  if (method === "cod" ? !cfg.cod : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
+  const { products, settings } = await loadCatalogData();
+  // Cash on delivery takes an advance online first (Site Settings → advance %), so it needs online payment too.
+  const advancePercent = settings.codAdvancePercent;
+  const codOk = cfg.cod && (advancePercent === 0 || !!cfg.online);
+  if (method === "cod" ? !codOk : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
   const items = Array.isArray(input.items) ? input.items : [];
   // Delhivery's word on the PIN code (accepted as deliverable when Delhivery isn't set up or can't be reached).
   const reach = await deliveryCheck(customer.pin, (await defaultPickup()).pin);
   if (!reach.serviceable) throw new OrderError("Sorry, our courier doesn't deliver to this PIN code yet. Please use another address.");
   if (method === "cod" && !reach.cod) throw new OrderError("Cash on delivery isn't available for this PIN code. Please pay online.");
 
-  const { products } = await loadCatalogData();
   const bySlug = new Map(products.filter((p) => p.active !== false).map((p) => [p.slug, p]));
 
   const order = await transaction(async (db) => {
@@ -237,20 +254,23 @@ export async function createOrder(input: {
       return p && live.has(slug) ? { ...p, stock: live.get(slug) ?? null } : undefined;
     };
     const coupon = input.discountCode ? await checkCoupon(db, input.discountCode, customer, { lock: true }) : null;
-    const priced = priceOrder({ items, getProduct, coupon, giftWrap });
+    const priced = priceOrder({ items, getProduct, coupon, giftWrap, rules: settings });
+    const plan = method === "cod" && advancePercent > 0 ? "advance" : "full";
+    const advance = plan === "advance" ? advanceFor(priced.total, advancePercent) : 0;
 
     const seq = await db.query<{ n: string }>("SELECT nextval('order_number_seq') AS n");
     const id = `TTV-${seq.rows[0].n}`;
     const token = crypto.randomBytes(16).toString("hex");
-    const pay: PaymentMethod = method === "cod" ? "cod" : cfg.online!;
+    // A plain COD order (no advance) is the only one not paid online at all.
+    const pay: PaymentMethod = method === "cod" && plan === "full" ? "cod" : cfg.online!;
     const c = customer;
     await db.query(
       `INSERT INTO orders (id, token, status, email, phone, first_name, last_name, address, apartment, city, state, pin,
-         subtotal, discount, discount_code, shipping, total, payment_method, payment_status, gift_wrap, gift_occasion, gift_message)
-       VALUES ($1,$2,'pending_payment',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+         subtotal, discount, discount_code, shipping, total, payment_method, payment_status, gift_wrap, gift_occasion, gift_message, payment_plan, advance)
+       VALUES ($1,$2,'pending_payment',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
       [id, token, c.email, c.phone, c.firstName, c.lastName, c.address, c.apartment, c.city, c.state, c.pin,
         priced.subtotal, priced.discount, priced.discountCode, priced.shipping, priced.total, pay, pay === "cod" ? "cod_due" : "pending",
-        priced.giftWrap, giftOccasion, giftMessage],
+        priced.giftWrap, giftOccasion, giftMessage, plan, advance],
     );
     for (const [n, l] of priced.lines.entries()) {
       await db.query("INSERT INTO order_items (order_id, line_no, product_slug, name, size, price, qty, image, cost) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)", [
@@ -265,11 +285,11 @@ export async function createOrder(input: {
 
   if (order.status === "confirmed") await alertNewOrder(order);
   if (order.payment.method === "razorpay") {
-    const rzp = await createRazorpayOrder({ amount: order.total, receipt: order.id, notes: { order: order.id } });
+    const rzp = await createRazorpayOrder({ amount: payNow(order), receipt: order.id, notes: { order: order.id, part: order.payment.plan } });
     await query("UPDATE orders SET razorpay_order_id = $2 WHERE id = $1", [order.id, rzp.id]);
-    return { order, payment: { mode: "razorpay" as const, keyId: razorpayKeyId(), razorpayOrderId: rzp.id } };
+    return { order, payment: { mode: "razorpay" as const, keyId: razorpayKeyId(), razorpayOrderId: rzp.id, amount: payNow(order) } };
   }
-  return { order, payment: { mode: order.payment.method } };
+  return { order, payment: { mode: order.payment.method, amount: order.payment.method === "cod" ? 0 : payNow(order) } };
 }
 
 /**
@@ -280,7 +300,7 @@ export async function completePayment(id: string, token: string | null, resp: Ra
   return transaction(async (db) => {
     const o = await loadOrder(db, id, true);
     if (!o || (!viaWebhook && o.token !== token)) throw new OrderError("Order not found", 404);
-    if (o.payment.status === "paid") return o;
+    if (o.payment.status === "paid" || (o.payment.plan === "advance" && o.payment.status === "cod_due")) return o;
     let paymentId: string;
     if (o.payment.method === "razorpay") {
       const sameOrder = resp.razorpay_order_id === o.payment.razorpayOrderId;
@@ -294,8 +314,9 @@ export async function completePayment(id: string, token: string | null, resp: Ra
     } else {
       throw new OrderError("This order is not paid online.");
     }
-    await db.query("UPDATE orders SET payment_status = 'paid', payment_id = $2, paid_at = now() WHERE id = $1", [id, paymentId]);
-    if (o.status === "pending_payment") await confirm(db, o, "Payment received");
+    const advance = o.payment.plan === "advance";
+    await db.query("UPDATE orders SET payment_status = $3, payment_id = $2, paid_at = now() WHERE id = $1", [id, paymentId, advance ? "cod_due" : "paid"]);
+    if (o.status === "pending_payment") await confirm(db, o, advance ? `Advance of ₹${o.payment.advance.toLocaleString("en-IN")} paid online; ₹${(o.total - o.payment.advance).toLocaleString("en-IN")} on delivery` : "Payment received");
     return { order: (await loadOrder(db, id))!, fresh: o.status === "pending_payment" };
   }).then(async (r) => {
     if ("fresh" in r && r.fresh) await alertNewOrder(r.order);

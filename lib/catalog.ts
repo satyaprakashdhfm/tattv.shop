@@ -17,6 +17,14 @@ export interface StoreSettings {
   hours: string;
   /** Studio address, one line per row. */
   address: string;
+  /** Orders whose items come to this (₹) or more ship free. */
+  freeShippingAbove: number;
+  /** Shipping charged below that (₹). */
+  shippingFee: number;
+  /** Gift packing (₹). */
+  giftWrapFee: number;
+  /** Cash on delivery: the share paid online at checkout (%); the courier collects the rest. 0 = all on delivery. */
+  codAdvancePercent: number;
 }
 
 export interface CatalogData {

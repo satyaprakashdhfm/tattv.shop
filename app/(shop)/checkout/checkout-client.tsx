@@ -8,9 +8,9 @@ import { useStore } from "@/components/store-provider";
 import { CartLineItem } from "@/components/cart-line-item";
 import { QuickAddList } from "@/components/quick-add-list";
 import { DemoPayment } from "@/components/demo-payment";
-import { GIFT_WRAP, discountFor, offerBlocker, offerName, type Offer } from "@/lib/site";
+import { GIFT_WRAP, advanceFor, discountFor, offerBlocker, offerName, type Offer } from "@/lib/site";
 import { CUSTOMER_RULES, type CustomerInput } from "@/lib/pricing";
-import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice, shippingFor } from "@/lib/format";
+import { formatPrice, shippingFor } from "@/lib/format";
 import { api, rememberOrder } from "@/lib/client-api";
 
 const STATES = ["Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"];
@@ -22,7 +22,8 @@ type RuleKey = keyof typeof CUSTOMER_RULES;
 interface PlacedOrder {
   order: { id: string; total: number; customer: CustomerInput };
   token: string;
-  payment: { mode: "cod" | "demo" | "razorpay"; keyId?: string; razorpayOrderId?: string };
+  /** `amount`: what is paid online now (the advance on a cash-on-delivery order), as the server worked it out. */
+  payment: { mode: "cod" | "demo" | "razorpay"; keyId?: string; razorpayOrderId?: string; amount?: number };
 }
 
 declare global {
@@ -226,9 +227,13 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
   const appliedBlocker = applied ? offerBlocker(applied, subtotal) : "";
   const usable = applied && !appliedBlocker ? applied : null;
   const discount = usable ? discountFor(usable, subtotal) : 0;
-  const shipping = shippingFor(subtotal);
-  const giftFee = gift ? GIFT_WRAP.fee : 0;
+  // Shown for convenience from Site Settings; the server prices the order again with the stored rules.
+  const rules = catalog.settings;
+  const shipping = shippingFor(subtotal, rules);
+  const giftFee = gift ? rules.giftWrapFee : 0;
   const total = subtotal - discount + shipping + giftFee;
+  // Cash on delivery: this share is paid online now, the rest to the courier.
+  const advance = payMethod === "cod" ? advanceFor(total, rules.codAdvancePercent) : 0;
   const soldOutLine = cart.find((l) => catalog.getProduct(l.slug)?.soldOut);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -286,7 +291,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
     const rzp = new window.Razorpay!({
       key: payment.keyId,
       order_id: payment.razorpayOrderId,
-      amount: Math.round(order.total * 100),
+      amount: Math.round((payment.amount ?? order.total) * 100),
       currency: "INR",
       name: "TATTV",
       description: `Order ${order.id}`,
@@ -350,7 +355,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
     }
   };
 
-  const payLabel = payMethod === "cod" ? `Place Order · ${formatPrice(total)}` : `Pay ${formatPrice(total)}`;
+  const payLabel = payMethod === "cod" ? (advance ? `Pay ${formatPrice(advance)} Advance & Place Order` : `Place Order · ${formatPrice(total)}`) : `Pay ${formatPrice(total)}`;
 
   return (
     <div className="bg-sand/50 pb-6">
@@ -389,13 +394,13 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
               </section>
 
               {/* Right under the bag, like ADC's "Goes great with": as many suggestions as fit beside the right-hand column (see fitSuggestions). */}
-              <div ref={suggestBoxRef} className="order-5 rounded-3xl border border-line bg-white p-5 md:p-6 lg:order-none lg:flex-1">
+              <div ref={suggestBoxRef} className="order-4 rounded-3xl border border-line bg-white p-5 md:p-6 lg:order-none lg:flex-1">
                 <div ref={suggestRef}>
                   <QuickAddList count={suggestCount} />
                 </div>
               </div>
 
-              <Panel title="Gift Packing" icon={<Gift size={13} strokeWidth={1.6} />} className="order-6 lg:order-none">
+              <Panel title="Gift Packing" icon={<Gift size={13} strokeWidth={1.6} />} className="order-5 lg:order-none">
                 <div className="flex items-center gap-4">
                   <p className="flex-1 text-sm leading-relaxed text-ink/75">
                     <span className="block font-medium text-ink">Send it as a gift</span>
@@ -415,7 +420,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                       </>
                     ) : (
                       <>
-                        <Plus size={14} /> Add · {formatPrice(GIFT_WRAP.fee)}
+                        <Plus size={14} /> Add · {formatPrice(rules.giftWrapFee)}
                       </>
                     )}
                   </button>
@@ -504,38 +509,12 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 <p className="mt-4 flex items-start gap-3 rounded-2xl bg-sand px-4 py-3 text-xs leading-relaxed text-ink/75">
                   <Truck size={16} strokeWidth={1.4} className="mt-px shrink-0" />
                   <span>
-                    {shipping ? `Shipping ${formatPrice(shipping)}, free on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}.` : "Complimentary insured shipping."} Dispatched within 24 hours; tracking is shared once it ships.
+                    {shipping ? `Shipping ${formatPrice(shipping)}, free on orders above ${formatPrice(rules.freeShippingAbove)}.` : "Complimentary insured shipping."} Dispatched within 24 hours; tracking is shared once it ships.
                   </span>
                 </p>
               </Panel>
 
-              <Panel title="Payment" step={3} className="order-4 lg:order-none">
-                <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
-                  {online && (
-                    <label className="flex cursor-pointer items-center gap-4 p-4 text-sm">
-                      <input type="radio" name="pay" checked={payMethod === "online"} onChange={() => setPayMethod("online")} className="size-4 accent-ink" />
-                      <span className="flex-1">
-                        <span className="block font-medium">Pay online</span>
-                        <span className="text-xs text-muted">UPI, cards, net banking and wallets via Razorpay</span>
-                      </span>
-                    </label>
-                  )}
-                  {cod && (
-                    <label className={`flex items-center gap-4 p-4 text-sm ${codOk ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
-                      <input type="radio" name="pay" checked={payMethod === "cod"} disabled={!codOk} onChange={() => setPayMethod("cod")} className="size-4 accent-ink" />
-                      <span className="flex-1">
-                        <span className="block font-medium">Cash on delivery</span>
-                        <span className="text-xs text-muted">{codOk ? "Pay in cash or UPI when your parcel arrives" : "Not available for this PIN code"}</span>
-                      </span>
-                    </label>
-                  )}
-                </div>
-                {online === "demo" && payMethod === "online" && (
-                  <p className="mt-3 text-xs text-muted">Demo mode: Razorpay keys aren&apos;t set up yet, so online payment is simulated and no money is charged.</p>
-                )}
-              </Panel>
-
-              <Panel title="Offers & Coupons" icon={<TicketPercent size={13} strokeWidth={1.6} />} className="order-7 lg:order-none">
+              <Panel title="Offers & Coupons" icon={<TicketPercent size={13} strokeWidth={1.6} />} className="order-6 lg:order-none">
                 <div className="flex gap-2">
                   <label htmlFor="co-code" className="sr-only">
                     Coupon code
@@ -607,21 +586,53 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                 </ul>
               </Panel>
 
+              <Panel title="Payment" step={3} className="order-7 lg:order-none">
+                <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
+                  {online && (
+                    <label className="flex cursor-pointer items-center gap-4 p-4 text-sm">
+                      <input type="radio" name="pay" checked={payMethod === "online"} onChange={() => setPayMethod("online")} className="size-4 accent-ink" />
+                      <span className="flex-1">
+                        <span className="block font-medium">Pay online</span>
+                        <span className="text-xs text-muted">UPI, cards, net banking and wallets via Razorpay</span>
+                      </span>
+                    </label>
+                  )}
+                  {cod && (
+                    <label className={`flex items-center gap-4 p-4 text-sm ${codOk ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
+                      <input type="radio" name="pay" checked={payMethod === "cod"} disabled={!codOk} onChange={() => setPayMethod("cod")} className="size-4 accent-ink" />
+                      <span className="flex-1">
+                        <span className="block font-medium">Cash on delivery</span>
+                        <span className="text-xs text-muted">
+                          {!codOk
+                            ? "Not available for this PIN code"
+                            : rules.codAdvancePercent > 0
+                              ? `Pay ${rules.codAdvancePercent}% now online (${formatPrice(advanceFor(total, rules.codAdvancePercent))}), the rest in cash or UPI when your parcel arrives`
+                              : "Pay in cash or UPI when your parcel arrives"}
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+                {online === "demo" && (payMethod === "online" || advance > 0) && (
+                  <p className="mt-3 text-xs text-muted">Demo mode: Razorpay keys aren&apos;t set up yet, so online payment is simulated and no money is charged.</p>
+                )}
+              </Panel>
+
               <Panel title="Order Summary" className="order-8 lg:order-none">
                 {/* The free-shipping rule, with progress until it's reached (as in the bag). */}
                 <div className="mb-5 rounded-2xl bg-sand/70 px-4 py-3">
                   <p className="text-xs text-ink/75">
                     {shipping ? (
                       <>
-                        You&apos;re <b className="font-medium text-ink">{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}</b> away from complimentary shipping
+                        You&apos;re <b className="font-medium text-ink">{formatPrice(rules.freeShippingAbove - subtotal)}</b> away from complimentary shipping
                       </>
                     ) : (
                       <>You&apos;ve unlocked complimentary shipping</>
                     )}
-                    <span className="text-muted"> · free on orders above {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
+                    <span className="text-muted"> · free on orders above {formatPrice(rules.freeShippingAbove)}</span>
                   </p>
                   <div className="mt-2 h-0.5 w-full rounded-full bg-line">
-                    <div className="h-full rounded-full bg-ink transition-all" style={{ width: `${Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100)}%` }} />
+                    <div className="h-full rounded-full bg-ink transition-all" style={{ width: `${Math.min(100, (subtotal / rules.freeShippingAbove) * 100)}%` }} />
                   </div>
                 </div>
                 <dl className="space-y-3 text-sm">
@@ -641,14 +652,14 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                   )}
                   <div className="flex justify-between">
                     <dt>
-                      Shipping <span className="text-xs text-muted">(free above {formatPrice(FREE_SHIPPING_THRESHOLD)})</span>
+                      Shipping <span className="text-xs text-muted">(free above {formatPrice(rules.freeShippingAbove)})</span>
                     </dt>
                     <dd>
                       {shipping ? (
                         formatPrice(shipping)
                       ) : (
                         <>
-                          <s className="mr-1.5 text-muted">{formatPrice(SHIPPING_FEE)}</s>
+                          <s className="mr-1.5 text-muted">{formatPrice(rules.shippingFee)}</s>
                           <span className="font-medium text-emerald-700">Free</span>
                         </>
                       )}
@@ -664,6 +675,18 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
                     <dt>Total</dt>
                     <dd>{formatPrice(total)}</dd>
                   </div>
+                  {advance > 0 && (
+                    <>
+                      <div className="flex justify-between">
+                        <dt>Pay now ({rules.codAdvancePercent}% advance)</dt>
+                        <dd className="font-medium">{formatPrice(advance)}</dd>
+                      </div>
+                      <div className="flex justify-between text-muted">
+                        <dt>On delivery (cash or UPI)</dt>
+                        <dd>{formatPrice(total - advance)}</dd>
+                      </div>
+                    </>
+                  )}
                 </dl>
                 <p className="mt-1 text-xs text-muted">Inclusive of all taxes</p>
                 {discount > 0 && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">You save {formatPrice(discount)} on this order.</p>}
@@ -702,7 +725,7 @@ export function CheckoutClient({ online, cod }: { online: "razorpay" | "demo" | 
 
       {demo && (
         <DemoPayment
-          amount={demo.order.total}
+          amount={demo.payment.amount ?? demo.order.total}
           orderId={demo.order.id}
           onSuccess={async () => {
             await api(`/api/orders/${demo.order.id}/pay`, { method: "POST", body: { token: demo.token } });

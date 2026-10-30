@@ -5,7 +5,7 @@ import { startTransition, useActionState, useEffect, useRef, useState } from "re
 import { COLLECTIONS, MATERIALS, type Category, type Product } from "@/lib/products";
 import { shrinkImage } from "@/lib/shrink-image";
 import { deleteProductAction, saveProductAction } from "../../actions";
-import { DEFAULT_SHIPPING_RETURNS, defaultCare } from "@/lib/product-copy";
+import { defaultCare } from "@/lib/product-copy";
 
 let nextKey = 0;
 type Photo = { key: number; url?: string; file?: File; preview?: string };
@@ -20,6 +20,7 @@ export function ProductForm({
   product,
   cost,
   categories,
+  standardShipping,
   savedNotice,
   returnTo,
 }: {
@@ -27,6 +28,8 @@ export function ProductForm({
   /** Cost price (admin only, kept apart from the product). */
   cost?: number | null;
   categories: Category[];
+  /** The standard Shipping & Returns points (they quote the shipping rule in Site Settings). */
+  standardShipping: string[];
   savedNotice?: boolean;
   returnTo?: string;
 }) {
@@ -158,7 +161,7 @@ export function ProductForm({
               <label htmlFor="f-ship" className="adm-label">
                 Shipping &amp; Returns (one per line)
               </label>
-              <textarea id="f-ship" name="shippingReturns" rows={4} defaultValue={(p.shippingReturns ?? DEFAULT_SHIPPING_RETURNS).join("\n")} className="adm-input" />
+              <textarea id="f-ship" name="shippingReturns" rows={4} defaultValue={(p.shippingReturns ?? standardShipping).join("\n")} className="adm-input" />
               <p className="mt-1 text-xs text-muted">Both start with the store&apos;s standard text. Edit them for this piece if needed; left unchanged, they follow the standard.</p>
             </div>
           </section>

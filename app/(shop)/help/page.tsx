@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import { whatsappHello } from "@/lib/site";
 import { loadCatalogData } from "@/lib/server/catalog";
 
@@ -61,7 +61,7 @@ export default async function HelpPage() {
       <div className="lg:col-span-8 lg:col-start-5">
         <Section id="shipping" title="Shipping">
           <p>
-            We ship across India with fully insured courier partners. Orders above {formatPrice(FREE_SHIPPING_THRESHOLD)} ship free; a flat {formatPrice(SHIPPING_FEE)} applies
+            We ship across India with fully insured courier partners. Orders above {formatPrice(s.freeShippingAbove)} ship free; a flat {formatPrice(s.shippingFee)} applies
             otherwise.
           </p>
           <p>Orders are dispatched within 24 hours. Metro cities: 2–3 business days. Rest of India: 4–6 business days.</p>

@@ -1,7 +1,7 @@
 // Store-wide settings. Safe to import from browser and server code: nothing secret lives here
 // (secrets come from environment variables).
 
-import { FREE_SHIPPING_THRESHOLD, formatPrice } from "./format";
+import { formatPrice } from "./format";
 
 // Starting contact details. The live values are edited in Admin → Site Settings (see StoreSettings);
 // these are only the defaults for a new store. The address is still a placeholder: replace it in the admin.
@@ -31,7 +31,7 @@ export const DEFAULT_SETTINGS = {
   youtube: CONTACT.youtube,
   /** Messages rotating in the top ribbon, in order. An empty list hides the ribbon's messages. */
   announcements: [
-    `Complimentary shipping across India on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}`,
+    `Complimentary shipping across India on orders above ${formatPrice(799)}`,
     "Easy 15-day returns & exchanges",
     "Every order arrives in a signature TATTV pouch",
   ],
@@ -39,6 +39,11 @@ export const DEFAULT_SETTINGS = {
   phone: CONTACT.phoneDisplay,
   hours: CONTACT.hours,
   address: CONTACT.address.join("\n"),
+  // Prices and payment rules: starting values, edited in Admin → Site Settings.
+  freeShippingAbove: 799,
+  shippingFee: 149,
+  giftWrapFee: 30,
+  codAdvancePercent: 25,
 };
 
 /** Digits for wa.me / tel: links; a 10-digit Indian number gets its 91 country code. */
@@ -88,8 +93,14 @@ export function offerBlocker(o: Offer, subtotal: number): string {
   return "";
 }
 
-/** Gift packing: the whole order goes in a TATTV gift box with a handwritten message card. */
-export const GIFT_WRAP = { fee: 99, messageMax: 200, occasions: ["Birthday", "Anniversary", "Wedding", "Thank you", "Just because"] };
+/** Gift packing: the whole order goes in a TATTV gift box with a handwritten message card. The fee is in Site Settings. */
+export const GIFT_WRAP = { messageMax: 200, occasions: ["Birthday", "Anniversary", "Wedding", "Thank you", "Just because"] };
+
+/** Cash on delivery's advance: `percent` of the total, rounded up, paid online at checkout. */
+export const advanceFor = (total: number, percent: number) => (percent > 0 ? Math.min(total, Math.ceil((total * percent) / 100)) : 0);
+
+/** Cash the courier collects: the balance of an advance order, or the whole total of a plain COD order; 0 once paid. */
+export const cashDue = (o: { total: number; payment: { status: string; advance?: number } }) => (o.payment.status === "cod_due" ? o.total - (o.payment.advance ?? 0) : 0);
 
 // Orders move through these stages. Labels are what the admin and the customer see.
 export const ORDER_STATUSES = {

@@ -237,6 +237,10 @@ CREATE INDEX IF NOT EXISTS orders_waybill_idx ON orders ((shipment->>'waybill'))
 ALTER TABLE reviews ALTER COLUMN order_id DROP NOT NULL;
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'order';
 
+-- Cash on delivery with an advance: plan 'advance' pays the advance column online at checkout and the rest on delivery.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_plan text NOT NULL DEFAULT 'full';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS advance integer NOT NULL DEFAULT 0;
+
 -- Delivery set-up (Admin → Delivery): each piece's packed weight, the places Delhivery collects from, and
 -- the pickups asked for. Packaging / margin / fragile live in settings under the key 'parcel'.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams integer CHECK (weight_grams IS NULL OR weight_grams > 0);

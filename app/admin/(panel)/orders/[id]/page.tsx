@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/format";
-import { ORDER_STATUSES, PAYMENT_LABELS, SITE_URL, type OrderStatus } from "@/lib/site";
+import { ORDER_STATUSES, PAYMENT_LABELS, SITE_URL, cashDue, type OrderStatus } from "@/lib/site";
 import { getOrder, type Order } from "@/lib/server/orders";
 import { addNote, saveTracking, setPayment, updateStatus } from "../../../actions";
 import { PageHead, StatusPill, when } from "../../ui";
@@ -25,7 +25,7 @@ function whatsappMessage(o: Order) {
     confirmed: `Hi ${name}! Thank you for your TATTV order ${o.id}. We're preparing it now and will share tracking once it ships. ${link}`,
     packed: `Hi ${name}! Your TATTV order ${o.id} is packed and will be shipped soon. ${link}`,
     shipped: `Hi ${name}! Your TATTV order ${o.id} is on its way${t ? ` with ${t.courier}${t.number ? `, tracking no. ${t.number}` : ""}` : ""}. ${t?.url || link}`,
-    out_for_delivery: `Hi ${name}! Your TATTV order ${o.id} is out for delivery today.${o.payment.status === "cod_due" ? ` Please keep ${formatPrice(o.total)} ready.` : ""}`,
+    out_for_delivery: `Hi ${name}! Your TATTV order ${o.id} is out for delivery today.${o.payment.status === "cod_due" ? ` Please keep ${formatPrice(cashDue(o))} ready.` : ""}`,
     delivered: `Hi ${name}! Your TATTV order ${o.id} has been delivered. We hope you enjoy wearing it.`,
     pending_payment: `Hi ${name}! We noticed your TATTV order ${o.id} wasn't paid. Can we help you complete it?`,
     cancelled: `Hi ${name}, your TATTV order ${o.id} has been cancelled. Please reply if you have any questions.`,
@@ -153,7 +153,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             configured={delhiveryConfigured()}
             canBook={!["pending_payment", "cancelled", "delivered"].includes(o.status)}
             defaultGrams={(await weighLines(o.lines)).total}
-            cod={o.payment.status === "cod_due" ? o.total : 0}
+            cod={cashDue(o)}
           />
 
           <section className="adm-card">
@@ -234,9 +234,20 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
           <section className="adm-card">
             <h2 className="adm-h2">Payment</h2>
             <p className="text-sm leading-relaxed">
-              {o.payment.method === "cod" ? "Cash on delivery" : o.payment.method === "demo" ? "Online (demo, not real money)" : "Online via Razorpay"}
+              {o.payment.plan === "advance"
+                ? `Cash on delivery with ${formatPrice(o.payment.advance)} advance ${o.payment.method === "demo" ? "(demo, not real money)" : "via Razorpay"}`
+                : o.payment.method === "cod"
+                  ? "Cash on delivery"
+                  : o.payment.method === "demo"
+                    ? "Online (demo, not real money)"
+                    : "Online via Razorpay"}
               <br />
               <b className="font-medium">{PAYMENT_LABELS[o.payment.status]}</b>
+              {o.payment.plan === "advance" && o.payment.status === "cod_due" && (
+                <span className="block text-sm">
+                  Advance paid {formatPrice(o.payment.advance)} · <b className="font-medium">collect {formatPrice(cashDue(o))}</b> on delivery
+                </span>
+              )}
               {o.payment.paymentId && <span className="block text-xs text-muted">Payment ID: {o.payment.paymentId}</span>}
               {o.payment.razorpayOrderId && <span className="block text-xs text-muted">Razorpay order: {o.payment.razorpayOrderId}</span>}
             </p>

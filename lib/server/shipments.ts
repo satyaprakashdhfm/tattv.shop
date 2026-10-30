@@ -1,6 +1,7 @@
 import "server-only";
 import { OrderError } from "@/lib/pricing";
 import type { OrderStatus } from "@/lib/site";
+import { cashDue } from "@/lib/site";
 import { query } from "./db";
 import { loadCatalogData } from "./catalog";
 import { adminUpdateOrder, getOrder, type Order, type Shipment } from "./orders";
@@ -14,8 +15,6 @@ import { defaultPickup, listPickupAddresses, markRegistered, recordPickup, weigh
 // worked out from Admin → Delivery (each piece's packed weight + packaging + margin) unless the admin types one.
 export const activeShipment = (o: Pick<Order, "shipment">) => (o.shipment?.state === "booked" && o.shipment.waybill ? o.shipment : null);
 
-/** Cash the courier collects: the whole total for an unpaid cash-on-delivery order, else nothing. */
-const cashDue = (o: Order) => (o.payment.status === "cod_due" ? o.total : 0);
 
 const blank = (): Shipment => ({ carrier: "delhivery", state: "failed", waybill: null, grams: null, cod: 0, cost: null, bookedAt: null, error: null, lastStatus: null, lastLocation: null, lastScanAt: null, checkedAt: null, scans: [] });
 

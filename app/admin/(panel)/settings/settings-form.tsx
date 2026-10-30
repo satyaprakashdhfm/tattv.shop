@@ -77,6 +77,30 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
 
         <section className="adm-card space-y-4">
           <div>
+            <h2 className="adm-h2 !mb-1">Prices &amp; payment rules</h2>
+            <p className="text-xs text-muted">Every order is priced on the server with these numbers, so nobody can change them from their browser. Changes apply to new orders straight away.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="s-free" name="freeShippingAbove" type="number" min={0} step={1} required label="Free shipping from (₹)" defaultValue={settings.freeShippingAbove} hint="Bags of this much or more ship free. 0 = always free." />
+            <Field id="s-ship" name="shippingFee" type="number" min={0} step={1} required label="Shipping fee below that (₹)" defaultValue={settings.shippingFee} />
+            <Field id="s-gift" name="giftWrapFee" type="number" min={0} step={1} required label="Gift packing (₹)" defaultValue={settings.giftWrapFee} />
+            <Field
+              id="s-adv"
+              name="codAdvancePercent"
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              required
+              label="Cash on delivery advance (%)"
+              defaultValue={settings.codAdvancePercent}
+              hint="Paid online at checkout to confirm a COD order; the courier collects the rest. 0 = all on delivery."
+            />
+          </div>
+        </section>
+
+        <section className="adm-card space-y-4">
+          <div>
             <h2 className="adm-h2 !mb-1">Announcement ribbon</h2>
             <p className="text-xs text-muted">The black strip at the very top of every page. These messages rotate in this order; edit, reorder or remove any of them.</p>
           </div>

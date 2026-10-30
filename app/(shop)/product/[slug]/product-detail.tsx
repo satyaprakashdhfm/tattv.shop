@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { ArrowLeft, BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck } from "lucide-react";
 import { MATERIALS, type Product } from "@/lib/products";
-import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
-import { DEFAULT_SHIPPING_RETURNS, defaultCare } from "@/lib/product-copy";
+import { formatPrice } from "@/lib/format";
+import { defaultCare, defaultShippingReturns } from "@/lib/product-copy";
 import { ProductImage } from "@/components/product-image";
 import { useStore } from "@/components/store-provider";
 
@@ -114,7 +114,7 @@ export function ProductDetail({ product }: { product: Product }) {
     },
     {
       title: "Shipping & Returns",
-      body: <Points lines={product.shippingReturns ?? DEFAULT_SHIPPING_RETURNS} />,
+      body: <Points lines={product.shippingReturns ?? defaultShippingReturns(catalog.settings)} />,
     },
   ];
   const activeTab = tabs.find((t) => t.title === tab) ?? tabs[0];

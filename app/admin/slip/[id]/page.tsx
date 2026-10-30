@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/server/auth";
 import { getOrder } from "@/lib/server/orders";
 import { formatPrice } from "@/lib/format";
-import { PAYMENT_LABELS } from "@/lib/site";
+import { PAYMENT_LABELS, cashDue } from "@/lib/site";
 import { loadCatalogData } from "@/lib/server/catalog";
 import { PrintButton } from "./print-button";
 
@@ -17,7 +17,7 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
   const o = await getOrder(id);
   if (!o) notFound();
   const c = o.customer;
-  const cod = o.payment.status === "cod_due";
+  const cod = cashDue(o) > 0;
 
   return (
     <div className="mx-auto max-w-2xl rounded-3xl bg-white p-8 text-sm print:rounded-none print:p-0">
@@ -61,7 +61,7 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
             <br />
             {settings.phone}
           </p>
-          {cod ? <p className="mt-3 rounded-xl border-2 border-ink p-2 font-semibold">CASH ON DELIVERY: {formatPrice(o.total)}</p> : <p className="mt-3">Payment: {PAYMENT_LABELS[o.payment.status]}</p>}
+          {cod ? <p className="mt-3 rounded-xl border-2 border-ink p-2 font-semibold">CASH ON DELIVERY: {formatPrice(cashDue(o))}</p> : <p className="mt-3">Payment: {PAYMENT_LABELS[o.payment.status]}</p>}
         </div>
       </div>
 

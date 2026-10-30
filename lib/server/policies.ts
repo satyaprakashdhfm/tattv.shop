@@ -1,5 +1,5 @@
 import "server-only";
-import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import { OrderError } from "@/lib/pricing";
 import { POLICIES, fillPolicy, policyBySlug, type PolicyPage } from "@/lib/policies";
 import { RETURN_WINDOW_DAYS } from "@/lib/site";
@@ -32,8 +32,8 @@ export async function getPolicy(slug: string) {
     phone: settings.phone,
     address: settings.address.replace(/\n/g, ", "),
     hours: settings.hours,
-    freeShipping: formatPrice(FREE_SHIPPING_THRESHOLD),
-    shippingFee: formatPrice(SHIPPING_FEE),
+    freeShipping: formatPrice(settings.freeShippingAbove),
+    shippingFee: formatPrice(settings.shippingFee),
     returnDays: String(RETURN_WINDOW_DAYS),
   };
   return { ...p, body: fillPolicy(p.body, vars) };

@@ -206,7 +206,7 @@ export async function saveSettingsAction(_prev: FormState, fd: FormData): Promis
   await requireAdmin();
   try {
     await saveSettings({
-      ...Object.fromEntries(["instagram", "facebook", "twitter", "youtube", "email", "phone", "hours", "address"].map((k) => [k, fd.get(k)])),
+      ...Object.fromEntries(["instagram", "facebook", "twitter", "youtube", "email", "phone", "hours", "address", "freeShippingAbove", "shippingFee", "giftWrapFee", "codAdvancePercent"].map((k) => [k, fd.get(k)])),
       announcements: fd.getAll("announcements"),
     });
   } catch (e) {

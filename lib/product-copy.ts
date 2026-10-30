@@ -1,6 +1,6 @@
 // The standard Care and Shipping & Returns text on product pages. A product can override either in
 // Admin → Products; left as the standard text, it follows these (so a rule change updates every piece).
-import { FREE_SHIPPING_THRESHOLD, SHIPPING_FEE, formatPrice } from "./format";
+import { formatPrice, type ShippingRules } from "./format";
 import { RETURN_WINDOW_DAYS } from "./site";
 
 const METAL_CARE = [
@@ -17,8 +17,9 @@ const LEATHER_CARE = [
 
 export const defaultCare = (finish?: string) => (finish === "leather" ? LEATHER_CARE : METAL_CARE);
 
-export const DEFAULT_SHIPPING_RETURNS = [
-  `Complimentary insured shipping on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)} (${formatPrice(SHIPPING_FEE)} below that).`,
+/** The standard Shipping & Returns points, with the shipping rule from Site Settings. */
+export const defaultShippingReturns = (r: ShippingRules) => [
+  `Complimentary insured shipping on orders above ${formatPrice(r.freeShippingAbove)} (${formatPrice(r.shippingFee)} below that).`,
   "Dispatched within 24 hours; tracking is shared once it ships.",
   `Returns and exchanges within ${RETURN_WINDOW_DAYS} days of delivery, unworn and in the original packaging.`,
   "Engraved or personalised pieces are final sale.",

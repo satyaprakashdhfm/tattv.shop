@@ -2,7 +2,10 @@ const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR",
 
 export const formatPrice = (amount: number) => inr.format(amount);
 
-export const FREE_SHIPPING_THRESHOLD = 799;
-export const SHIPPING_FEE = 149;
+/** The shipping rule, from Admin → Site Settings (never from the browser: the server prices every order with the stored one). */
+export interface ShippingRules {
+  freeShippingAbove: number;
+  shippingFee: number;
+}
 
-export const shippingFor = (subtotal: number) => (subtotal === 0 || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE);
+export const shippingFor = (subtotal: number, r: ShippingRules) => (subtotal === 0 || subtotal >= r.freeShippingAbove ? 0 : r.shippingFee);

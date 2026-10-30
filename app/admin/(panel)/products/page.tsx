@@ -9,6 +9,7 @@ import { PageHead } from "../ui";
 import { ClickRow } from "../click-row";
 import { Modal } from "../modal";
 import { ProductForm } from "./product-form";
+import { defaultShippingReturns } from "@/lib/product-copy";
 
 export const metadata = { title: "Products" };
 
@@ -16,7 +17,7 @@ type View = { scope: ProductScope; label: string; where: string; storeHref: stri
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const [{ products, categories }, costs] = await Promise.all([loadCatalogData(), loadCosts()]);
+  const [{ products, categories, settings }, costs] = await Promise.all([loadCatalogData(), loadCosts()]);
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
 
   // Every place on the store where the order of products matters. Each one is the same shop order, filtered.
@@ -146,7 +147,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           title={editing === "new" ? "Add a Product" : editing.name}
           sub={editing === "new" ? "It goes live when you add it (untick “Show in the store” to keep it hidden)." : "Changes go live when you save."}
         >
-          <ProductForm key={editing === "new" ? "new" : editing.slug} product={editing === "new" ? undefined : editing} cost={editing === "new" ? null : costs.get(editing.slug)} categories={categories} returnTo={withParam("edit", editing === "new" ? "new" : editing.slug)} />
+          <ProductForm key={editing === "new" ? "new" : editing.slug} product={editing === "new" ? undefined : editing} cost={editing === "new" ? null : costs.get(editing.slug)} categories={categories} standardShipping={defaultShippingReturns(settings)} returnTo={withParam("edit", editing === "new" ? "new" : editing.slug)} />
         </Modal>
       )}
     </>

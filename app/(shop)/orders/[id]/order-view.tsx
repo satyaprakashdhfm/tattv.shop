@@ -25,7 +25,7 @@ interface OrderView {
   shipping: number;
   gift: { fee: number; occasion: string; message: string } | null;
   total: number;
-  payment: { method: string; status: PaymentStatus };
+  payment: { method: string; plan?: "full" | "advance"; advance?: number; status: PaymentStatus };
   tracking: { courier: string; number: string; url: string } | null;
 }
 
@@ -139,7 +139,14 @@ export function OrderView({ id }: { id: string }) {
         <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-line bg-line text-left text-sm md:grid-cols-4">
           {[
             ["Status", ORDER_STATUSES[order.status]?.customer],
-            ["Payment", order.payment.method === "cod" ? "Cash on delivery" : PAYMENT_LABELS[order.payment.status]],
+            [
+              "Payment",
+              order.payment.plan === "advance" && order.payment.status === "cod_due"
+                ? `${formatPrice(order.payment.advance ?? 0)} paid · ${formatPrice(order.total - (order.payment.advance ?? 0))} on delivery`
+                : order.payment.method === "cod"
+                  ? "Cash on delivery"
+                  : PAYMENT_LABELS[order.payment.status],
+            ],
             ["Placed", when(order.createdAt)],
             ["Total", formatPrice(order.total)],
           ].map(([k, v]) => (

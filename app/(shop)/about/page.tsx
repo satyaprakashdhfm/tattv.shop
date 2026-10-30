@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Gem, Hand, Layers, PenTool, ShieldCheck, Sparkles } from "lucide-react";
 import { getCatalog } from "@/lib/server/catalog";
-import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
+import type { StoreSettings } from "@/lib/catalog";
 import { RETURN_WINDOW_DAYS } from "@/lib/site";
 import { Faq, type FaqGroup } from "./faq";
 import { RotatingName } from "@/components/rotating-name";
@@ -13,7 +14,8 @@ export const metadata: Metadata = {
   description: "TATTV means element. Discover the story and craft behind our men's jewellery.",
 };
 
-const FAQ: FaqGroup[] = [
+/** The FAQ, with the shipping and cash-on-delivery rules from Site Settings. */
+const faqFor = (rules: Pick<StoreSettings, "freeShippingAbove" | "codAdvancePercent">): FaqGroup[] => [
   {
     id: "general",
     label: "General",
@@ -28,8 +30,8 @@ const FAQ: FaqGroup[] = [
     label: "Orders & Shipping",
     items: [
       { q: "How fast do you ship?", a: "Orders are dispatched within 24 hours, and the courier tracking link appears in your account and on your order page as soon as it ships." },
-      { q: "Is shipping free?", a: `Shipping is complimentary and insured on orders above ${formatPrice(FREE_SHIPPING_THRESHOLD)}. Below that a small flat fee applies, shown at checkout.` },
-      { q: "Do you offer cash on delivery?", a: "Yes. Choose cash on delivery at checkout and pay by cash or UPI when your parcel arrives." },
+      { q: "Is shipping free?", a: `Shipping is complimentary and insured on orders above ${formatPrice(rules.freeShippingAbove)}. Below that a small flat fee applies, shown at checkout.` },
+      { q: "Do you offer cash on delivery?", a: rules.codAdvancePercent > 0 ? `Yes. Choose cash on delivery at checkout: you pay ${rules.codAdvancePercent}% online to confirm the order, and the rest by cash or UPI when your parcel arrives.` : "Yes. Choose cash on delivery at checkout and pay by cash or UPI when your parcel arrives." },
       { q: "Can I send a piece as a gift?", a: "Add gift packing at checkout: your order goes in the TATTV gift box with a handwritten message card, and no prices inside." },
     ],
   },
@@ -183,7 +185,7 @@ export default async function AboutPage() {
           <h2 className="mt-4 font-serif text-3xl font-medium md:text-5xl">Frequently asked questions</h2>
           <p className="mt-4 text-sm text-ink/60">Clear answers about our pieces, orders, returns and care.</p>
         </div>
-        <Faq groups={FAQ} />
+        <Faq groups={faqFor(catalog.settings)} />
       </section>
 
       {/* Explore the collection. */}

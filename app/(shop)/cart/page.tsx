@@ -9,7 +9,7 @@ import { formatPrice, shippingFor } from "@/lib/format";
 
 export default function CartPage() {
   const { cart, cartCount, subtotal, catalog } = useStore();
-  const shipping = shippingFor(subtotal);
+  const shipping = shippingFor(subtotal, catalog.settings);
   const suggestions = catalog.recommend(cart.map((l) => l.slug), 4);
 
   return (

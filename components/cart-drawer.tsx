@@ -1,15 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { ShoppingBag, X } from "lucide-react";
-import { FREE_SHIPPING_THRESHOLD, formatPrice } from "@/lib/format";
+import { useEffect, useState } from "react";
+import { ShoppingBag, Tag, Truck, X } from "lucide-react";
+import { formatPrice } from "@/lib/format";
+import { offerBlocker, offerName, type Offer } from "@/lib/site";
+import { api } from "@/lib/client-api";
 import { useStore } from "./store-provider";
 import { CartLineItem } from "./cart-line-item";
 import { QuickAddList } from "./quick-add-list";
 
 export function CartDrawer() {
-  const { cart, cartCount, subtotal, cartOpen, setCartOpen } = useStore();
+  const { cart, cartCount, subtotal, cartOpen, setCartOpen, catalog } = useStore();
+  const { freeShippingAbove } = catalog.settings;
+  // The codes anyone can use (Admin → Coupons), fetched when the bag opens.
+  const [offers, setOffers] = useState<Offer[]>([]);
+  useEffect(() => {
+    if (!cartOpen) return;
+    api<{ offers: Offer[] }>("/api/coupons")
+      .then((d) => setOffers(d.offers))
+      .catch(() => setOffers([]));
+  }, [cartOpen]);
 
   useEffect(() => {
     if (!cartOpen) return;
@@ -24,8 +35,8 @@ export function CartDrawer() {
 
   if (!cartOpen) return null;
 
-  const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
-  const progress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
+  const remaining = freeShippingAbove - subtotal;
+  const progress = freeShippingAbove > 0 ? Math.min(100, (subtotal / freeShippingAbove) * 100) : 100;
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Shopping bag">
@@ -59,6 +70,9 @@ export function CartDrawer() {
                   <>You&apos;ve unlocked complimentary shipping</>
                 )}
               </p>
+              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
+                <Truck size={12} strokeWidth={1.6} /> Free delivery on orders above {formatPrice(freeShippingAbove)}
+              </p>
               <div className="mt-2 h-0.5 w-full bg-line">
                 <div className="h-full rounded-full bg-ink transition-all" style={{ width: `${progress}%` }} />
               </div>
@@ -69,6 +83,26 @@ export function CartDrawer() {
                   <CartLineItem key={line.key} line={line} compact />
                 ))}
               </div>
+              {offers.length > 0 && (
+                <div className="border-t border-line py-5">
+                  <p className="eyebrow mb-3">Offers</p>
+                  <ul className="space-y-2">
+                    {offers.map((o) => {
+                      const why = offerBlocker(o, subtotal);
+                      return (
+                        <li key={o.code} className="flex items-center gap-3 rounded-2xl border border-dashed border-ink/25 px-3.5 py-2.5 text-sm">
+                          <Tag size={15} strokeWidth={1.5} className="shrink-0" />
+                          <span className="min-w-0 flex-1">
+                            <b className="font-semibold tracking-[0.08em]">{o.code}</b> <span className="text-muted">· {offerName(o)}</span>
+                            <span className="block text-xs text-muted">{why || o.label}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-2 text-[11px] text-muted">Apply a code at checkout.</p>
+                </div>
+              )}
               <div className="border-t border-line pb-2 pt-5">
                 <QuickAddList />
               </div>
