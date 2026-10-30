@@ -12,6 +12,7 @@ import { resetPolicy, savePolicy } from "@/lib/server/policies";
 import { awaitingPickup, bookShipment, cancelBooking, refreshAllInTransit, refreshTracking, registerPickup, requestPickup } from "@/lib/server/shipments";
 import { deletePickupAddress, saveParcelSettings, savePickupAddress, saveWeights, setDefaultPickup } from "@/lib/server/pickup";
 import { deleteAlert, markAlertSent, notifyRestocked } from "@/lib/server/stock-alerts";
+import { confirmMoneyCode, requestMoneyCode } from "@/lib/server/refunds";
 import { addReel, deleteReel, moveReel, saveVideo, updateReel } from "@/lib/server/reels";
 import { deleteCategory, deleteProduct, moveCategory, moveProduct, quickUpdateProducts, saveCategory, saveImage, saveProduct, saveSettings, type ProductScope } from "@/lib/server/catalog";
 
@@ -42,8 +43,26 @@ const refresh = (id?: string) => {
 export async function updateStatus(fd: FormData) {
   await requireAdmin();
   const id = str(fd, "id");
+  // Cancelling goes through "Cancel or refund", which needs the owner's code and refunds the money.
+  if (str(fd, "status") === "cancelled") return;
   await adminUpdateOrder(id, { status: str(fd, "status"), statusNote: fd.get("statusNote") });
   refresh(id);
+}
+
+/** Cancel or refund, step 1: check the request and text the owner a code. */
+export async function moneyCodeAction(id: string, input: { kind?: string; reason?: string; reasonCode?: string; amount?: string; note?: string }) {
+  await requireAdmin();
+  return attempt(() =>
+    requestMoneyCode(String(id), { kind: input?.kind, reason: input?.reason, reasonCode: input?.reasonCode, amount: input?.amount, note: input?.note }),
+  );
+}
+
+/** Step 2: the owner's code (or MSG91's token for it). Only now is anything cancelled or refunded. */
+export async function moneyConfirmAction(id: string, proof: { code?: string; accessToken?: string }) {
+  await requireAdmin();
+  const res = await attempt(() => confirmMoneyCode(String(id), { code: String(proof?.code || "").trim(), accessToken: proof?.accessToken ? String(proof.accessToken) : "" }));
+  refresh(String(id));
+  return res;
 }
 
 export async function saveTracking(fd: FormData) {

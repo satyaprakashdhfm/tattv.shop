@@ -9,6 +9,10 @@ import { PageHead, StatusPill, when } from "../../ui";
 import { delhiveryConfigured } from "@/lib/server/delhivery";
 import { weighLines } from "@/lib/server/pickup";
 import { DelhiveryPanel } from "./delhivery-panel";
+import { MoneyPanel } from "./money-panel";
+import { REFUND_REASONS, canCancel, moneyOf } from "@/lib/server/refunds";
+import { activeShipment } from "@/lib/server/shipments";
+import { ownerCodes } from "@/lib/server/otp";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   return { title: `Order ${(await params).id}` };
@@ -135,7 +139,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
                 Status
               </label>
               <select id="st" name="status" defaultValue={o.status} className="adm-input w-auto">
-                {Object.entries(ORDER_STATUSES).map(([k, v]) => (
+                {Object.entries(ORDER_STATUSES).filter(([k]) => k !== "cancelled" || o.status === "cancelled").map(([k, v]) => (
                   <option key={k} value={k}>
                     {v.label}
                   </option>
@@ -144,8 +148,19 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
               <input name="statusNote" placeholder="Note for the timeline (optional)" aria-label="Status note" className="adm-input min-w-48 flex-1" />
               <button className="btn btn-outline btn-sm">Save</button>
             </form>
-            <p className="text-xs text-muted">Cancelling an order puts its items back into stock.</p>
+            <p className="text-xs text-muted">To cancel, use Cancel or refund below: it needs the owner&apos;s code, refunds the money and puts the items back in stock.</p>
           </section>
+
+          <MoneyPanel
+            id={o.id}
+            canCancel={canCancel(o)}
+            money={await moneyOf(o).catch(() => null)}
+            waybill={activeShipment(o)?.waybill ?? null}
+            refunds={o.refunds}
+            reasons={Object.entries(REFUND_REASONS)}
+            codesReady={!!ownerCodes()}
+            widget={ownerCodes() === "widget" ? { widgetId: process.env.MSG91_WIDGET_ID!, tokenAuth: process.env.MSG91_WIDGET_TOKEN! } : null}
+          />
 
           <DelhiveryPanel
             id={o.id}
@@ -258,15 +273,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
                   Cash Collected
                 </button>
               )}
-              {o.payment.status === "paid" && (
-                <button name="paymentStatus" value="refunded" className="btn btn-outline btn-sm">
-                  Mark Refunded
-                </button>
-              )}
             </form>
-            {o.payment.method === "razorpay" && o.payment.status === "paid" && (
-              <p className="mt-2 text-xs text-muted">Refunds are made in the Razorpay dashboard; mark the order refunded here afterwards.</p>
-            )}
           </section>
 
           <section className="adm-card">

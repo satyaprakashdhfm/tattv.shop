@@ -29,7 +29,7 @@ const PER_HOUR = 5;
 
 export const widgetReady = () => !!(authkey() && process.env.MSG91_WIDGET_ID && process.env.MSG91_WIDGET_TOKEN);
 export const templateReady = () => !!(authkey() && process.env.MSG91_TEMPLATE_ID);
-const showCode = () => !widgetReady() && !templateReady() && !isProd;
+export const showCode = () => !widgetReady() && !templateReady() && !isProd;
 export const otpSwitchedOn = () => process.env.CUSTOMER_OTP_LOGIN === "true";
 export const otpAvailable = () => otpSwitchedOn() && (widgetReady() || templateReady() || showCode());
 
@@ -42,6 +42,12 @@ export function otpConfig() {
     testMode: showCode(),
   };
 }
+
+/**
+ * Approval codes to the owner's mobile (cancelling and refunding orders): not tied to the customer login
+ * switch. "widget" when MSG91's widget sends them from the admin page, "code" for our own code, else null.
+ */
+export const ownerCodes = () => (widgetReady() ? "widget" : templateReady() || showCode() ? "code" : null);
 
 export function validMobile(v: unknown) {
   const p = normalisePhone(v);
@@ -103,21 +109,25 @@ async function sendSms(phone: string, code: string) {
   }
 }
 
-/** Texts a 6-digit code. Returns { resendIn, code? }: the code only in local test mode. */
-export async function sendOtp(rawPhone: unknown) {
-  if (!otpAvailable()) throw new OrderError("Mobile login is coming soon. You can still check out as a guest.", 503);
+/**
+ * Texts a 6-digit code. Returns { resendIn, code? }: the code only in local test mode. `scope` keeps a
+ * code for one purpose (an owner's approval for one order) apart from login codes to the same number.
+ */
+export async function sendOtp(rawPhone: unknown, { scope = "" } = {}) {
+  if (scope ? ownerCodes() !== "code" : !otpAvailable()) throw new OrderError("Mobile login is coming soon. You can still check out as a guest.", 503);
   const phone = validMobile(rawPhone);
   if (!phone) throw new OrderError("Enter a valid 10-digit mobile number.");
+  const key = scope ? `${scope}:${phone}` : phone;
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
   await transaction(async (db) => {
-    const prev = (await db.query<{ sent_at: Date; sends: Date[] }>("SELECT sent_at, sends FROM otps WHERE key = $1 FOR UPDATE", [phone])).rows[0];
+    const prev = (await db.query<{ sent_at: Date; sends: Date[] }>("SELECT sent_at, sends FROM otps WHERE key = $1 FOR UPDATE", [key])).rows[0];
     const sends = (prev?.sends ?? []).filter((t) => Date.now() - new Date(t).getTime() < 3600_000);
     if (prev && Date.now() - prev.sent_at.getTime() < RESEND) throw new OrderError("Please wait a few seconds before asking for a new code.", 429);
     if (sends.length >= PER_HOUR) throw new OrderError("Too many codes asked for this number. Please try again in an hour.", 429);
     await db.query(
       `INSERT INTO otps (key, hash, exp, tries, sent_at, sends) VALUES ($1, $2, $3, 0, now(), $4)
        ON CONFLICT (key) DO UPDATE SET hash = EXCLUDED.hash, exp = EXCLUDED.exp, tries = 0, sent_at = now(), sends = EXCLUDED.sends`,
-      [phone, hash(phone, code), new Date(Date.now() + TTL), [...sends, new Date()]],
+      [key, hash(key, code), new Date(Date.now() + TTL), [...sends, new Date()]],
     );
   });
   if (templateReady()) await sendSms(phone, code);
@@ -125,18 +135,19 @@ export async function sendOtp(rawPhone: unknown) {
 }
 
 /** The phone number when the code matches; the code can't be used again afterwards. */
-export async function checkOtp(rawPhone: unknown, code: unknown) {
+export async function checkOtp(rawPhone: unknown, code: unknown, { scope = "" } = {}) {
   const phone = validMobile(rawPhone);
   if (!phone || !/^\d{6}$/.test(String(code || ""))) throw new OrderError("Enter the 6-digit code.");
+  const key = scope ? `${scope}:${phone}` : phone;
   return transaction(async (db) => {
-    const o = (await db.query<{ hash: string; exp: Date; tries: number }>("SELECT hash, exp, tries FROM otps WHERE key = $1 FOR UPDATE", [phone])).rows[0];
+    const o = (await db.query<{ hash: string; exp: Date; tries: number }>("SELECT hash, exp, tries FROM otps WHERE key = $1 FOR UPDATE", [key])).rows[0];
     if (!o || Date.now() > o.exp.getTime()) throw new OrderError("This code has expired. Please ask for a new one.");
     if (o.tries >= 5) throw new OrderError("Too many wrong tries. Please ask for a new code.", 429);
-    if (o.hash !== hash(phone, String(code))) {
-      await db.query("UPDATE otps SET tries = tries + 1 WHERE key = $1", [phone]);
+    if (o.hash !== hash(key, String(code))) {
+      await db.query("UPDATE otps SET tries = tries + 1 WHERE key = $1", [key]);
       throw new OrderError("That code isn't right. Please check and try again.");
     }
-    await db.query("UPDATE otps SET exp = now() WHERE key = $1", [phone]);
+    await db.query("UPDATE otps SET exp = now() WHERE key = $1", [key]);
     return phone;
   });
 }

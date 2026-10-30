@@ -263,6 +263,15 @@ CREATE TABLE IF NOT EXISTS stock_alerts (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS stock_alerts_waiting_idx ON stock_alerts (product_slug, phone) WHERE status = 'waiting';
 
+-- Cancelling and refunding (lib/server/refunds.ts): money sent back on an order, and the request waiting
+-- for the owner's approval code. A code is tied to one order and to what it was asked for.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS refunds jsonb NOT NULL DEFAULT '[]';
+CREATE TABLE IF NOT EXISTS money_codes (
+  order_id text PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+  intent   jsonb NOT NULL,
+  at       timestamptz NOT NULL DEFAULT now()
+);
+
 -- Delivery set-up (Admin → Delivery): each piece's packed weight, the places Delhivery collects from, and
 -- the pickups asked for. Packaging / margin / fragile live in settings under the key 'parcel'.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams integer CHECK (weight_grams IS NULL OR weight_grams > 0);

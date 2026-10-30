@@ -67,7 +67,17 @@ export interface Order {
   shipment: Shipment | null;
   history: { at: string; status: OrderStatus; note: string; byAdmin: boolean }[];
   notes: { at: string; text: string }[];
+  /** Money sent back (Admin → order → Cancel or refund), newest last. */
+  refunds: Refund[];
   stockApplied: boolean;
+}
+
+export interface Refund {
+  at: string;
+  amount: number;
+  reason: string;
+  note: string;
+  refundId: string;
 }
 
 /** What the customer pays online now: the advance on a cash-on-delivery order, else the whole total. */
@@ -121,6 +131,7 @@ const toOrder = (r: any): Order => ({
   shipment: r.shipment ?? null,
   history: r.history,
   notes: r.notes,
+  refunds: r.refunds ?? [],
   stockApplied: r.stock_applied,
 });
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -136,7 +147,7 @@ export const isLive = (o: Pick<Order, "status">) => o.status !== "pending_paymen
 /** Strip admin-only fields before an order goes to the browser. */
 export function publicOrder(o: Order) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { notes, token, stockApplied, shipment, ...rest } = o;
+  const { notes, token, stockApplied, shipment, refunds, ...rest } = o;
   return { ...rest, history: o.history.map(({ at, status, note }) => ({ at, status, note })) };
 }
 export type PublicOrder = ReturnType<typeof publicOrder>;
@@ -408,7 +419,7 @@ export async function adminUpdateOrder(
     }
     if (change.note) await db.query("INSERT INTO order_notes (order_id, text) VALUES ($1, $2)", [id, String(change.note).slice(0, 1000)]);
     if (change.paymentStatus && change.paymentStatus !== o.payment.status) {
-      if (!["paid", "refunded"].includes(change.paymentStatus)) throw new OrderError("Unknown payment status");
+      if (!["paid", "refunded", "void"].includes(change.paymentStatus)) throw new OrderError("Unknown payment status");
       await db.query("UPDATE orders SET payment_status = $2, paid_at = COALESCE(paid_at, CASE WHEN $2 = 'paid' THEN now() END) WHERE id = $1", [id, change.paymentStatus]);
       await addEvent(db, id, o.status, "Payment marked " + change.paymentStatus, true);
     }

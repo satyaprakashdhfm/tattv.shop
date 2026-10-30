@@ -124,6 +124,8 @@ export const PAYMENT_LABELS = {
   failed: "Failed",
   cod_due: "Cash on delivery (due)",
   refunded: "Refunded",
+  /** A cash-on-delivery order cancelled before delivery: nothing left to collect. */
+  void: "Nothing to collect",
 } as const;
 
 export type PaymentStatus = keyof typeof PAYMENT_LABELS;

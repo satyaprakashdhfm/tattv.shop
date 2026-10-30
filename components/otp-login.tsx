@@ -25,7 +25,7 @@ declare global {
 }
 
 const SCRIPTS = ["https://verify.msg91.com/otp-provider.js", "https://verify.phone91.com/otp-provider.js"];
-const CAPTCHA_ID = "msg91-captcha";
+export const CAPTCHA_ID = "msg91-captcha";
 const RESEND_AFTER = 30;
 
 let configPromise: Promise<OtpConfig> | null = null;
@@ -62,7 +62,7 @@ function loadScript(i = 0): Promise<void> {
   });
 }
 
-async function startWidget(w: NonNullable<OtpConfig["widget"]>) {
+export async function startWidget(w: NonNullable<OtpConfig["widget"]>) {
   scriptPromise ??= loadScript().catch((e) => {
     scriptPromise = null;
     throw e;
