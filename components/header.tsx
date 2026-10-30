@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { NAV } from "@/lib/navigation";
 import { formatPrice } from "@/lib/format";
@@ -190,8 +191,8 @@ export function Header() {
         </div>
       )}
 
-      {/* Mobile menu */}
-      {mobileOpen && (
+      {/* Mobile menu. Rendered on <body>: the header's translate and blur would otherwise squeeze a fixed overlay into the header strip. */}
+      {mobileOpen && createPortal(
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 animate-fade-in bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm animate-slide-in-left flex-col overflow-hidden rounded-r-[2rem] bg-white">
@@ -250,10 +251,11 @@ export function Header() {
               </Link>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {loginOpen && otp && <QuickLogin config={otp} onClose={() => setLoginOpen(false)} />}
+      {loginOpen && otp && createPortal(<QuickLogin config={otp} onClose={() => setLoginOpen(false)} />, document.body)}
     </header>
   );
 }
