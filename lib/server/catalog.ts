@@ -8,6 +8,7 @@ import { OrderError } from "@/lib/pricing";
 import { DEFAULT_SETTINGS } from "@/lib/site";
 import { customLines, defaultCare, defaultShippingReturns } from "@/lib/product-copy";
 import { query, transaction } from "./db";
+import { afterStockChange } from "./stock-alerts";
 
 // Catalogue storage: categories, products (+ product_images) and the store settings row.
 // Reads are cached in memory for a short while; every admin edit drops the cache.
@@ -250,6 +251,7 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
     return slug;
   });
   invalidateCatalog();
+  afterStockChange();
   return slug;
 }
 
@@ -277,6 +279,7 @@ export async function quickUpdateProducts(rows: { slug: string; price: unknown; 
     }
   });
   invalidateCatalog();
+  afterStockChange();
 }
 
 /** Swaps a row with its neighbour in `table`'s sort order. */

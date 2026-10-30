@@ -11,6 +11,7 @@ import { deleteReview, saveReview, setReviewStatus } from "@/lib/server/reviews"
 import { resetPolicy, savePolicy } from "@/lib/server/policies";
 import { awaitingPickup, bookShipment, cancelBooking, refreshAllInTransit, refreshTracking, registerPickup, requestPickup } from "@/lib/server/shipments";
 import { deletePickupAddress, saveParcelSettings, savePickupAddress, saveWeights, setDefaultPickup } from "@/lib/server/pickup";
+import { deleteAlert, markAlertSent, notifyRestocked } from "@/lib/server/stock-alerts";
 import { addReel, deleteReel, moveReel, saveVideo, updateReel } from "@/lib/server/reels";
 import { deleteCategory, deleteProduct, moveCategory, moveProduct, quickUpdateProducts, saveCategory, saveImage, saveProduct, saveSettings, type ProductScope } from "@/lib/server/catalog";
 
@@ -451,4 +452,24 @@ export async function saveReviewAction(_prev: FormState, fd: FormData): Promise<
   const back = backTo(fd, { saved: "1" });
   if (back) redirect(back);
   return { ok: "Saved." };
+}
+
+// ── Notify requests (back in stock) ──
+export async function markAlertSentAction(fd: FormData) {
+  await requireAdmin();
+  await markAlertSent(str(fd, "id"));
+  revalidatePath("/admin/notify");
+}
+
+export async function deleteAlertAction(fd: FormData) {
+  await requireAdmin();
+  await deleteAlert(str(fd, "id"));
+  revalidatePath("/admin/notify");
+}
+
+export async function sendRestockNowAction() {
+  await requireAdmin();
+  await notifyRestocked();
+  revalidatePath("/admin/notify");
+  redirect("/admin/notify?note=" + encodeURIComponent("Waiting messages sent where possible. Any that failed show why."));
 }

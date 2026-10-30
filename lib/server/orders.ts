@@ -7,6 +7,7 @@ import { type Db, pool, query, transaction } from "./db";
 import { sendMail, storeInbox } from "./mail";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
 import { checkCoupon } from "./coupons";
+import { afterStockChange } from "./stock-alerts";
 import { deliveryCheck } from "./delhivery";
 import { defaultPickup } from "./pickup";
 import { createRazorpayOrder, razorpayEnabled, razorpayKeyId, verifyPaymentSignature, type RazorpayResponse } from "./razorpay";
@@ -427,6 +428,8 @@ export async function adminUpdateOrder(
     return (await loadOrder(db, id))!;
   });
   if (delivered) await askForReview(order);
+  // A cancelled order may have put a sold-out piece back in stock.
+  if (change.status === "cancelled") afterStockChange();
   return order;
 }
 

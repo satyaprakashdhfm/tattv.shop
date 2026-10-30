@@ -10,11 +10,18 @@ import { AdminNav } from "./admin-nav";
 
 export default async function PanelLayout({ children }: { children: ReactNode }) {
   await requireAdmin();
-  const [orders, messages, reviews] = await Promise.all([listOrders(), listMessages(), query<{ n: number }>("SELECT count(*)::int AS n FROM reviews WHERE status = 'pending'")]);
+  const [orders, messages, reviews, notify] = await Promise.all([
+    listOrders(),
+    listMessages(),
+    query<{ n: number }>("SELECT count(*)::int AS n FROM reviews WHERE status = 'pending'"),
+    query<{ n: number }>("SELECT count(*)::int AS n FROM stock_alerts WHERE status IN ('ready', 'failed')"),
+  ]);
   const counts = {
     toPack: orders.filter((o) => o.status === "confirmed").length,
     messages: messages.filter((m) => m.status === "new").length,
     reviews: reviews.rows[0].n,
+    // Back in stock, with the message still to send.
+    notify: notify.rows[0].n,
   };
   return (
     <div className="min-h-screen bg-paper">

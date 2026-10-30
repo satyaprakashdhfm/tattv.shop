@@ -7,6 +7,7 @@ import { MATERIALS, type Product } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { defaultCare, defaultShippingReturns } from "@/lib/product-copy";
 import { ProductImage } from "@/components/product-image";
+import { NotifyMe } from "@/components/notify-me";
 import { useStore } from "@/components/store-provider";
 
 function deliveryDate(days: number) {
@@ -251,9 +252,7 @@ export function ProductDetail({ product }: { product: Product }) {
               </button>
             </div>
             {product.soldOut ? (
-              <button disabled className="btn flex-1 border border-warm-line bg-sand-dark !px-4 text-muted">
-                Sold Out
-              </button>
+              <NotifyMe slug={product.slug} name={product.name} />
             ) : (
               <button onClick={handleAdd} className="btn flex-1 bg-espresso !px-4 text-white shadow-[0_6px_16px_-8px_rgba(43,33,26,0.6)] hover:bg-espresso-hover">
                 <ShoppingBag size={16} strokeWidth={1.6} /> Add to Bag · {formatPrice(price * qty)}

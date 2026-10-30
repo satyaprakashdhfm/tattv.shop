@@ -250,6 +250,19 @@ ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner_tone text NOT NULL DEFAUL
 ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner_align text NOT NULL DEFAULT 'left';
 ALTER TABLE categories ADD COLUMN IF NOT EXISTS banner_position text NOT NULL DEFAULT '50% 50%';
 
+-- "Notify me" on sold-out pieces (lib/server/stock-alerts.ts): who asked, and whether they were told.
+CREATE TABLE IF NOT EXISTS stock_alerts (
+  id           text PRIMARY KEY,
+  product_slug text NOT NULL REFERENCES products(slug) ON UPDATE CASCADE ON DELETE CASCADE,
+  name         text NOT NULL DEFAULT '',
+  phone        text NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  status       text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'ready', 'sent', 'failed')),
+  notified_at  timestamptz,
+  note         text NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX IF NOT EXISTS stock_alerts_waiting_idx ON stock_alerts (product_slug, phone) WHERE status = 'waiting';
+
 -- Delivery set-up (Admin → Delivery): each piece's packed weight, the places Delhivery collects from, and
 -- the pickups asked for. Packaging / margin / fragile live in settings under the key 'parcel'.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams integer CHECK (weight_grams IS NULL OR weight_grams > 0);

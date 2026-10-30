@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, Clapperboard, FileText, LayoutGrid, MessageSquare, Package, Receipt, Search, Settings, Star, Tags, TicketPercent, Truck, Users, type LucideIcon } from "lucide-react";
+import { BellRing, Boxes, Clapperboard, FileText, LayoutGrid, MessageSquare, Package, Receipt, Search, Settings, Star, Tags, TicketPercent, Truck, Users, type LucideIcon } from "lucide-react";
 
-type Count = "toPack" | "messages" | "reviews";
+type Count = "toPack" | "messages" | "reviews" | "notify";
 type Item = [href: string, label: string, icon: LucideIcon, count: Count | null];
 
 const GROUPS: [string, Item[]][] = [
@@ -23,6 +23,7 @@ const GROUPS: [string, Item[]][] = [
       ["/admin/products", "Products", Package, null],
       ["/admin/categories", "Categories", Tags, null],
       ["/admin/stock", "Stock & Prices", Boxes, null],
+      ["/admin/notify", "Notify Requests", BellRing, "notify"],
     ],
   ],
   [
