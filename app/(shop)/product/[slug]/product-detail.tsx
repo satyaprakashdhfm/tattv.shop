@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { ArrowLeft, BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Check, Heart, Minus, Package, Plus, RotateCcw, ShoppingBag, Truck, Play } from "lucide-react";
 import { MATERIALS, type Product } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { defaultCare, defaultShippingReturns } from "@/lib/product-copy";
@@ -15,13 +15,18 @@ function deliveryDate(days: number) {
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
 
-/** Gallery views: every photo, plus a close-up of the first so each product has at least two. */
+/** Gallery views: every photo, the product's video (second, after the main photo), and a close-up of the first photo. */
 interface View {
   index: number;
   closeUp?: boolean;
+  video?: string;
 }
 
-const galleryViews = (product: Product): View[] => [...product.images.map((_, index) => ({ index })), { index: 0, closeUp: true }];
+const galleryViews = (product: Product): View[] => {
+  const photos: View[] = product.images.map((_, index) => ({ index }));
+  if (product.video) photos.splice(1, 0, { index: 0, video: product.video });
+  return [...photos, { index: 0, closeUp: true }];
+};
 
 const TYPE_LABEL: Record<string, string> = {
   chains: "Chain / Pendant",
@@ -131,27 +136,38 @@ export function ProductDetail({ product }: { product: Product }) {
                 onMouseEnter={() => setViewIndex(i)}
                 onFocus={() => setViewIndex(i)}
                 onClick={() => setViewIndex(i)}
-                aria-label={`View ${v.closeUp ? "close-up" : `image ${v.index + 1}`}`}
+                aria-label={v.video ? "Play the video" : `View ${v.closeUp ? "close-up" : `image ${v.index + 1}`}`}
                 aria-current={viewIndex === i}
                 className={`relative aspect-square w-[76px] shrink-0 overflow-hidden rounded-2xl border-2 bg-white transition-colors ${
                   viewIndex === i ? "border-gold" : "border-warm-line hover:border-gold/50"
                 }`}
               >
                 <ProductImage product={product} index={v.index} sizes="76px" className={v.closeUp ? "scale-[1.9]" : ""} />
+                {v.video && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-white/90 text-espresso">
+                      <Play size={14} fill="currentColor" />
+                    </span>
+                  </span>
+                )}
               </button>
             ))}
           </div>
           <div className="relative aspect-square flex-1 overflow-hidden rounded-[2rem] border border-warm-line bg-white shadow-soft">
-            <HoverZoom scale={view.closeUp ? 1.5 : 2}>
-              <ProductImage
-                key={viewIndex}
-                product={product}
-                index={view.index}
-                priority
-                sizes="(min-width: 1024px) 45vw, 100vw"
-                className={`animate-fade-in ${view.closeUp ? "scale-[1.9]" : ""}`}
-              />
-            </HoverZoom>
+            {view.video ? (
+              <video key={view.video} src={view.video} autoPlay muted loop playsInline controls aria-label={`${product.name}, video`} className="size-full animate-fade-in object-cover" />
+            ) : (
+              <HoverZoom scale={view.closeUp ? 1.5 : 2}>
+                <ProductImage
+                  key={viewIndex}
+                  product={product}
+                  index={view.index}
+                  priority
+                  sizes="(min-width: 1024px) 45vw, 100vw"
+                  className={`animate-fade-in ${view.closeUp ? "scale-[1.9]" : ""}`}
+                />
+              </HoverZoom>
+            )}
             {(product.soldOut || product.badge) && (
               <span className={`absolute left-4 top-4 rounded-full px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${product.soldOut ? "bg-espresso text-white" : "border border-gold/40 bg-bronze-soft text-espresso"}`}>
                 {product.soldOut ? "Sold Out" : product.badge}

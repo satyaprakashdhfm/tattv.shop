@@ -18,6 +18,8 @@ export interface Product {
   finish: Finish;
   /** Paths under /public, from TATTV's Instagram posts until original product shots are supplied. */
   images: string[];
+  /** A short video of the piece (uploaded in the admin), shown in the gallery after the main photo. */
+  video?: string;
   sizes?: { label: string; values: string[] };
   badge?: "New" | "Bestseller" | "Limited Edition";
   isNew?: boolean;

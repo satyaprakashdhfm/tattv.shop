@@ -41,6 +41,7 @@ interface ProductRow {
   stock: number | null;
   active: boolean;
   images: string[] | null;
+  video: string | null;
 }
 
 const toProduct = (r: ProductRow): Product => ({
@@ -53,6 +54,7 @@ const toProduct = (r: ProductRow): Product => ({
   material: r.material,
   finish: r.finish,
   images: r.images ?? [],
+  ...(r.video ? { video: r.video } : {}),
   sizes: r.size_label && r.size_values?.length ? { label: r.size_label, values: r.size_values } : undefined,
   badge: r.badge ?? undefined,
   isNew: r.is_new,
@@ -177,6 +179,8 @@ export interface ProductInput {
   costPrice: unknown;
   active: boolean;
   images: string[];
+  /** The product's video URL ("" for none). */
+  video: string;
 }
 
 async function uniqueSlug(db: PoolClient, table: "products" | "categories", base: string) {
@@ -219,19 +223,20 @@ export async function saveProduct(input: ProductInput, { isNew }: { isNew: boole
       String(input.details || "").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 20),
       stock, !!input.active,
       customLines(input.care, defaultCare(String(input.finish))), customLines(input.shippingReturns, defaultShippingReturns((await loadCatalogData()).settings)), costPrice,
+      /^\/media\/[\w-]+\.(mp4|webm)$/.test(input.video) ? input.video : "",
     ];
     if (isNew) {
       await db.query(
         `INSERT INTO products (slug, name, category_id, collection, price, compare_at, material, finish, size_label, size_values,
-           badge, is_new, bestseller, short, description, details, stock, active, care, shipping_returns, cost_price, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM products))`,
+           badge, is_new, bestseller, short, description, details, stock, active, care, shipping_returns, cost_price, video, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM products))`,
         values,
       );
     } else {
       await db.query(
         `UPDATE products SET name=$2, category_id=$3, collection=$4, price=$5, compare_at=$6, material=$7, finish=$8, size_label=$9,
            size_values=$10, badge=$11, is_new=$12, bestseller=$13, short=$14, description=$15, details=$16, stock=$17, active=$18,
-           care=$19, shipping_returns=$20, cost_price=$21, updated_at=now() WHERE slug=$1`,
+           care=$19, shipping_returns=$20, cost_price=$21, video=$22, updated_at=now() WHERE slug=$1`,
         values,
       );
     }

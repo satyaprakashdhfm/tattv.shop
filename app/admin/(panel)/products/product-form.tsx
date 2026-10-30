@@ -43,6 +43,16 @@ export function ProductForm({
   const [price, setPrice] = useState(p.price ? String(p.price) : "");
   const [costPrice, setCostPrice] = useState(cost != null ? String(cost) : "");
   const margin = Number(price) > 0 && costPrice !== "" ? Number(price) - Number(costPrice) : null;
+  // The video kept (its URL, "" for none) and a preview of a newly chosen file.
+  const [video, setVideo] = useState(p.video ?? "");
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const videoInput = useRef<HTMLInputElement>(null);
+  // After a save, show the stored video (so a new upload isn't sent twice).
+  useEffect(() => {
+    setVideo(product?.video ?? "");
+    setVideoPreview(null);
+    if (videoInput.current) videoInput.current.value = "";
+  }, [product?.video]);
   const formRef = useRef<HTMLFormElement>(null);
 
   // After a save the page re-renders with the stored product: show its saved photos (so new uploads aren't sent twice).
@@ -211,6 +221,52 @@ export function ProductForm({
                 </label>
               </li>
             </ul>
+          </section>
+
+          <section className="adm-card">
+            <h2 className="adm-h2">Video</h2>
+            <p className="mb-4 text-xs text-muted">Optional: a short clip of the piece being worn or turned in the hand (MP4, up to 25 MB, 5 to 20 seconds is plenty). It shows in the product&apos;s gallery after the main photo.</p>
+            <input type="hidden" name="video" value={video} />
+            <div className="flex flex-wrap items-start gap-4">
+              {(videoPreview || video) && (
+                <div className="relative aspect-[4/5] w-40 overflow-hidden rounded-2xl border border-line bg-ink">
+                  <video src={videoPreview || video} muted loop autoPlay playsInline className="size-full object-cover" />
+                  {videoPreview && <span className="absolute right-2 top-2 rounded-full bg-white px-2 py-0.5 text-[9px] uppercase tracking-[0.14em]">New</span>}
+                </div>
+              )}
+              <div className="space-y-2">
+                <label className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-ink/30 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-muted hover:border-ink hover:text-ink">
+                  <input
+                    ref={videoInput}
+                    type="file"
+                    name="videoFile"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      setVideoPreview((old) => {
+                        if (old) URL.revokeObjectURL(old);
+                        return f ? URL.createObjectURL(f) : null;
+                      });
+                    }}
+                  />
+                  {video || videoPreview ? "Replace Video" : "+ Add Video"}
+                </label>
+                {(video || videoPreview) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVideo("");
+                      setVideoPreview(null);
+                      if (videoInput.current) videoInput.current.value = "";
+                    }}
+                    className="block text-xs text-red-700 underline underline-offset-2"
+                  >
+                    Remove video
+                  </button>
+                )}
+              </div>
+            </div>
           </section>
 
           <section className="adm-card grid gap-4 sm:grid-cols-2">

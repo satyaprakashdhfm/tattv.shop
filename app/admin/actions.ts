@@ -129,6 +129,8 @@ export async function saveProductAction(_prev: FormState, fd: FormData): Promise
         care: str(fd, "care"),
         shippingReturns: str(fd, "shippingReturns"),
         costPrice: fd.get("costPrice"),
+        // A new upload replaces the video; "video" carries the one kept (empty once removed).
+        video: (await saveVideo(fd.get("videoFile") as File | null)) ?? str(fd, "video"),
         active: fd.get("active") === "on",
         images,
       },
