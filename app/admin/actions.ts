@@ -4,12 +4,13 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { checkAdminLogin, endAdminSession, requireAdmin, startAdminSession } from "@/lib/server/auth";
-import { adminUpdateOrder, setMessageStatus } from "@/lib/server/orders";
+import { adminUpdateOrder, listOrders, setMessageStatus } from "@/lib/server/orders";
 import { OrderError } from "@/lib/pricing";
 import { deleteCoupon, saveCoupon, setCouponActive } from "@/lib/server/coupons";
 import { deleteReview, setReviewStatus } from "@/lib/server/reviews";
 import { resetPolicy, savePolicy } from "@/lib/server/policies";
-import { bookShipment, cancelBooking, refreshTracking } from "@/lib/server/shipments";
+import { awaitingPickup, bookShipment, cancelBooking, refreshAllInTransit, refreshTracking, registerPickup, requestPickup } from "@/lib/server/shipments";
+import { deletePickupAddress, saveParcelSettings, savePickupAddress, saveWeights, setDefaultPickup } from "@/lib/server/pickup";
 import { addReel, deleteReel, moveReel, saveVideo, updateReel } from "@/lib/server/reels";
 import { deleteCategory, deleteProduct, moveCategory, moveProduct, quickUpdateProducts, saveCategory, saveImage, saveProduct, saveSettings, type ProductScope } from "@/lib/server/catalog";
 
@@ -358,4 +359,76 @@ export async function shipmentAction(_prev: FormState, fd: FormData): Promise<Fo
   });
   refresh(id);
   return typeof res === "object" ? res : { ok: res };
+}
+
+// ── Admin → Delivery ──
+// Each action goes back to the Delivery page with a one-line notice (?note=…, or ?err=… when it failed).
+async function delivery(fn: () => Promise<string>) {
+  const res = await attempt(fn);
+  revalidatePath("/admin/delivery");
+  redirect(`/admin/delivery?${typeof res === "object" ? "err" : "note"}=${encodeURIComponent(typeof res === "object" ? res.error : res)}`);
+}
+
+export async function savePickupAddressAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    await savePickupAddress(Object.fromEntries(fd));
+    return "Pickup address saved. Press Register with Delhivery if it is new or its details changed.";
+  });
+}
+
+export async function defaultPickupAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    await setDefaultPickup(str(fd, "id"));
+    return "Default pickup address changed. New shipments are booked from it.";
+  });
+}
+
+export async function deletePickupAddressAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    await deletePickupAddress(str(fd, "id"));
+    return "Pickup address deleted.";
+  });
+}
+
+export async function registerPickupAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    const r = await registerPickup(str(fd, "id"));
+    return r.existed ? `Delhivery already had “${r.name}”; its details are updated.` : `“${r.name}” registered with Delhivery. They may take up to a day to switch it on.`;
+  });
+}
+
+export async function saveParcelSettingsAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    await saveParcelSettings(Object.fromEntries(fd));
+    return "Parcel weight settings saved. They apply to shipments booked from now on.";
+  });
+}
+
+export async function saveWeightsAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    await saveWeights(fd.getAll("slug").map(String).map((slug) => ({ slug, grams: fd.get(`w:${slug}`) })));
+    return "Packed weights saved.";
+  });
+}
+
+export async function requestPickupAction(fd: FormData) {
+  await requireAdmin();
+  await delivery(async () => {
+    const r = await requestPickup({ date: str(fd, "date"), time: str(fd, "time"), count: fd.get("count"), from: str(fd, "from"), orders: awaitingPickup(await listOrders()) });
+    return `Pickup requested from ${r.location}${r.id ? ` (Delhivery pickup ID ${r.id})` : ""}.`;
+  });
+}
+
+export async function refreshAllTrackingAction() {
+  await requireAdmin();
+  await delivery(async () => {
+    const r = await refreshAllInTransit();
+    return r.checked ? `Asked Delhivery about ${r.checked} parcel${r.checked === 1 ? "" : "s"}.` : "No parcels are on their way.";
+  });
 }

@@ -4,16 +4,14 @@ import type { OrderStatus } from "@/lib/site";
 import { query } from "./db";
 import { loadCatalogData } from "./catalog";
 import { adminUpdateOrder, getOrder, type Order, type Shipment } from "./orders";
-import { cancelShipment, createShipment, delhiveryConfigured, delhiveryTrackUrl, explainDelhivery, fetchLabel, fetchWaybill, getShippingCost, trackShipment } from "./delhivery";
+import { cancelShipment, createPickupRequest, createShipment, delhiveryConfigured, delhiveryTrackUrl, explainDelhivery, fetchLabel, fetchWaybill, getShippingCost, registerWarehouse, trackShipment } from "./delhivery";
+import { defaultPickup, listPickupAddresses, markRegistered, recordPickup, weighLines } from "./pickup";
 
 // Delhivery shipments for orders (ported from the Minimalstoys backend). The admin books one from the order
 // page; Delhivery's scans (pushed to /api/delhivery/webhook, or fetched with "Refresh tracking") then move the
 // order on: shipped → out for delivery → delivered. Booking never changes the order's status by itself:
-// the piece still has to be packed.
-//
-//   DELHIVERY_PARCEL_GRAMS   default packed weight of a parcel in grams (250); the admin can type the real one
-
-export const DEFAULT_GRAMS = () => Math.max(1, Math.round(Number(process.env.DELHIVERY_PARCEL_GRAMS) || 250));
+// the piece still has to be packed. The parcel goes from the default pickup address, with the weight
+// worked out from Admin → Delivery (each piece's packed weight + packaging + margin) unless the admin types one.
 export const activeShipment = (o: Pick<Order, "shipment">) => (o.shipment?.state === "booked" && o.shipment.waybill ? o.shipment : null);
 
 /** Cash the courier collects: the whole total for an unpaid cash-on-delivery order, else nothing. */
@@ -27,7 +25,7 @@ async function writeShipment(id: string, s: Shipment) {
 
 const inFlight = new Set<string>();
 
-/** Books the parcel with Delhivery and fills in the order's tracking. `grams`: the weighed parcel, or the default. */
+/** Books the parcel with Delhivery and fills in the order's tracking. `grams`: the weighed parcel, or the worked-out weight. */
 export async function bookShipment(id: string, gramsInput?: unknown) {
   if (!delhiveryConfigured()) throw new OrderError("Delhivery is not set up yet. Add DELIVERY_API_TOKEN and DELHIVERY_PICKUP_LOCATION on the server.");
   const typed = gramsInput === "" || gramsInput == null ? null : Math.round(Number(gramsInput));
@@ -39,7 +37,9 @@ export async function bookShipment(id: string, gramsInput?: unknown) {
     if (!o) throw new OrderError("Order not found", 404);
     if (activeShipment(o)) throw new OrderError(`Already booked: waybill ${o.shipment!.waybill}.`);
     if (["pending_payment", "cancelled", "delivered"].includes(o.status)) throw new OrderError("Only confirmed orders that are not yet delivered can be shipped.");
-    const grams = typed ?? DEFAULT_GRAMS();
+    const weight = await weighLines(o.lines);
+    const grams = typed ?? weight.total;
+    const from = await defaultPickup();
     const fail = async (reason: string) => {
       const msg = explainDelhivery(reason);
       await writeShipment(id, { ...(o.shipment ?? blank()), state: "failed", error: msg });
@@ -68,18 +68,26 @@ export async function bookShipment(id: string, gramsInput?: unknown) {
       quantity: String(o.lines.reduce((s, l) => s + l.qty, 0) || 1),
       hsn_code: "7117", // imitation jewellery
       order_date: o.createdAt.slice(0, 10),
-      seller_name: "TATTV",
-      seller_add: settings.address.replace(/\n/g, ", "),
+      seller_name: from.contact || "TATTV",
+      seller_add: [from.address, from.city].filter(Boolean).join(", ") || settings.address.replace(/\n/g, ", "),
       seller_inv: o.id,
+      return_name: from.contact,
+      return_add: from.address,
+      return_city: from.city,
+      return_state: from.state,
+      return_pin: from.pin,
+      return_country: "India",
+      return_phone: from.phone,
       weight: grams,
       shipment_length: 15,
       shipment_width: 12,
       shipment_height: 6,
       shipping_mode: "Surface",
       address_type: "home",
-    });
+      ...(weight.fragile ? { fragile_shipment: true } : {}),
+    }, from.name);
     if (!res.ok) return fail(res.reason);
-    const quote = await getShippingCost({ destPin: c.pin, grams, codAmount: due }).catch(() => null);
+    const quote = await getShippingCost({ destPin: c.pin, grams, codAmount: due, fromPin: from.pin }).catch(() => null);
 
     await writeShipment(id, {
       ...blank(),
@@ -92,7 +100,7 @@ export async function bookShipment(id: string, gramsInput?: unknown) {
     });
     await adminUpdateOrder(id, {
       tracking: { courier: "Delhivery", number: res.waybill, url: delhiveryTrackUrl(res.waybill) },
-      note: `Delhivery shipment booked: ${res.waybill}${due ? ` (COD ₹${due})` : " (prepaid)"}, ${grams} g`,
+      note: `Delhivery shipment booked from ${from.name}: ${res.waybill}${due ? ` (COD ₹${due})` : " (prepaid)"}, ${grams} g${weight.fragile ? ", fragile" : ""}${!typed && weight.missing.length ? `. Not weighed yet: ${weight.missing.join(", ")}` : ""}`,
     });
     console.log(`[SHIPMENT] booked | order=${id} | waybill=${res.waybill} | cod=${due}`);
     return res.waybill;
@@ -156,3 +164,34 @@ export async function labelFor(id: string) {
   return r;
 }
 
+
+// ── Pickups ──
+/** Parcels booked but not collected yet. */
+export const awaitingPickup = (orders: Order[]) =>
+  orders.filter((o) => activeShipment(o) && ["confirmed", "packed"].includes(o.status) && (!o.shipment!.lastStatus || /^(manifested|not picked|pending pickup)/i.test(o.shipment!.lastStatus)));
+
+/** Asks Delhivery to collect the day's parcels from a pickup address (one request a day per address). */
+export async function requestPickup({ date, time, count, from: fromId, orders }: { date: string; time: string; count: unknown; from: string; orders: Order[] }) {
+  if (!delhiveryConfigured()) throw new OrderError("Delhivery is not set up yet.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new OrderError("Pick a pickup date.");
+  const list = await listPickupAddresses();
+  const from = list.find((a) => a.id === fromId) ?? list[0];
+  const n = Math.max(1, Math.min(100, Math.round(Number(count)) || 1));
+  const t = /^\d{2}:\d{2}$/.test(time) ? time : "14:00";
+  const r = await createPickupRequest({ date, time: t, count: n, location: from.name });
+  if (!r.ok) throw new OrderError(explainDelhivery(r.reason));
+  await recordPickup({ date, time: t, count: n, location: from.name, delhiveryId: r.id, orders: orders.map((o) => ({ id: o.id, waybill: o.shipment?.waybill ?? "" })) });
+  return { id: r.id, location: from.name };
+}
+
+/** Registers a pickup address with Delhivery (or updates the one they have under that name). */
+export async function registerPickup(id: string) {
+  if (!delhiveryConfigured()) throw new OrderError("Delhivery is not set up yet.");
+  const a = (await listPickupAddresses()).find((x) => x.id === id);
+  if (!a || a.unsaved) throw new OrderError("Save this pickup address first, then register it.");
+  const { settings } = await loadCatalogData();
+  const r = await registerWarehouse({ name: a.name, phone: a.phone, email: settings.email, address: a.address, city: a.city, state: a.state, pin: a.pin });
+  if (!r.ok) throw new OrderError(explainDelhivery(r.reason));
+  await markRegistered(id);
+  return { name: a.name, existed: r.existed };
+}

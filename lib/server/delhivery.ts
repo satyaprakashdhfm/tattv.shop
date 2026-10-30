@@ -6,8 +6,10 @@ import "server-only";
 //   DELIVERY_API_TOKEN          One Panel → Settings → API Setup. Sent as `Token <token>`, not Bearer.
 //   DELHIVERY_BASE_URL          https://track.delhivery.com (production, the default)
 //                               https://staging-express.delhivery.com (staging: needs the staging token)
-//   DELHIVERY_PICKUP_LOCATION   the warehouse name registered in the Delhivery panel, spelled exactly
-//   DELHIVERY_ORIGIN_PIN        the warehouse PIN code, for delivery-time estimates and charges
+//
+// The pickup addresses (Delhivery "warehouses") and parcel weights are set in Admin → Delivery
+// (lib/server/pickup.ts). DELHIVERY_PICKUP_LOCATION / DELHIVERY_ORIGIN_PIN only fill in the first one
+// until the admin saves their own.
 //
 // Every function returns { ok, ... } and never throws, so a Delhivery outage can't fail a checkout or an
 // admin page. Staging only knows a small set of test PIN codes, so it can say "not serviceable" for real ones.
@@ -16,8 +18,7 @@ const BASE_URL = () => (process.env.DELHIVERY_BASE_URL || "https://track.delhive
 const TOKEN = () => process.env.DELIVERY_API_TOKEN || process.env.DELHIVERY_API_TOKEN || "";
 
 export const delhiveryConfigured = () => !!TOKEN();
-export const pickupLocation = () => process.env.DELHIVERY_PICKUP_LOCATION || "TATTV";
-export const originPin = () => process.env.DELHIVERY_ORIGIN_PIN || "500001";
+export const delhiveryStaging = () => BASE_URL().includes("staging");
 export const delhiveryTrackUrl = (waybill: string) => `https://www.delhivery.com/track-v2/package/${encodeURIComponent(waybill)}`;
 
 type Fail = { ok: false; reason: string };
@@ -55,7 +56,10 @@ export function explainDelhivery(said: string) {
   if (!s) return "Delhivery refused the request without giving a reason.";
   if (s === "network_error") return "Could not reach Delhivery. Check the connection and try again in a minute.";
   if (/balance|insufficient|recharge|wallet/.test(s)) return "The Delhivery wallet is too low. Recharge it in the Delhivery panel and try again.";
-  if (/clientwarehouse matching query does not exist|invalid pickup location/.test(s)) return "Delhivery does not recognise the pickup location. DELHIVERY_PICKUP_LOCATION must match the warehouse name in their panel exactly.";
+  if (/clientwarehouse matching query does not exist|invalid pickup location/.test(s)) return "Delhivery does not recognise the pickup address. Its name in Admin → Delivery must match the warehouse name in their panel exactly (or press Register with Delhivery).";
+  const pickupPin = s.match(/error due to serviceability for pincode:?\s*(\d{6})/)?.[1];
+  if (pickupPin) return `Delhivery can't collect parcels from PIN code ${pickupPin} on this account. (Staging only knows a few test PIN codes.)`;
+  if (/already|pickup request.*exist/.test(s)) return "A pickup is already booked for that day. Delhivery allows one per pickup address per day.";
   if (/non serviceable pincode|not serviceable/.test(s)) return "Delhivery does not deliver to this PIN code.";
   if (/incorrect phone/.test(s)) return "Delhivery rejected the customer's phone number.";
   if (/duplicate order|duplicate waybill/.test(s)) return "Delhivery already has a shipment for this order.";
@@ -84,10 +88,10 @@ export async function checkServiceability(pincode: string): Promise<{ ok: true; 
 }
 
 // ── Expected transit days: GET /api/dc/expected_tat (mot S = surface) ──
-export async function expectedTat(destinationPin: string): Promise<{ ok: true; days: number | null } | Fail> {
+export async function expectedTat(destinationPin: string, fromPin: string): Promise<{ ok: true; days: number | null } | Fail> {
   const d = pin6(destinationPin);
   try {
-    const { ok, status, data } = await dhRequest("/api/dc/expected_tat", { query: { origin_pin: originPin(), destination_pin: d, mot: "S", pdt: "B2C" }, timeoutMs: 8_000 });
+    const { ok, status, data } = await dhRequest("/api/dc/expected_tat", { query: { origin_pin: pin6(fromPin), destination_pin: d, mot: "S", pdt: "B2C" }, timeoutMs: 8_000 });
     if (ok && data?.success) return { ok: true, days: data.data?.tat ?? null };
     return { ok: false, reason: data?.msg || `api_error_${status}` };
   } catch {
@@ -96,10 +100,10 @@ export async function expectedTat(destinationPin: string): Promise<{ ok: true; d
 }
 
 // ── Shipping charge: GET /api/kinko/v1/invoice/charges/.json (what Delhivery bills TATTV; grams) ──
-export async function getShippingCost({ destPin, grams, codAmount = 0 }: { destPin: string; grams: number; codAmount?: number }): Promise<{ ok: true; total: number } | Fail> {
+export async function getShippingCost({ destPin, grams, codAmount = 0, fromPin }: { destPin: string; grams: number; codAmount?: number; fromPin: string }): Promise<{ ok: true; total: number } | Fail> {
   try {
     const { ok, status, data } = await dhRequest("/api/kinko/v1/invoice/charges/.json", {
-      query: { md: "S", cgm: Math.round(grams), o_pin: originPin(), d_pin: pin6(destPin), ss: "Delivered", pt: codAmount > 0 ? "COD" : "Pre-paid", cod: codAmount },
+      query: { md: "S", cgm: Math.round(grams), o_pin: pin6(fromPin), d_pin: pin6(destPin), ss: "Delivered", pt: codAmount > 0 ? "COD" : "Pre-paid", cod: codAmount },
       timeoutMs: 8_000,
     });
     const row = Array.isArray(data) ? data[0] : null;
@@ -125,9 +129,9 @@ export async function fetchWaybill(): Promise<{ ok: true; waybill: string } | Fa
 }
 
 // ── Create shipment: POST /api/cmu/create.json (form-encoded format=json&data=<json>) ──
-export async function createShipment(shipment: Record<string, unknown>): Promise<{ ok: true; waybill: string } | Fail> {
+export async function createShipment(shipment: Record<string, unknown>, location: string): Promise<{ ok: true; waybill: string } | Fail> {
   try {
-    const payload = JSON.stringify({ shipments: [shipment], pickup_location: { name: pickupLocation() } });
+    const payload = JSON.stringify({ shipments: [shipment], pickup_location: { name: location } });
     const { ok, status, data } = await dhRequest("/api/cmu/create.json", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -139,6 +143,43 @@ export async function createShipment(shipment: Record<string, unknown>): Promise
     if (!pkg) return { ok: false, reason: data?.rmk || "no_package_in_response" };
     if (pkg.status !== "Success") return { ok: false, reason: delhiveryMessage(pkg.remarks) || pkg.status };
     return { ok: true, waybill: String(pkg.waybill) };
+  } catch {
+    return { ok: false, reason: "network_error" };
+  }
+}
+
+// ── Pickup address (warehouse): POST /api/backend/clientwarehouse/create/ ──
+// Delhivery finds the warehouse by `name`; every shipment and pickup names it. A name that already exists
+// comes back as a vague 400, so the edit endpoint is tried next, which updates it in place.
+export async function registerWarehouse(a: { name: string; phone: string; email: string; address: string; city: string; state: string; pin: string }): Promise<{ ok: true; existed: boolean } | Fail> {
+  const payload = {
+    name: a.name, registered_name: a.name, phone: a.phone, email: a.email, address: a.address, city: a.city, pin: a.pin, country: "India",
+    return_address: a.address, return_pin: a.pin, return_city: a.city, return_state: a.state, return_country: "India",
+  };
+  const post = (path: string) => dhRequest(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  try {
+    const created = await post("/api/backend/clientwarehouse/create/");
+    if (created.ok) return { ok: true, existed: false };
+    const edited = await post("/api/backend/clientwarehouse/edit/");
+    if (edited.ok) return { ok: true, existed: true };
+    const said = delhiveryMessage(created.data);
+    return { ok: false, reason: said.match(/error due to [^.]+/i)?.[0] || created.data?.data?.message || said || `api_error_${created.status}` };
+  } catch {
+    return { ok: false, reason: "network_error" };
+  }
+}
+
+// ── Pickup request: POST /fm/request/new/ (one per warehouse per day) ──
+export async function createPickupRequest({ date, time, count, location }: { date: string; time: string; count: number; location: string }): Promise<{ ok: true; id: string | null } | Fail> {
+  const t = /^\d{2}:\d{2}$/.test(time) ? `${time}:00` : time; // Delhivery wants HH:MM:SS
+  try {
+    const { ok, status, data } = await dhRequest("/fm/request/new/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pickup_date: date, pickup_time: t, pickup_location: location, expected_package_count: count }),
+    });
+    if (!ok) return { ok: false, reason: delhiveryMessage(data) || `api_error_${status}` };
+    return { ok: true, id: data?.pickup_id != null ? String(data.pickup_id) : data?.request_id != null ? String(data.request_id) : null };
   } catch {
     return { ok: false, reason: "network_error" };
   }
@@ -216,13 +257,13 @@ export interface DeliveryCheck {
   checked: boolean;
 }
 
-export async function deliveryCheck(pin: string): Promise<DeliveryCheck> {
+export async function deliveryCheck(pin: string, fromPin: string): Promise<DeliveryCheck> {
   const p = pin6(pin);
   if (!/^\d{6}$/.test(p)) return { serviceable: false, cod: false, days: null, checked: true };
   if (!delhiveryConfigured()) return { serviceable: true, cod: true, days: null, checked: false };
   const hit = cache.get(p);
   if (hit && Date.now() - hit.at < 6 * 3600_000) return hit.result;
-  const [svc, tat] = await Promise.all([checkServiceability(p), expectedTat(p)]);
+  const [svc, tat] = await Promise.all([checkServiceability(p), expectedTat(p, fromPin)]);
   if (!svc.ok) return { serviceable: true, cod: true, days: null, checked: false };
   const result = { serviceable: svc.serviceable, cod: svc.cod, days: tat.ok ? tat.days : null, checked: true };
   cache.set(p, { at: Date.now(), result });

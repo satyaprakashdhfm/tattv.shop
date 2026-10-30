@@ -7,7 +7,7 @@ import { getOrder, type Order } from "@/lib/server/orders";
 import { addNote, saveTracking, setPayment, updateStatus } from "../../../actions";
 import { PageHead, StatusPill, when } from "../../ui";
 import { delhiveryConfigured } from "@/lib/server/delhivery";
-import { DEFAULT_GRAMS } from "@/lib/server/shipments";
+import { weighLines } from "@/lib/server/pickup";
 import { DelhiveryPanel } from "./delhivery-panel";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -152,7 +152,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             shipment={o.shipment}
             configured={delhiveryConfigured()}
             canBook={!["pending_payment", "cancelled", "delivered"].includes(o.status)}
-            defaultGrams={DEFAULT_GRAMS()}
+            defaultGrams={(await weighLines(o.lines)).total}
             cod={o.payment.status === "cod_due" ? o.total : 0}
           />
 

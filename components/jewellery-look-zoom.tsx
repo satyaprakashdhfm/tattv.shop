@@ -391,7 +391,9 @@ export function JewelleryLookZoom() {
     return () => ro.disconnect();
   }, [w, h]);
 
-  const [stop, setStop] = useState(0);
+  // Starts from where the camera already is: coming back after the walk has played, it opens on the
+  // closing shot (p = 1) and never changes, so a change listener alone would leave the hotspots hidden.
+  const [stop, setStop] = useState(() => stopAt(p.get()));
   useMotionValueEvent(p, "change", (t) => setStop(stopAt(t)));
 
   const photoW = useTransform(() => Math.max(w.get(), h.get() * RATIO));

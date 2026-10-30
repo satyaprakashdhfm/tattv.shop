@@ -232,6 +232,33 @@ CREATE INDEX IF NOT EXISTS reviews_status_idx ON reviews (status, created_at DES
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipment jsonb;
 CREATE INDEX IF NOT EXISTS orders_waybill_idx ON orders ((shipment->>'waybill')) WHERE shipment IS NOT NULL;
 
+-- Delivery set-up (Admin → Delivery): each piece's packed weight, the places Delhivery collects from, and
+-- the pickups asked for. Packaging / margin / fragile live in settings under the key 'parcel'.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams integer CHECK (weight_grams IS NULL OR weight_grams > 0);
+CREATE TABLE IF NOT EXISTS pickup_addresses (
+  id            text PRIMARY KEY,
+  name          text NOT NULL UNIQUE,
+  contact       text NOT NULL DEFAULT '',
+  phone         text NOT NULL,
+  address       text NOT NULL,
+  city          text NOT NULL,
+  state         text NOT NULL,
+  pin           text NOT NULL,
+  is_default    boolean NOT NULL DEFAULT false,
+  registered_at timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS pickups (
+  id           text PRIMARY KEY,
+  pickup_date  date NOT NULL,
+  pickup_time  text NOT NULL,
+  count        integer NOT NULL,
+  location     text NOT NULL,
+  delhivery_id text,
+  orders       jsonb NOT NULL DEFAULT '[]',
+  requested_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Customer accounts: signed in with a mobile number and a one-time code (MSG91). The number is the account.
 CREATE TABLE IF NOT EXISTS customers (
   phone         text PRIMARY KEY,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, Clapperboard, FileText, LayoutGrid, MessageSquare, Package, Receipt, Search, Settings, Star, Tags, TicketPercent, Users, type LucideIcon } from "lucide-react";
+import { Boxes, Clapperboard, FileText, LayoutGrid, MessageSquare, Package, Receipt, Search, Settings, Star, Tags, TicketPercent, Truck, Users, type LucideIcon } from "lucide-react";
 
 type Count = "toPack" | "messages" | "reviews";
 type Item = [href: string, label: string, icon: LucideIcon, count: Count | null];
@@ -13,6 +13,7 @@ const GROUPS: [string, Item[]][] = [
     "Orders",
     [
       ["/admin/orders", "Orders", Receipt, "toPack"],
+      ["/admin/delivery", "Delivery", Truck, null],
       ["/admin/coupons", "Coupons", TicketPercent, null],
     ],
   ],

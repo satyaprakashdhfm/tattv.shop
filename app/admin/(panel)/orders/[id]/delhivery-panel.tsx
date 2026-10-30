@@ -102,7 +102,7 @@ export function DelhiveryPanel({ id, shipment, configured, canBook, defaultGrams
             {booking ? "Booking…" : "Book Delhivery Shipment"}
           </button>
           {!canBook && <p className="text-xs text-muted">Only confirmed orders that are not delivered or cancelled can be booked.</p>}
-          <p className="text-xs text-muted">Empty weight uses {defaultGrams} g. Booking fills in the tracking below; Delhivery&apos;s scans then move the order to Shipped, Out for delivery and Delivered.</p>
+          <p className="text-xs text-muted">Empty weight uses {defaultGrams} g, worked out from Delivery → Parcel weight. Booking fills in the tracking below; Delhivery&apos;s scans then move the order to Shipped, Out for delivery and Delivered.</p>
         </form>
       )}
 

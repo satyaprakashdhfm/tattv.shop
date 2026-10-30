@@ -8,6 +8,7 @@ import { sendMail, storeInbox } from "./mail";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
 import { checkCoupon } from "./coupons";
 import { deliveryCheck } from "./delhivery";
+import { defaultPickup } from "./pickup";
 import { createRazorpayOrder, razorpayEnabled, razorpayKeyId, verifyPaymentSignature, type RazorpayResponse } from "./razorpay";
 
 export { OrderError };
@@ -215,7 +216,7 @@ export async function createOrder(input: {
   if (method === "cod" ? !cfg.cod : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
   const items = Array.isArray(input.items) ? input.items : [];
   // Delhivery's word on the PIN code (accepted as deliverable when Delhivery isn't set up or can't be reached).
-  const reach = await deliveryCheck(customer.pin);
+  const reach = await deliveryCheck(customer.pin, (await defaultPickup()).pin);
   if (!reach.serviceable) throw new OrderError("Sorry, our courier doesn't deliver to this PIN code yet. Please use another address.");
   if (method === "cod" && !reach.cod) throw new OrderError("Cash on delivery isn't available for this PIN code. Please pay online.");
 
