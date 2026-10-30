@@ -104,6 +104,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     <Link href={`/admin/orders/${o.id}`} className="font-medium underline-offset-2 hover:underline">
                       {o.id}
                     </Link>
+                    {o.gift && <span className="pill pill-packed ml-2">🎁 Gift</span>}
                     <span className="block text-xs text-muted">{short(o.createdAt)}</span>
                   </td>
                   <td>

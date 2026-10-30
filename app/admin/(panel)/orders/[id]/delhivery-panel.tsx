@@ -17,7 +17,7 @@ export function DelhiveryPanel({ id, shipment, configured, canBook, defaultGrams
     <section className="adm-card space-y-4">
       <div>
         <h2 className="adm-h2 !mb-1">Delhivery</h2>
-        {!configured && <p className="text-xs text-muted">Not set up yet: add DELIVERY_API_TOKEN and DELHIVERY_PICKUP_LOCATION on the server. Until then, add tracking by hand below.</p>}
+        {!configured && <p className="text-xs text-muted">Not set up yet: add DELIVERY_API_TOKEN and DELHIVERY_PICKUP_LOCATION on the server. Until then, orders are moved on with the status buttons above.</p>}
       </div>
 
       {configured && live && (

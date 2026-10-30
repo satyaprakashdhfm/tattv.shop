@@ -18,6 +18,8 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
   if (!o) notFound();
   const c = o.customer;
   const cod = cashDue(o) > 0;
+  // A gift goes without prices: the person opening the parcel isn't the one who paid.
+  const gift = o.gift;
 
   return (
     <div className="mx-auto max-w-2xl rounded-3xl bg-white p-8 text-sm print:rounded-none print:p-0">
@@ -65,13 +67,21 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
         </div>
       </div>
 
+      {gift && (
+        <div className="mb-6 rounded-2xl border-2 border-dashed border-ink p-4">
+          <p className="font-semibold uppercase tracking-[0.14em]">🎁 Gift packing{gift.occasion && ` · ${gift.occasion}`}</p>
+          <p className="mt-1 text-xs">Pack in the TATTV gift box. No prices or invoice inside. Message card:</p>
+          <p className="mt-3 font-serif text-base italic">{gift.message ? `“${gift.message}”` : "No message: leave the card blank."}</p>
+        </div>
+      )}
+
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-y border-ink text-left text-[10px] uppercase tracking-[0.14em]">
             <th className="py-2">Item</th>
             <th className="py-2">Qty</th>
-            <th className="py-2 text-right">Price</th>
-            <th className="py-2 text-right">Total</th>
+            {!gift && <th className="py-2 text-right">Price</th>}
+            {!gift && <th className="py-2 text-right">Total</th>}
           </tr>
         </thead>
         <tbody>
@@ -82,12 +92,12 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
                 {l.size && <span className="text-muted"> · {l.size}</span>}
               </td>
               <td className="py-2">{l.qty}</td>
-              <td className="py-2 text-right">{formatPrice(l.price)}</td>
-              <td className="py-2 text-right">{formatPrice(l.price * l.qty)}</td>
+              {!gift && <td className="py-2 text-right">{formatPrice(l.price)}</td>}
+              {!gift && <td className="py-2 text-right">{formatPrice(l.price * l.qty)}</td>}
             </tr>
           ))}
         </tbody>
-        <tfoot>
+        {!gift && <tfoot>
           <tr>
             <td colSpan={3} className="pt-3 text-right">
               Subtotal
@@ -114,7 +124,7 @@ export default async function Slip({ params }: { params: Promise<{ id: string }>
             </td>
             <td className="pt-2 text-right">{formatPrice(o.total)}</td>
           </tr>
-        </tfoot>
+        </tfoot>}
       </table>
 
       <p className="mt-10 border-t border-line pt-5 text-center text-xs uppercase tracking-[0.2em] text-muted">Thank you for choosing TATTV · Energize Your Style Element</p>

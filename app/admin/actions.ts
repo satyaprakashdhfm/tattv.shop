@@ -65,30 +65,6 @@ export async function moneyConfirmAction(id: string, proof: { code?: string; acc
   return res;
 }
 
-export async function saveTracking(fd: FormData) {
-  await requireAdmin();
-  const id = str(fd, "id");
-  const tracking = { courier: fd.get("courier"), number: fd.get("number"), url: fd.get("url") };
-  const markShipped = fd.get("markShipped") === "on";
-  await adminUpdateOrder(id, { tracking, ...(markShipped ? { status: "shipped", statusNote: "Tracking added" } : {}) });
-  refresh(id);
-}
-
-export async function setPayment(fd: FormData) {
-  await requireAdmin();
-  const id = str(fd, "id");
-  await adminUpdateOrder(id, { paymentStatus: str(fd, "paymentStatus") });
-  refresh(id);
-}
-
-export async function addNote(fd: FormData) {
-  await requireAdmin();
-  const id = str(fd, "id");
-  const note = str(fd, "note").trim();
-  if (note) await adminUpdateOrder(id, { note });
-  refresh(id);
-}
-
 export async function markMessage(fd: FormData) {
   await requireAdmin();
   await setMessageStatus(str(fd, "id"), str(fd, "status"));

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
-import { SITE_URL } from "@/lib/site";
 import { loadCatalogData } from "@/lib/server/catalog";
 import { delhiveryConfigured, delhiveryStaging, delhiveryTrackUrl } from "@/lib/server/delhivery";
 import { listOrders, type Order } from "@/lib/server/orders";
@@ -346,19 +345,6 @@ export default async function DeliveryPage({ searchParams }: { searchParams: Pro
           </form>
         </details>
       </section>
-
-      {ready && (
-        <section className="adm-card space-y-2 text-sm">
-          <h2 className="adm-h2 !mb-1">Tracking updates</h2>
-          <p className="text-ink/75">
-            Every 30 minutes the server asks Delhivery about parcels on their way and moves orders on (Shipped → Out for delivery → Delivered).
-            {process.env.DELHIVERY_WEBHOOK_TOKEN
-              ? " For updates the moment a parcel is scanned, ask Delhivery's tech team to push scans to:"
-              : " For instant updates, set DELHIVERY_WEBHOOK_TOKEN on the server and ask Delhivery to push scans to this site."}
-          </p>
-          {process.env.DELHIVERY_WEBHOOK_TOKEN && <code className="block break-all rounded-2xl bg-sand px-4 py-3 text-xs">{SITE_URL}/api/delhivery/webhook?token=•••• (the DELHIVERY_WEBHOOK_TOKEN value)</code>}
-        </section>
-      )}
 
       {done.length > 0 && (
         <details className="adm-card overflow-x-auto !p-0">

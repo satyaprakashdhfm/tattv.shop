@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUSES, PAYMENT_LABELS, SITE_URL, cashDue, type OrderStatus } from "@/lib/site";
 import { getOrder, type Order } from "@/lib/server/orders";
-import { addNote, saveTracking, setPayment, updateStatus } from "../../../actions";
+import { updateStatus } from "../../../actions";
 import { PageHead, StatusPill, when } from "../../ui";
 import { delhiveryConfigured } from "@/lib/server/delhivery";
 import { weighLines } from "@/lib/server/pickup";
@@ -66,6 +66,16 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
+          {o.gift && (
+            <section className="adm-card border-[#e5d6bb] bg-[#fbf7f0]">
+              <h2 className="adm-h2">🎁 Gift: pack it as a gift{o.gift.occasion && ` · ${o.gift.occasion}`}</h2>
+              <p className="text-sm text-ink/75">The customer asked for gift packing. Use the TATTV gift box, keep prices out of the parcel, and write this on the message card:</p>
+              <blockquote className="mt-3 rounded-2xl bg-white px-5 py-4 font-serif text-lg italic leading-relaxed">
+                {o.gift.message ? `“${o.gift.message}”` : <span className="text-sm not-italic text-muted">No message: leave the card blank.</span>}
+              </blockquote>
+            </section>
+          )}
+
           <section className="adm-card">
             <h2 className="adm-h2">Items</h2>
             <ul className="divide-y divide-line">
@@ -114,15 +124,6 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             </dl>
           </section>
 
-          {o.gift && (
-            <section className="adm-card border-[#e5d6bb] bg-[#fbf7f0]">
-              <h2 className="adm-h2">🎁 Gift packing{o.gift.occasion && ` · ${o.gift.occasion}`}</h2>
-              <p className="text-sm text-ink/75">Pack in the TATTV gift box, no invoice inside. Write this on the message card:</p>
-              <blockquote className="mt-3 rounded-2xl bg-white px-5 py-4 font-serif text-lg italic leading-relaxed">
-                {o.gift.message ? `“${o.gift.message}”` : <span className="text-sm not-italic text-muted">No message: leave the card blank.</span>}
-              </blockquote>
-            </section>
-          )}
 
           <section className="adm-card space-y-4">
             <h2 className="adm-h2 !mb-0">Update status</h2>
@@ -170,40 +171,6 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             defaultGrams={(await weighLines(o.lines)).total}
             cod={cashDue(o)}
           />
-
-          <section className="adm-card">
-            <h2 className="adm-h2">Shipping &amp; tracking</h2>
-            <form action={saveTracking} className="grid gap-4 sm:grid-cols-2">
-              <input type="hidden" name="id" value={o.id} />
-              <div>
-                <label htmlFor="tc" className="adm-label">
-                  Courier
-                </label>
-                <input id="tc" name="courier" defaultValue={o.tracking?.courier} placeholder="e.g. Delhivery, DTDC" className="adm-input" />
-              </div>
-              <div>
-                <label htmlFor="tn" className="adm-label">
-                  Tracking number
-                </label>
-                <input id="tn" name="number" defaultValue={o.tracking?.number} className="adm-input" />
-              </div>
-              <div className="sm:col-span-2">
-                <label htmlFor="tu" className="adm-label">
-                  Tracking link (optional)
-                </label>
-                <input id="tu" name="url" type="url" defaultValue={o.tracking?.url} placeholder="https://" className="adm-input" />
-              </div>
-              {["confirmed", "packed"].includes(o.status) && (
-                <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                  <input type="checkbox" name="markShipped" defaultChecked className="size-4 accent-ink" /> Also mark the order as shipped
-                </label>
-              )}
-              <div className="sm:col-span-2">
-                <button className="btn btn-outline btn-sm">Save Tracking</button>
-                <p className="mt-2 text-xs text-muted">The customer sees this on their order page.</p>
-              </div>
-            </form>
-          </section>
 
           <section className="adm-card">
             <h2 className="adm-h2">Timeline</h2>
@@ -263,42 +230,12 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
                   Advance paid {formatPrice(o.payment.advance)} · <b className="font-medium">collect {formatPrice(cashDue(o))}</b> on delivery
                 </span>
               )}
+              {o.payment.status === "cod_due" && <span className="mt-1 block text-xs text-muted">Marked collected on its own when Delhivery delivers the parcel.</span>}
               {o.payment.paymentId && <span className="block text-xs text-muted">Payment ID: {o.payment.paymentId}</span>}
               {o.payment.razorpayOrderId && <span className="block text-xs text-muted">Razorpay order: {o.payment.razorpayOrderId}</span>}
             </p>
-            <form action={setPayment} className="mt-4 flex gap-2">
-              <input type="hidden" name="id" value={o.id} />
-              {o.payment.status === "cod_due" && (
-                <button name="paymentStatus" value="paid" className="btn btn-dark btn-sm">
-                  Cash Collected
-                </button>
-              )}
-            </form>
           </section>
 
-          <section className="adm-card">
-            <h2 className="adm-h2">Internal notes</h2>
-            {o.notes.length === 0 ? (
-              <p className="text-xs text-muted">Only the team can see these.</p>
-            ) : (
-              <ul className="space-y-3 text-sm">
-                {o.notes.map((n, i) => (
-                  <li key={i}>
-                    {n.text}
-                    <span className="block text-xs text-muted">{when(n.at)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <form action={addNote} className="mt-4 space-y-2">
-              <input type="hidden" name="id" value={o.id} />
-              <label htmlFor="nt" className="sr-only">
-                Note
-              </label>
-              <textarea id="nt" name="note" rows={2} placeholder="e.g. Gift wrap requested" className="adm-input" />
-              <button className="btn btn-outline btn-sm">Add Note</button>
-            </form>
-          </section>
         </div>
       </div>
     </>

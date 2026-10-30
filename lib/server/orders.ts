@@ -1,10 +1,11 @@
 import "server-only";
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
-import { GIFT_WRAP, ORDER_STATUSES, SITE_URL, advanceFor, type OrderStatus, type PaymentStatus } from "@/lib/site";
+import { GIFT_WRAP, ORDER_STATUSES, SITE_URL, advanceFor, cashDue, type OrderStatus, type PaymentStatus } from "@/lib/site";
 import { OrderError, normalisePhone, priceOrder, validateCustomer, type CustomerInput, type OrderItemInput, type PricedLine } from "@/lib/pricing";
 import { type Db, pool, query, transaction } from "./db";
 import { sendMail, storeInbox } from "./mail";
+import { formatPrice } from "@/lib/format";
 import { invalidateCatalog, loadCatalogData } from "./catalog";
 import { checkCoupon } from "./coupons";
 import { currentCustomer } from "./customers";
@@ -438,6 +439,11 @@ export async function adminUpdateOrder(
       await db.query("UPDATE orders SET status = $2 WHERE id = $1", [id, next]);
       await addEvent(db, id, next, change.statusNote ? String(change.statusNote).slice(0, 300) : "", true);
       delivered = next === "delivered";
+      // Delivered means the courier took the cash: a cash-on-delivery balance counts as collected.
+      if (delivered && o.payment.status === "cod_due") {
+        await db.query("UPDATE orders SET payment_status = 'paid', paid_at = now() WHERE id = $1", [id]);
+        await addEvent(db, id, next, `Cash collected by the courier: ${formatPrice(cashDue(o))}`, true);
+      }
     }
     return (await loadOrder(db, id))!;
   });
