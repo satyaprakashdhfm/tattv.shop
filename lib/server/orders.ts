@@ -90,7 +90,6 @@ export function paymentConfig() {
   return {
     online: (razorpayEnabled() ? "razorpay" : demo ? "demo" : null) as "razorpay" | "demo" | null,
     keyId: razorpayKeyId(),
-    cod: process.env.COD_ENABLED !== "false",
   };
 }
 
@@ -244,7 +243,7 @@ export async function createOrder(input: {
   const { products, settings } = await loadCatalogData();
   // Cash on delivery takes an advance online first (Site Settings → advance %), so it needs online payment too.
   const advancePercent = settings.codAdvancePercent;
-  const codOk = cfg.cod && (advancePercent === 0 || !!cfg.online);
+  const codOk = advancePercent === 0 || !!cfg.online;
   if (method === "cod" ? !codOk : method !== "online" || !cfg.online) throw new OrderError("That payment method is not available.");
   const items = Array.isArray(input.items) ? input.items : [];
   // Personal coupons need the customer signed in on their mobile (a proven login, never what's typed).
